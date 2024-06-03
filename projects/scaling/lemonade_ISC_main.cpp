@@ -5,13 +5,18 @@
 #include <LeMonADE/updater/UpdaterAddLinearChains.h>
 #include <LeMonADE/updater/UpdaterSimpleSimulator.h>
 #include <LeMonADE/analyzer/AnalyzerWriteBfmFile.h>
+#include <LeMonADE/analyzer/AnalyzerRadiusOfGyration.h>
 
 #include <LeMonADE/utility/RandomNumberGenerators.h>
 #include <LeMonADE/utility/TaskManager.h>
 
 int main(int argc, char* argv[])
 {
-  int nChains(1),chainLength(64),type1(1),nMCS(100),nRuns(10);
+
+  //  read in the chain length from the executable command line
+  int n_monomers = atoi(argv[1]);
+
+  int nChains(1),chainLength(n_monomers),type1(1),nMCS(100),nRuns(10);
   
   typedef LOKI_TYPELIST_2(
     FeatureMoleculesIO, 
@@ -24,9 +29,9 @@ int main(int argc, char* argv[])
   RandomNumberGenerators rng;
   rng.seedAll();
   
-  ingredients.setBoxX(64);
-  ingredients.setBoxY(64);
-  ingredients.setBoxZ(64);
+  ingredients.setBoxX(n_monomers);
+  ingredients.setBoxY(n_monomers);
+  ingredients.setBoxZ(n_monomers);
   ingredients.setPeriodicX(true);
   ingredients.setPeriodicY(true);
   ingredients.setPeriodicZ(true);
@@ -37,6 +42,10 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, nChains,chainLength,type1,type1),0);
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
+  taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
+  // TODO :: add EndToEndDistance Property Calculations
+  // TODO :: add RouseTimeScale Property Calculations
+  // TODO :: add BondBondCorrelation Property Calculations
   
   taskManager.initialize();
   taskManager.run(nRuns);

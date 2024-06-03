@@ -21,7 +21,7 @@ set (CMAKE_CXX_FLAGS " -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -
 set (CMAKE_C_FLAGS "-O3 -msse2 -mssse3 -std=c++11-fexpensive-optimizations -std=c++11 -Wno-error=narrowing")
 
 #add the relevant subdirectories for doing fancy stuff 
-add_subdirectory(scaling)
+add_subdirectory(projects)
 # add_subdirectory(analyzer)
 # add_subdirectory(updater)
 # add_subdirectory(feature)
