@@ -1,3 +1,10 @@
+# cmake instructions
+*CMakeLists.txt
+
+# Bond-Fluctuation Model files
+*.bfm
+*.dat
+
 # linux scripts
 *.sh
 
