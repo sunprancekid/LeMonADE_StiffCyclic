@@ -15,13 +15,16 @@ using namespace std;
 #include <LeMonADE/utility/RandomNumberGenerators.h>
 #include <LeMonADE/utility/TaskManager.h>
 
+// modules not found in LeMonADE Library
+#include <AnalyzerEndToEndDistance.h>
+
 int main(int argc, char* argv[])
 {
 
   //  read in the chain length from the executable command line
   int n_monomers = atoi(argv[1]);
   
-  int nChains(1),chainLength(n_monomers),type1(1),nMCS(100),nRuns(10);
+  int nChains(1),chainLength(n_monomers),type1(1),nMCS(200000),nRuns(1000);
   
   typedef LOKI_TYPELIST_3(
     FeatureMoleculesIO, 
@@ -49,9 +52,10 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config_ev.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
   taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-  // TODO :: add EndToEndDistance Property Calculations
+  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat"));
   // TODO :: add RouseTimeScale Property Calculations
   // TODO :: add BondBondCorrelation Property Calculations
+  // TODO :: add radial distribution accumulation
   
   taskManager.initialize();
   taskManager.run(nRuns);

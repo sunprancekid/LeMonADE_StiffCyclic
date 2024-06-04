@@ -10,6 +10,9 @@
 #include <LeMonADE/utility/RandomNumberGenerators.h>
 #include <LeMonADE/utility/TaskManager.h>
 
+// modules not found in LeMonADE Library
+#include <AnalyzerEndToEndDistance.h>
+
 int main(int argc, char* argv[])
 {
 
@@ -43,7 +46,7 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
   taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-  // TODO :: add EndToEndDistance Property Calculations
+  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "ROG2.dat"));
   // TODO :: add RouseTimeScale Property Calculations
   // TODO :: add BondBondCorrelation Property Calculations
   

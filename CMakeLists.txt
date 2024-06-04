@@ -13,7 +13,9 @@ message( "LeMonADE_includePath : " ${LEMONADE_INCLUDE_DIR} )
 message( "LeMonADE_libraryPath : " ${LEMONADE_LIBRARY_DIR} )
 
 include_directories (${LEMONADE_INCLUDE_DIR})
+include_directories (properties)
 link_directories (${LEMONADE_LIBRARY_DIR})
+link_directories (properties)
 set (EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 
 #define flags for the gcc compiler 
@@ -21,6 +23,7 @@ set (CMAKE_CXX_FLAGS " -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -
 set (CMAKE_C_FLAGS "-O3 -msse2 -mssse3 -std=c++11-fexpensive-optimizations -std=c++11 -Wno-error=narrowing")
 
 #add the relevant subdirectories for doing fancy stuff 
+#include_directories(properties)
 add_subdirectory(projects)
 # add_subdirectory(analyzer)
 # add_subdirectory(updater)
