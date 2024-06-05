@@ -9,11 +9,13 @@ set -e
 ## PARAMETERS
 ## PARAMETERS -- BOOLEAN
 # boolean determining if the script should be executed verbosely
-declare -i BOOL_VERBOSE=0
+declare -i BOOL_VERB=0
 # boolean determining if the script should generate the simulation parameters
 declare -i BOOL_GEN=0
+# boolean determining if the script should submit simulations to SLURM
+declare -i BOOL_SUB=0
 # boolean determining if the script should upload a directory to the linux server
-declare -i BOOL_UP=0
+declare -i BOOL_UPP=0
 # boolean determining if the script should download a directory from the could
 declare -i BOOL_DWN=0
 ## PARAMETERS -- JOB
@@ -27,8 +29,6 @@ declare -i PARM_R=3
 MAINDIR="01_raw_data"
 # default job name
 JOB="scaling"
-# executable
-# ?
 # linux server
 LINUXSERV="gandalf"
 
@@ -40,41 +40,48 @@ help () {
 	# TODO :: write options so that if a variable is specified, its value is held constant
 	# if the job already exists, the script skips, unless and overwrite flag is specified
 
-	echo -e "\nScript for generating conH jobs on CHTC systems.\nUSAGE: ./conH.sh << FLAGS >>\n"
+	echo -e "\nScript for generating conH jobs on CHTC systems.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>\n"
+	echo -e "\n"
+	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -h           | display script options, exit 0."
 	echo -e " -v           | execute script verbosely."
-	echo -e " -g           | boolean determing if simulation parameters / directories should be generated."
-	echo -e " -s           | submit job to CHTC based on current status."
-	echo -e " -o           | boolean determining if existing jobs should be overwritten."
+	echo -e " -g           | generate simulation parameters / directories ."
+	echo -e " -s           | submit job to SLURM."
+	echo -e " -u           | upload local default directory to linux cluster."
+	echo -e " -d           | sync local default directory with linux cluster."
 	echo -e "\n"
-	echo -e " ## JOB PARAMETERS ##"
-	echo -e " -j << ARG >> | specify job title (default is ${JOB})"
-	echo -e " -c << ARG >> | specify cell size (default is ${CELL})"
-	echo -e " -e << ARG >> | specify events per (default is ${EVENTS})"
-	echo -e " -f << ARG >> | specify annealing fraction (default is ${FRAC})"
-	echo -e "\n"
-	echo -e " ## SIMULATION PARAMETERS ##"
-	echo -e " -r << ARG >> | integer representing the number of replicates to perform (default is 1)."
-	echo -e "\n"
-	echo -e " ## CHTC SUBMIT INSTRUCTIONS ##"
-	echo -e " -t           | \"touch\" simulation directries, update files."
-	echo -e " -r           | rerun anneal simulations that have already been performed."
+	echo -e " ## SCRIPT PARAMETERS ##"
+	echo -e " -j << ARG >> | specify job title (default is ${JOB})."
+	echo -e " -l << ARG >> | specify linux cluster (default is ${LINUXSERV})."
+	echo -e " -p << ARG >> | specify the local directory (default is ${MAINDIR})."
 }
 
 
 ## OPTIONS
-while getopts "vg:" option; do
+while getopts "hvgsudj:l:p:" option; do
 	case $option in
+		h) # print script parameters to CLT
+			help
+			exit 0 ;;
         v) # exectue script verbosely
-            declare -i BOOL_VERBOSE=1
-            ;;
+            declare -i BOOL_VERB=1 ;;
         g) # generate simulation parameters
-            declare -i BOOL_GEN=1
-            ;;
+            declare -i BOOL_GEN=1 ;;
+		s) # submit simulations to SLURM
+			declare -i BOOL_SUB=1 ;;
+		u) # upload local directory to linux cluster
+			declare -i BOOL_UPP=1 ;;
+		d) # sync local directory with linux cluster
+			declare -i BOOL_DWN=1 ;;
+		j) # update job name
+			JOB="${OPTARG}" ;;
+		l) # update linux cluster
+			LINUXSERV="${OPTARG}" ;;
+		p) # update local directory path
+			MAINDIR="${OPTARG}" ;;
         \?) # sonstiges
             help
             exit $NONZERO_EXITCODE
-
     esac
 done
 
