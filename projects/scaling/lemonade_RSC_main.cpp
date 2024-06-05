@@ -22,12 +22,15 @@ int main(int argc, char* argv[])
 {
 
   //  first argument :: integer for chain length
-  int n_monomers = atoi(argv[1]);
+  int chainLength = atoi(argv[1]);
   // second argument :: integer for number of monte carlo steps
+  int nMCS = atoi(argv[2]);
   // third argument :: integer for number of runs
+  int nRuns = atoi(argv[3]);
   // fourth argument :: double for equilibriation time
-  
-  int nChains(1),chainLength(n_monomers),type1(1),nMCS(200000),nRuns(5000);
+  int t_equil = atof(argv[4]);
+
+  int nChains(1),type1(1);
   
   typedef LOKI_TYPELIST_3(
     FeatureMoleculesIO, 
@@ -41,9 +44,9 @@ int main(int argc, char* argv[])
   RandomNumberGenerators rng;
   rng.seedAll();
 
-  ingredients.setBoxX(n_monomers);
-  ingredients.setBoxY(n_monomers);
-  ingredients.setBoxZ(n_monomers);
+  ingredients.setBoxX(chainLength);
+  ingredients.setBoxY(chainLength);
+  ingredients.setBoxZ(chainLength);
   ingredients.setPeriodicX(true);
   ingredients.setPeriodicY(true);
   ingredients.setPeriodicZ(true);
