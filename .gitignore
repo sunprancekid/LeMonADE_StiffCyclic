@@ -6,7 +6,7 @@ build/
 *.dat
 
 # linux scripts
-*.sh
+# *.sh
 
 # Prerequisites
 *.d

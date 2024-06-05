@@ -21,10 +21,13 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 
-  //  read in the chain length from the executable command line
+  //  first argument :: integer for chain length
   int n_monomers = atoi(argv[1]);
+  // second argument :: integer for number of monte carlo steps
+  // third argument :: integer for number of runs
+  // fourth argument :: double for equilibriation time
   
-  int nChains(1),chainLength(n_monomers),type1(1),nMCS(200000),nRuns(1000);
+  int nChains(1),chainLength(n_monomers),type1(1),nMCS(200000),nRuns(5000);
   
   typedef LOKI_TYPELIST_3(
     FeatureMoleculesIO, 
@@ -52,7 +55,7 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config_ev.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
   taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat"));
+  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat")); // TODO :: equilibriation time
   // TODO :: add RouseTimeScale Property Calculations
   // TODO :: add BondBondCorrelation Property Calculations
   // TODO :: add radial distribution accumulation
