@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   // third argument :: integer for number of runs
   int nRuns = atoi(argv[3]);
   // fourth argument :: double for equilibriation time
-  int t_equil = atof(argv[4]);
+  int t_equil = atoo(argv[4]);
 
   int nChains(1),type1(1);
   
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
   taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "ROG2.dat"));
+  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "ROG2.dat", t_equil));
   // TODO :: add RouseTimeScale Property Calculations
   // TODO :: add BondBondCorrelation Property Calculations
   

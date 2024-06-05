@@ -62,6 +62,10 @@ private:
     void dumpTimeSeries();
     //! calculate the Rg squared of the monomer group
     VectorDouble3 calculateRe2eComponents(const MonomerGroup<molecules_type>& group) const;
+    //! starting number of MCS when analyzer is initialized
+    uint32_t startMCS;
+    //! analyze after equilibration time
+    uint32_t equilibrationTime;
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
     void setMonomerGroups(std::vector<MonomerGroup<molecules_type> > groupVector){groups=groupVector;}
@@ -69,7 +73,8 @@ public:
 
     //! constructor
     AnalyzerEndToEndDistance(const IngredientsType& ing,
-                             std::string filename="Re2eTimeSeries.dat");
+                             std::string filename="Re2eTimeSeries.dat",
+                             uint32_t equilibrationTime_=0);
 
     //! destructor. does nothing
     virtual ~AnalyzerEndToEndDistance(){}
@@ -83,6 +88,10 @@ public:
     void setBufferSize(uint32_t size){bufferSize=size;}
     //! Change the output file name
     void setOutputFile(std::string filename){outputFile=filename;isFirstFileDump=true;}
+    //! Set equilibration time
+    void setEquilibrationTime(uint32_t time){equilibrationTime=time;}
+    //! Get equilibration time
+    uint32_t getEquilibrationTime(){return equilibrationTime;}
 
 };
 
@@ -97,12 +106,14 @@ public:
 template<class IngredientsType>
 AnalyzerEndToEndDistance<IngredientsType>::AnalyzerEndToEndDistance(
     const IngredientsType& ing,
-    std::string filename)
+    std::string filename,
+    uint32_t equilibrationTime_)
 :ingredients(ing)
 ,Re2eTimeSeries(4,std::vector<double>(0))
 ,bufferSize(100)
 ,outputFile(filename)
 ,isFirstFileDump(true)
+,equilibrationTime(equilibrationTime_)
 {
 }
 
@@ -116,6 +127,8 @@ AnalyzerEndToEndDistance<IngredientsType>::AnalyzerEndToEndDistance(
 template< class IngredientsType >
 void AnalyzerEndToEndDistance<IngredientsType>::initialize()
 {
+    // record the number of initial number of MCS steps
+    startMCS=ingredients.getMolecules().getAge();
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
     if(groups.size()==0){
@@ -135,6 +148,11 @@ bool AnalyzerEndToEndDistance<IngredientsType>::execute()
 {
     VectorDouble3 Re2eComponents(0.0,0.0,0.0);
 
+    // if the equilibriation time for the analyzer has not been reached yet
+    if((ingredients.getMolecules().getAge()-startMCS) <= equilibrationTime)
+        // skip the e2e vector calculation
+        return true;
+
     for(size_t n=0;n<groups.size();n++)
     {
         //this vector will contain (Re2e_x, Re2e_y, Re2e_z)
@@ -149,7 +167,7 @@ bool AnalyzerEndToEndDistance<IngredientsType>::execute()
     }
 
     MCSTimes.push_back(ingredients.getMolecules().getAge());
-    //save to disk in regular intervals
+    //save to disk in regular intervals, only if equilibriation time has been reached
     if(MCSTimes.size()>=bufferSize)
         dumpTimeSeries();
 
