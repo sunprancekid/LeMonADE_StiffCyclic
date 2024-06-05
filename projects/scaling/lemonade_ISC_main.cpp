@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   // third argument :: integer for number of runs
   int nRuns = atoi(argv[3]);
   // fourth argument :: double for equilibriation time
-  int t_equil = atoo(argv[4]);
+  int t_equil = atoi(argv[4]);
 
   int nChains(1),type1(1);
   
