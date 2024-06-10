@@ -145,7 +145,7 @@ if scaling:
         # plot end-to-end distance
         plot_scaling (mod_parm, N_col = 'N', R_col = 'E2E', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 100, X_label = "Number of Monomers ($N$)", Y_label = "End-to-End Distance", Title = "End-to-End Distance Scaling for " + mod , saveas = save_name + "_e2e.png", fit = True)
         # plot radius of gyration for real chains
-        plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "rog.png", fit = True)
+        plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
 
 # analyze results, as instructed
 
