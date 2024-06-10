@@ -128,12 +128,16 @@ if scaling:
     # TODO :: add boot strapping
     scaling_parms = parse_scaling_results(scaling_parms, 'RE2E.dat', 4, 'E2E')
     scaling_parms = parse_scaling_results(scaling_parms, 'ROG.dat', 4, 'ROG')
+    # save the results
+    if not os.path.exists("02_processed_data/scaling/"):
+        os.mkdir("02_processed_data/scaling/")
+    scaling_parms.to_csv("02_processed_data/scaling/scaling_results.csv")
     # perform analysis for each unqiue set of 'modules'
     for mod in scaling_parms['mod'].unique():
         # isolate the parameters corresponding to the module
         mod_parm = scaling_parms[scaling_parms['mod'] == mod]
         # establish filenames, etc.
-        save_name = '01_raw_data/scaling/scaling_' + mod
+        save_name = '02_processed_data/scaling/scaling_' + mod
         if mod == "linearChainReal":
             mod = "Real, Linear Polymer Chains"
         elif mod == "linearChainIdeal":
