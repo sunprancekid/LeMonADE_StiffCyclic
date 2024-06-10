@@ -44,9 +44,9 @@ int main(int argc, char* argv[])
   RandomNumberGenerators rng;
   rng.seedAll();
 
-  ingredients.setBoxX(chainLength);
-  ingredients.setBoxY(chainLength);
-  ingredients.setBoxZ(chainLength);
+  ingredients.setBoxX(256);
+  ingredients.setBoxY(256);
+  ingredients.setBoxZ(256);
   ingredients.setPeriodicX(true);
   ingredients.setPeriodicY(true);
   ingredients.setPeriodicZ(true);

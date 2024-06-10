@@ -38,9 +38,9 @@ int main(int argc, char* argv[])
   RandomNumberGenerators rng;
   rng.seedAll();
   
-  ingredients.setBoxX(chainLength);
-  ingredients.setBoxY(chainLength);
-  ingredients.setBoxZ(chainLength);
+  ingredients.setBoxX(256);
+  ingredients.setBoxY(256);
+  ingredients.setBoxZ(256);
   ingredients.setPeriodicX(true);
   ingredients.setPeriodicY(true);
   ingredients.setPeriodicZ(true);
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
   taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
   taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
   taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "ROG2.dat", t_equil));
+  taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
   // TODO :: add RouseTimeScale Property Calculations
   // TODO :: add BondBondCorrelation Property Calculations
   
