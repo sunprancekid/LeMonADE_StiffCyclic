@@ -46,9 +46,6 @@ declare -i t_equilibrium=100000000
 # display script options
 help () {
 
-	# TODO :: write options so that if a variable is specified, its value is held constant
-	# if the job already exists, the script skips, unless and overwrite flag is specified
-
 	echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>\n"
 	echo -e "\n"
 	echo -e " ## SCRIPT PROTOCOL ##"
