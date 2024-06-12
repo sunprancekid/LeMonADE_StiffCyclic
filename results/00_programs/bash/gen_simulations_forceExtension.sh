@@ -123,6 +123,57 @@ logscale () {
      echo $(printf "%8.5f\n" "${scale}")
 }
 
+# generate slurm submission script for simulation
+gen_slurm () {
+
+    ## PARAMETERS
+    # name of file contains slurm submission instructions
+    local FILENAME="${SIMID}.slurm.sub"
+    # directory that the file is stored in
+    local FILEPATH="${PATH_SIMPARM}${SIMDIR}"
+
+    ## ARGUMENTS
+    # none
+
+    ## SCRIPT
+    # none
+
+    echo "#!/bin/bash" > $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "#SBATCH -J ${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
+    echo "#SBATCH --nodes=1" >> $FILEPATH$FILENAME  # number of nodes
+    echo "#SBATCH --ntasks=1" >> $FILEPATH$FILENAME   # number of processor cores (i.e. tasks)
+    echo "#SBATCH --error=${SIMID}.%j.err" >> $FILEPATH$FILENAME
+    echo "#SBATCH --output=OneLinearChainIdeal_N100_PerX512_PerYZ128_ConstantForce_f0_0.01.%j.out" >> $FILEPATH$FILENAME
+    # echo "#SBATCH --mail-type=FAIL" >> $FILEPATH$FILENAME
+    # echo "#SBATCH --mail-user=dorsey@ipfdd.de" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### PARAMETERS ###" >> $FILEPATH$FILENAME
+    echo "SUBDIR=\$(pwd) # location of slurm submission" >> $FILEPATH$FILENAME
+    echo "EXECDIR=/beetmp/dorsey/tmp/ # location of slurm execution" >> $FILEPATH$FILENAME
+    echo "hostname" >> $FILEPATH$FILENAME
+    echo "cd \${EXECDIR}" >> $FILEPATH$FILENAME
+    echo "mkdir ${SIMID} " >> $FILEPATH$FILENAME
+    echo "cd ${SIMID}" >> $FILEPATH$FILENAME
+    echo "echo Running on host \$(hostname)" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### load modules" >> $FILEPATH$FILENAME
+    echo "# module load slurm/15.08.8" >> $FILEPATH$FILENAME
+    echo "# module load gcc/6.1.0" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### copy everything from the submit directory to the execute directory ###" >> $FILEPATH$FILENAME
+    echo "cp \${SUBDIR}/* ." >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### run job ####" >> $FILEPATH$FILENAME
+    echo "srun ./${SIMID}.sh > ${SIMID}.wrap.out 2>&1" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    ## TODO :: add instructions for copying results back
+    echo "### copy back results, delete everthing ###" >> $FILEPATH$FILENAME
+    echo "cp * \${SUBDIR}/" >> $FILEPATH$FILENAME
+    echo "cd ../" >> $FILEPATH$FILENAME
+    echo "rm -rf ${SIMID}" >> $FILEPATH$FILENAME
+}
+
 # generate simulation parameters
 gen_simparm() {
 
@@ -159,8 +210,10 @@ gen_simparm() {
                     cp $EXECDIR${m} ${PATH_SIMPARM}${SIMDIR}
                     echo "./$m ${n} ${N_MCS} ${N_runs} ${t_equilibrium} ${FORCE_VAL} > ${SIMID}.txt" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                     chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                    # add slurm script
+                    gen_slurm
                     # add parameters to parm file
-                    echo "${SIMID},${m},${n},${r},${FORCE_VAL},${SIMDIR}" >> $FILE_SIMPARM
+                    echo "${SIMID},${SIMDIR},${m},${n},${r},${FORCE_VAL}" >> $FILE_SIMPARM
                 done
             done
 		done
@@ -222,7 +275,7 @@ for i in $(seq 2 $N_LINES); do
 	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
 		# move to the simulation directory
 		CURRDIR=$(echo $PWD)
-		cd "${MAINDIR}/${JOB}/${SIMDIR}"
+        cd "${MAINDIR}/${JOB}/${SIMDIR}"
 		echo $PWD
 		# exectue the simulation
 		if [ $BOOL_SUB -eq 1 ]; then

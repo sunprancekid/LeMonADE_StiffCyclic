@@ -1,5 +1,5 @@
 ## PACKAGES
-import sys, os
+import sys, os, math
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -33,7 +33,7 @@ def clean_file(filepath, commentchar = '#'):
 # parse data from end-to-end file, return average
 # filepath :: path to file containing data
 # avgcol :: column header that contains relevant data
-def parse_data(filepath, avgcol = None, header = None, boostrapping = False, M1 = False, M2 = False):
+def parse_data(filepath, avgcol = None, header = None):
 
     # check that the file exists
     file = Path(filepath)
@@ -43,19 +43,66 @@ def parse_data(filepath, avgcol = None, header = None, boostrapping = False, M1 
 
     # load the file as a data frame
     df = pd.read_csv(filepath, sep = '\t', header = header)
-    return df[avgcol].mean()
+    return df[avgcol].to_list()
 
 # method for getting simulation results from files
-def parse_scaling_results(parms, simfile, col, title):
-    # initialize empty arrays
-    vals = []
+def parse_scaling_results(parms = None, simfile = None, col = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False):
+
+    # make sure required information has been provided
+    if title is None:
+        pass
+    if simfile is None:
+        pass
+    if parms is None:
+        pass
+    if col is None:
+        pass
+
+    # initialize arrays
+    M1_arr = []
+    M2_arr = []
+    var_arr = []
+
     # loop through all simulation directories
     for i, r in parms.iterrows():
         clean_file("01_raw_data/scaling/" + r['path'] + simfile)
-        vals.append(parse_data("01_raw_data/scaling/" + r['path'] + simfile, avgcol = col))
+        vals = parse_data("01_raw_data/scaling/" + r['path'] + simfile, avgcol = col)
+        # calculate the first moment if, specified
+        avg = 0
+        if bootstrapping:
+            # TODO fit data to normal distribution, determine average
+            pass
+        else:
+            for i in vals:
+                avg += i
+            avg = avg / len(vals)
+        if M1:
+            # if specified, append to array
+            M1_arr.append(avg)
+
+        # calculate the second moment, if specified
+        if M2:
+            avg2 = 0
+            for i in vals:
+                avg2 += pow(i,2)
+            avg2 = avg2 / len(vals)
+            M2_arr.append(math.sqrt(avg2))
+
+        # calculate the variance, if specified
+        if var:
+            sigma = 0
+            if bootstrapping:
+                # TODO fit data to normal distribution
+                pass
+            for i in vals:
+                sigma += pow(i - avg, 2)
+                sigma = sigma / (len(vals) - 1)
+            var_arr.append(sigma)
 
     # add to parameters data frame and return to user
-    parms[title] = vals
+    if M1: parms[title + "_M1"] = M1_arr
+    if M2: parms[title + "_M2"] = M2_arr
+    if var: parms[title + "_var"] = var_arr
     return parms
 
 # method for getting scaling simulation data (N vs. R)
@@ -126,8 +173,9 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_scaling_results(scaling_parms, 'RE2E.dat', 4, 'E2E', bootstrapping = False, M1 = True, M2 = True)
-    scaling_parms = parse_scaling_results(scaling_parms, 'ROG.dat', 4, 'ROG')
+    scaling_parms = parse_scaling_results(parms = scaling_parms, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True)
+    scaling_parms = parse_scaling_results(parms = scaling_parms, simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
+    scaling_parms = parse_scaling_results(scaling_parms, 'ROG.dat', 4, 'ROG', M1 = True)
     # save the results
     if not os.path.exists("02_processed_data/scaling/"):
         os.mkdir("02_processed_data/scaling/")
@@ -143,9 +191,9 @@ if scaling:
         elif mod == "linearChainIdeal":
             mod = "Ideal, Linear Polymer Chains"
         # plot end-to-end distance
-        plot_scaling (mod_parm, N_col = 'N', R_col = 'E2E', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 100, X_label = "Number of Monomers ($N$)", Y_label = "End-to-End Distance", Title = "End-to-End Distance Scaling for " + mod , saveas = save_name + "_e2e.png", fit = True)
+        plot_scaling (mod_parm, N_col = 'N', R_col = 'E2Etot_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 100, X_label = "Number of Monomers ($N$)", Y_label = "End-to-End Distance", Title = "End-to-End Distance Scaling for " + mod , saveas = save_name + "_e2e.png", fit = True)
         # plot radius of gyration for real chains
-        plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
+        plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
 
 # analyze results, as instructed
 
