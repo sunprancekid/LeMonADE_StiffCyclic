@@ -33,7 +33,7 @@ def clean_file(filepath, commentchar = '#'):
 # parse data from end-to-end file, return average
 # filepath :: path to file containing data
 # avgcol :: column header that contains relevant data
-def parse_data(filepath, avgcol = None, header = None):
+def parse_data(filepath, avgcol = None, header = None, boostrapping = False, M1 = False, M2 = False):
 
     # check that the file exists
     file = Path(filepath)
@@ -126,7 +126,7 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_scaling_results(scaling_parms, 'RE2E.dat', 4, 'E2E')
+    scaling_parms = parse_scaling_results(scaling_parms, 'RE2E.dat', 4, 'E2E', bootstrapping = False, M1 = True, M2 = True)
     scaling_parms = parse_scaling_results(scaling_parms, 'ROG.dat', 4, 'ROG')
     # save the results
     if not os.path.exists("02_processed_data/scaling/"):

@@ -159,6 +159,7 @@ void AnalyzerConstantForce<IngredientsType>::initialize() {
 	uint32_t n = 0;
 	for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
 		if (ingredients.getMolecules()[i].getAttributeTag() != 0){
+            std::cout << ingredients.getMolecules()[i].getAttributeTag() << "\n";
 			indexMonomersForce[n] = i;
 			n += 1;
 		}
@@ -166,6 +167,7 @@ void AnalyzerConstantForce<IngredientsType>::initialize() {
 		if((n > 2) || (n==0))
         {
             std::stringstream errormessage;
+            errormessage << n << "\n" << std::endl;
             errormessage<<"AnalyzerConstantForce::initialize()...ambigious number of monomers subjected to force" << std::endl; 
                     
             throw std::runtime_error(errormessage.str());

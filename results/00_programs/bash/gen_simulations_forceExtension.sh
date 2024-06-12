@@ -132,7 +132,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,mod,N,F,R,path"
+	HEADER_SIMPARM="id,path,mod,N,F,R"
 
 	## ARGUMENTS
 	# none
@@ -205,3 +205,30 @@ done
 if [ $BOOL_GEN -eq 1 ]; then
 	gen_simparm
 fi
+
+# parse simulation parameters from file, perform protocol as instructed
+SIMPARAM_FILE="${MAINDIR}/${JOB}/${JOB}.csv"
+if [ ! -f $SIMPARAM_FILE ]; then
+	# if the file does not exist, inform user and abort
+	echo "Must generate simulation parameters for ${JOB} in ${MAINDIR} before submitting simulations."
+	exit $NONZERO_EXITCODE
+fi
+declare -i N_LINES=$(wc -l < $SIMPARAM_FILE)
+for i in $(seq 2 $N_LINES); do
+	# get the simulation directory
+	SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 2)
+	# get the simulation id
+	SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
+	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
+		# move to the simulation directory
+		CURRDIR=$(echo $PWD)
+		cd "${MAINDIR}/${JOB}/${SIMDIR}"
+		echo $PWD
+		# exectue the simulation
+		if [ $BOOL_SUB -eq 1 ]; then
+			./${SIMID}.sh
+		fi
+		# return to the main directory
+		cd $CURRDIR
+	fi
+done

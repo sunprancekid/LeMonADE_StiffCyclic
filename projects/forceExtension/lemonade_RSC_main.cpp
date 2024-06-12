@@ -17,6 +17,7 @@ using namespace std;
 #include <LeMonADE/utility/TaskManager.h>
 
 // modules not found in LeMonADE Library
+#include <AnalyzerConstantForce.h>
 #include <AnalyzerEndToEndDistance.h>
 
 int main(int argc, char* argv[])
@@ -69,13 +70,28 @@ int main(int argc, char* argv[])
     taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, nChains,chainLength,type1,type1),0);
     taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
     taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config_ev.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
-    taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-    taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil)); // TODO :: equilibriation time
+    taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
     // TODO :: add RouseTimeScale Property Calculations
     // TODO :: add BondBondCorrelation Property Calculations
     // TODO :: add radial distribution accumulation
 
     taskManager.initialize();
+
+    // assign the molecules that experience forces
+    for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
+        if (i == 0){
+            // the first molecule in the chain experiences a positive force
+            ingredients.modifyMolecules()[i].setAttributeTag(4);
+        } else if (i == (ingredients.getMolecules().size() - 1)) {
+            // the last molecule in the chain experiences a negative force
+            ingredients.modifyMolecules()[i].setAttributeTag(5);
+        } else {
+            // otherwise, set the attribute tag to 0
+            ingredients.modifyMolecules()[i].setAttributeTag(0);
+        }
+        // cout << ingredients.getMolecules()[i].getAttributeTag() << "\n";
+    }
+    // run simulation
     taskManager.run(nRuns);
     taskManager.cleanup();
 

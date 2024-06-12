@@ -73,7 +73,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,mod,N,R,path"
+	HEADER_SIMPARM="id,path,mod,N,R"
 
 	## ARGUMENTS
 	# none
@@ -159,7 +159,7 @@ fi
 declare -i N_LINES=$(wc -l < $SIMPARAM_FILE)
 for i in $(seq 2 $N_LINES); do
 	# get the simulation directory
-	SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 5)
+	SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 2)
 	# get the simulation id
 	SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
 	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
