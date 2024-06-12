@@ -5,4 +5,4 @@
 
 # real chain
 add_executable(FElinearChainReal lemonade_RSC_main.cpp)
-target_link_libraries(FElinearChainReal_forceExtension LeMonADE)
+target_link_libraries(FElinearChainReal LeMonADE)
