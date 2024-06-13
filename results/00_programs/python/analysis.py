@@ -1,9 +1,11 @@
 ## PACKAGES
 import sys, os, math
 from pathlib import Path
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.stats import norm
 # TODO :: add recombinator library for boot strapping
 
 ## PARAMETERS
@@ -73,6 +75,17 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
         avg = 0
         if bootstrapping:
             # TODO fit data to normal distribution, determine average
+            mu, std = norm.fit(vals)
+            fig, ax = plt.subplots()
+            ax.hist(vals, bins=50, density=True)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x, p, 'k', linewidth=2)
+            title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
+            plt.title(title)
+            plt.show()
+            exit()
             pass
         else:
             for i in vals:
@@ -177,7 +190,7 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, bootstrapping = True)
     scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
     scaling_parms = parse_results(scaling_parms, 'ROG.dat', 4, 'ROG', M1 = True)
     # save the results
@@ -206,6 +219,6 @@ if forceExtension:
     FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
     # save results
     if not os.path.exists("02_processed_data/forceExtension/"):
-        os.mkdir("02_processed_data/force_Extension/")
-    FE_parms.to_csv("02_processed_data/force_Extension/forceExtension.csv")
+        os.mkdir("02_processed_data/forceExtension/")
+    FE_parms.to_csv("02_processed_data/forceExtension/forceExtension.csv")
     print(FE_parms)
