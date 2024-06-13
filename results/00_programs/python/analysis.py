@@ -9,6 +9,8 @@ from scipy.optimize import curve_fit
 ## PARAMETERS
 # file that contains parameters for scaling simulations
 scaling_parmcsv = '01_raw_data/scaling/scaling.csv'
+# file that contains parameter for forceExtension simulations
+forceExtension_parmcsv = '01_raw_data/forceExtension/forceExtension.csv'
 # default image resolution
 default_dpi = 200
 
@@ -46,7 +48,7 @@ def parse_data(filepath, avgcol = None, header = None):
     return df[avgcol].to_list()
 
 # method for getting simulation results from files
-def parse_scaling_results(parms = None, simfile = None, col = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False):
+def parse_results(parms = None, dir = None, simfile = None, col = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False):
 
     # make sure required information has been provided
     if title is None:
@@ -65,8 +67,8 @@ def parse_scaling_results(parms = None, simfile = None, col = None, title = None
 
     # loop through all simulation directories
     for i, r in parms.iterrows():
-        clean_file("01_raw_data/scaling/" + r['path'] + simfile)
-        vals = parse_data("01_raw_data/scaling/" + r['path'] + simfile, avgcol = col)
+        clean_file(dir + r['path'] + simfile)
+        vals = parse_data(dir + r['path'] + simfile, avgcol = col)
         # calculate the first moment if, specified
         avg = 0
         if bootstrapping:
@@ -160,6 +162,8 @@ def power_fit(x, A, B):
 ## ARGUMENTS
 # performing scaling analysis
 scaling = ("scaling" in sys.argv)
+# performe force extension analysis
+forceExtension = ("forceExtension" in sys.argv)
 
 ## SCRIPT
 # load defaults / settings from yaml
@@ -173,9 +177,9 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_scaling_results(parms = scaling_parms, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True)
-    scaling_parms = parse_scaling_results(parms = scaling_parms, simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
-    scaling_parms = parse_scaling_results(scaling_parms, 'ROG.dat', 4, 'ROG', M1 = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
+    scaling_parms = parse_results(scaling_parms, 'ROG.dat', 4, 'ROG', M1 = True)
     # save the results
     if not os.path.exists("02_processed_data/scaling/"):
         os.mkdir("02_processed_data/scaling/")
@@ -195,6 +199,13 @@ if scaling:
         # plot radius of gyration for real chains
         plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
 
-# analyze results, as instructed
-
-# generate graphs, as instructed
+if forceExtension:
+    # get simulation parameters
+    FE_parms = pd.read_csv(forceExtension_parmcsv)
+    # average simulation properties
+    FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
+    # save results
+    if not os.path.exists("02_processed_data/forceExtension/"):
+        os.mkdir("02_processed_data/force_Extension/")
+    FE_parms.to_csv("02_processed_data/force_Extension/forceExtension.csv")
+    print(FE_parms)
