@@ -69,25 +69,39 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
 
     # loop through all simulation directories
     for i, r in parms.iterrows():
+        if not os.path.exists(dir + r['path'] + simfile):
+            # if the path does not exists, add NaN to each array
+            M1_arr.append(np.nan)
+            M2_arr.append(np.nan)
+            var_arr.append(np.nan)
+            # skip to next entry
+            continue
         clean_file(dir + r['path'] + simfile)
         vals = parse_data(dir + r['path'] + simfile, avgcol = col)
+        if title == 'ROG':
+            vals = [math.sqrt(i) for i in vals]
         # calculate the first moment if, specified
         avg = 0
         if bootstrapping:
-            # TODO fit data to normal distribution, determine average
+            # fit data to normal distribution, determine average
+            n_bins = 50
             mu, std = norm.fit(vals)
+            avg = mu
             fig, ax = plt.subplots()
-            ax.hist(vals, bins=50, density=True)
+            ax.hist(vals, bins=n_bins, density=True, label = "Simulation Data")
             xmin, xmax = plt.xlim()
             x = np.linspace(xmin, xmax, 100)
             p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2)
-            title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
-            plt.title(title)
-            plt.show()
-            exit()
-            pass
+            plt.plot(x, p, 'k', linewidth=2, label = "Normal Distribution")
+            plt.plot([], [], ' ', label = "$\mu$ = %.3f,  $\sigma$ = %.3f" % (mu, std))
+            plt.title("Distribution of " + title + " Values ($n_{{bins}}$ = {:d})".format(n_bins))
+            plt.legend()
+            plt.xlabel("Property Value")
+            plt.ylabel("Distribution")
+            plt.savefig(dir + r['path'] + "propdist_" + title + ".png", dpi = 200)
+            plt.close()
         else:
+            # calculate using the formula
             for i in vals:
                 avg += i
             avg = avg / len(vals)
@@ -105,14 +119,13 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
 
         # calculate the variance, if specified
         if var:
-            sigma = 0
-            if bootstrapping:
-                # TODO fit data to normal distribution
-                pass
-            for i in vals:
-                sigma += pow(i - avg, 2)
-                sigma = sigma / (len(vals) - 1)
-            var_arr.append(sigma)
+            if not bootstrapping:
+                # if boot strapping was not used
+                std = 0
+                for i in vals:
+                    std += pow(i - avg, 2)
+                std = std / (len(vals) - 1)
+            var_arr.append(std)
 
     # add to parameters data frame and return to user
     if M1: parms[title + "_M1"] = M1_arr
@@ -121,7 +134,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
     return parms
 
 # method for getting scaling simulation data (N vs. R)
-def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, dpi = None, logscale = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None):
+def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None):
     # make sure that the proper parameters were passed to the method
     if N_col is None:
         exit()
@@ -130,24 +143,32 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     # establish image parameters based on parameters passed to method
     if dpi is None:
         dpi = default_dpi
-    # get values, average duplicates
-    x = []
-    y = []
-    for u in parms[N_col].unique():
-        x.append(u)
-        y_mean = parms[parms[N_col] == u]
-        y.append(y_mean[R_col].mean())
-    # plot values
-    plt.plot(x, y, 'o', label = "Simulation Data", fillstyle = 'none')
-    # fit data to power low, if specified
-    if fit:
-        # fit data to power law equation, determine parameters
-        popt, pcov = curve_fit(power_fit, x, y)
-        x_fit = [ ((max(x) - min(x)) / (100 - 1)) * i + min(x) for i in range(100)]
-        y_fit = [ power_fit(i, *popt) for i in x_fit]
-        plt.plot(x_fit, y_fit, '--', label = "Power Fit ($y = A \cdot x^{{B}}$)")
-        plt.plot([], [], ' ', label="A = {:.3f}".format(popt[0]))
-        plt.plot([], [], ' ', label="B = {:.3f}".format(popt[1]))
+    for c in range(len(R_col)):
+        # get values, average duplicates
+        x = []
+        y = []
+        v = []
+        for u in parms[N_col].unique():
+            x.append(u)
+            y_mean = parms[parms[N_col] == u]
+            y.append(y_mean[R_col[c] + '_M1'].mean())
+            if error:
+                v.append(y_mean[R_col[c] + '_var'].mean() / 2)
+        # plot values
+        if error:
+            # plot with error bars
+            plt.errorbar(x, y, yerr = v, label = data_label[c], fmt = 'o', color = color[c])
+        else:
+            plt.plot(x, y, 'o', label = data_label[c], fillstyle = 'none', color = color[c])
+        # fit data to power low, if specified
+        if fit:
+            # fit data to power law equation, determine parameters
+            popt, pcov = curve_fit(power_fit, x, y)
+            x_fit = [ ((max(x) - min(x)) / (100 - 1)) * i + min(x) for i in range(100)]
+            y_fit = [ power_fit(i, *popt) for i in x_fit]
+            plt.plot(x_fit, y_fit, '--', label = data_label[c] + " Fit", color = color[c])
+            # plt.plot([], [], ' ', label="A = {:.3f}".format(popt[0]))
+            plt.plot([], [], ' ', label="$\\nu$ = {:.2f}".format(popt[1]))
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     plt.xscale('log')
@@ -190,9 +211,9 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, bootstrapping = True)
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
-    scaling_parms = parse_results(scaling_parms, 'ROG.dat', 4, 'ROG', M1 = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, var = True)
     # save the results
     if not os.path.exists("02_processed_data/scaling/"):
         os.mkdir("02_processed_data/scaling/")
@@ -208,15 +229,18 @@ if scaling:
         elif mod == "linearChainIdeal":
             mod = "Ideal, Linear Polymer Chains"
         # plot end-to-end distance
-        plot_scaling (mod_parm, N_col = 'N', R_col = 'E2Etot_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 100, X_label = "Number of Monomers ($N$)", Y_label = "End-to-End Distance", Title = "End-to-End Distance Scaling for " + mod , saveas = save_name + "_e2e.png", fit = True)
+        plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
         # plot radius of gyration for real chains
-        plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
+        # plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
+
+        # combined plots
+
 
 if forceExtension:
     # get simulation parameters
     FE_parms = pd.read_csv(forceExtension_parmcsv)
     # average simulation properties
-    FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True)
+    FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True)
     # save results
     if not os.path.exists("02_processed_data/forceExtension/"):
         os.mkdir("02_processed_data/forceExtension/")
