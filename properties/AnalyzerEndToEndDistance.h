@@ -66,6 +66,8 @@ private:
     uint32_t startMCS;
     //! analyze after equilibration time
     uint32_t equilibrationTime;
+    //! boolean that determines if the minimum image convention should be applied to distance vector calculations
+    // bool minImage;
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
     void setMonomerGroups(std::vector<MonomerGroup<molecules_type> > groupVector){groups=groupVector;}
@@ -241,8 +243,15 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
             return VectorDouble3(0.0,0.0,0.0);
         }
 
+        // vector containing the difference between the first and last momomers in the group
+        VectorDouble3 diff_vec;
+        diff_vec.setX(group[group_size - 1].getX() - group[0].getX());
+        diff_vec.setY(group[group_size - 1].getY() - group[0].getY());
+        diff_vec.setZ(group[group_size - 1].getZ() - group[0].getZ());
+        return diff_vec;
+
         // get the minimum image distance vector between the first and last monomers
-        return LemonadeDistCalcs::MinImageVector(group[0], group[group_size - 1], ingredients);
+        // return LemonadeDistCalcs::MinImageVector(group[0], group[group_size - 1], ingredients);
 
     }
     #endif
