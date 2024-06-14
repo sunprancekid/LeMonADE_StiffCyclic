@@ -36,10 +36,9 @@ int main(int argc, char* argv[])
 
     int nChains(1),type1(1);
 
-    typedef LOKI_TYPELIST_4(
+    typedef LOKI_TYPELIST_3(
         FeatureMoleculesIO,
         FeatureAttributes<>,
-        FeatureExcludedVolumeSc< FeatureLatticePowerOfTwo < > >,
         FeatureLinearForce) Features;
     const uint max_bonds=4;
     typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
@@ -80,10 +79,10 @@ int main(int argc, char* argv[])
 
     // assign the molecules that experience forces
     for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
-        if ((i % nChains) == 0){
+        if (i == 0){
             // the first molecule in the chain experiences a positive force
             ingredients.modifyMolecules()[i].setAttributeTag(4);
-        } else if ((i % nChains) == (ingredients.getMolecules().size() - 1)) {
+        } else if (i == (ingredients.getMolecules().size() - 1)) {
             // the last molecule in the chain experiences a negative force
             ingredients.modifyMolecules()[i].setAttributeTag(5);
         } else {

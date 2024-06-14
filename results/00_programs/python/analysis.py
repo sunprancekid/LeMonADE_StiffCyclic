@@ -134,7 +134,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
     return parms
 
 # method for getting scaling simulation data (N vs. R)
-def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None):
+def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None):
     # make sure that the proper parameters were passed to the method
     if N_col is None:
         exit()
@@ -171,8 +171,10 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
             plt.plot([], [], ' ', label="$\\nu$ = {:.2f}".format(popt[1]))
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
-    plt.xscale('log')
-    plt.yscale('log')
+    if logscale_x:
+        plt.xscale('log')
+    if logscale_y:
+        plt.yscale('log')
     plt.legend(loc = 'upper left')
     if Title is not None:
         plt.title(Title)
@@ -229,7 +231,7 @@ if scaling:
         elif mod == "linearChainIdeal":
             mod = "Ideal, Linear Polymer Chains"
         # plot end-to-end distance
-        plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
+        plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale_x = True, logscale_y = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
         # plot radius of gyration for real chains
         # plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
 
@@ -245,4 +247,16 @@ if forceExtension:
     if not os.path.exists("02_processed_data/forceExtension/"):
         os.mkdir("02_processed_data/forceExtension/")
     FE_parms.to_csv("02_processed_data/forceExtension/forceExtension.csv")
-    print(FE_parms)
+    # perform analysis for each unqiue set of 'modules'
+    for mod in FE_parms['mod'].unique():
+        # isolate the parameters corresponding to the module
+        mod_parm = FE_parms[FE_parms['mod'] == mod]
+        # establish filenames, etc.
+        save_name = '02_processed_data/forceExtension/forceExtension_' + mod
+        if mod == "FElinearChainReal":
+            mod = "Real, Linear Polymer Chains"
+        elif mod == "FElinearChainIdeal":
+            mod = "Ideal, Linear Polymer Chains"
+        # plot x_distance
+        plot_scaling(mod_parm, N_col = 'F', R_col = ['E2Ex'], logscale_x = True, logscale_y = False, x_min = .0001, x_max = 5., y_min = 0., y_max = 300, X_label = "External Force ($f_{x}$)", Y_label = "Distance", data_label = ["Chain Extension in X-direction"], Title = "Force Extension for " + mod + " (N = 100)", saveas = save_name + '.png', error = True, color = ['tab:purple'])
+

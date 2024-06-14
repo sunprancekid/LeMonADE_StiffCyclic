@@ -29,7 +29,7 @@ MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing the different executables to test
-PARM_EX=( "FElinearChainReal" ) # "FElinearChainIdeal"
+PARM_EX=( "FElinearChainReal" "FElinearChainIdeal" ) #
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
@@ -213,7 +213,7 @@ gen_simparm() {
                     # add slurm script
                     gen_slurm
                     # add parameters to parm file
-                    echo "${SIMID},${SIMDIR},${m},${n},${r},${FORCE_VAL}" >> $FILE_SIMPARM
+                    echo "${SIMID},${SIMDIR},${m},${n},${FORCE_VAL},${r}" >> $FILE_SIMPARM
                 done
             done
 		done
