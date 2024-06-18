@@ -62,7 +62,7 @@ public:
     //! Writes the final results to file
     virtual void cleanup();
     //! Change the output file name
-    void setOutputFile(std::string filename){outputFile=filename;isFirstFileDump=true;}
+    void setOutputFile(std::string filename){outputFile=filename;}
     //! Set equilibration time
     void setEquilibrationTime(uint32_t time){equilibrationTime=time;}
     //! Get equilibration time
@@ -72,8 +72,8 @@ public:
 
 // constructor
 template<class IngredientsType>
-AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string outputFile_, uint64_t equilibrationTime_)
-: ingredients(ing), outputFile(outputFIle_), equilibrationTime(equilibrationTime_)
+AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_)
+: ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_)
 {initialized=false;}
 
 // initlaizer
@@ -81,7 +81,7 @@ template<class IngredientsType>
 void AnalyzerBondBondDistribution<IngredientsType>::initialize() {
 
     // initialize histogram
-
+    bbdist = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, num_bins);
     // ready to analyze
     initialized=true;
 }
@@ -119,5 +119,7 @@ void AnalyzerBondBondDistribution<IngredientsType>::cleanup() {
     // print results into a file
 
 }
+
+#endif /*ANALYZER_BOND_BOND_DISTRIBUTION_H*/
 
 

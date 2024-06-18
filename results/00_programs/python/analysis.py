@@ -174,6 +174,9 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
             x_fit = [ ((max(x) - min(x)) / (100 - 1)) * i + min(x) for i in range(100)]
             y_fit = [ power_fit_hook(i, A) for i in x_fit]
             plt.plot(x_fit, y_fit, '--', label = "Hookean Regime", color = "black", alpha = 0.5)
+        if fit_pincus:
+            # fit data to power law equation, determine parameters
+            A = y[25] /
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     if logscale_x:
