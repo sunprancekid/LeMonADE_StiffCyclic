@@ -21,6 +21,12 @@ template < class IngredientsType > class AnalyzerBondBondDistribution : public A
 {
 
 private:
+    //! lower histrogram border
+    double low_dist_bound = 0.;
+    //! upper histogram border
+    double upp_dist_bound = 2. * M_PI;
+    //! number of histrgarm bins
+    int num_bins = 50;
     //! typedef for the underlying container holding the monomers
     typedef typename IngredientsType::molecules_type molecules_type;
     //! reference to the complete system
@@ -29,8 +35,6 @@ private:
     std::vector<MonomerGroup<molecules_type> > groups;
     //! histogram that accummulates the bond bond angle values
     HistogramGeneralStatistik1D bbdist;
-    //! timeseries of the Re2e. Components: [0]-> Re2e_x, [1]->Re2e_y, [2]->Re2e_z, [3]:Re2e_tot
-    std::vector< std::vector<double> > Re2eTimeSeries;
     //! name of output files are outputFilePrefix_averages.dat and outputFilePrefix_timeseries.dat
     std::string outputFile;
     //! calculate the bond bond distrubution  of the monomer group
@@ -67,21 +71,25 @@ public:
 };
 
 // constructor
+template<class IngredientsType>
+AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string outputFile_, uint64_t equilibrationTime_)
+: ingredients(ing), outputFile(outputFIle_), equilibrationTime(equilibrationTime_)
+{initialized=false;}
 
 // initlaizer
 template<class IngredientsType>
-void AnalyzerConstantForce<IngredientsType>::initialize() {
+void AnalyzerBondBondDistribution<IngredientsType>::initialize() {
 
     // initialize histogram
 
-    // histogram has been initialized
+    // ready to analyze
     initialized=true;
 }
 
 // exectue
 // loop through monomer groups and calculate the bondbond distriubition
 template<class IngredientsType>
-bool AnalyzerConstantForce<IngredientsType>::execute() {
+bool AnalyzerBondBondDistribution<IngredientsType>::execute() {
 
     //check if groups have been initialized. if not, exit and explain
     if(initialized==false)
@@ -106,7 +114,7 @@ bool AnalyzerConstantForce<IngredientsType>::execute() {
 }
 
 template<class IngredientsType>
-void AnalyzerConstantForce<IngredientsType>::cleanup() {
+void AnalyzerBondBondDistribution<IngredientsType>::cleanup() {
 
     // print results into a file
 
