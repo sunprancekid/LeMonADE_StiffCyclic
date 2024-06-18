@@ -18,7 +18,6 @@ public:
 	{
 		nBins = 0;
 		nValues= 0.0;
-
 		minVal=0.0;
 		maxVal = 0.0;
 		binsize = 0.0;
@@ -38,6 +37,7 @@ public:
 			binsize=0.0;
 		
 		histogram.resize(nbins);
+		histogram_count.resize(nbins);
 		
 	}
 
@@ -61,8 +61,9 @@ public:
 			binsize=0.0;
 		
 		histogram.resize(nbins);
-
-		
+		histogram = {0.};
+		histogram_count.resize(nbins);
+		histogram_count = {0};
 	}
 	
 	size_t getBinNo(double x) const
@@ -83,28 +84,28 @@ public:
 	
 	double getFirstMomentInBin(size_t bin) const
 	{
-		return histogram[bin].ReturnM1();
+		return histogram[bin] / nValues;
 	}
 	
-	double getSecondMomentInBin(size_t bin) const
-		{
-			return histogram[bin].ReturnM2();
-		}
+	// double getSecondMomentInBin(size_t bin) const
+	// {
+	// 	return histogram[bin].ReturnM2();
+	// }
 
 	double getNumCountAt(double x) const
 	{
-		return histogram[getBinNo(x)].ReturnN();
+		return histogram_count[getBinNo(x)];
 	}
 	
 	double getFirstMomentAtKey(double x) const
-		{
-			return histogram[getBinNo(x)].ReturnM1();
-		}
+	{
+		return histogram[getBinNo(x)] / nValues;
+	}
 
 	double getCountAt(double x) const
-		{
-			return histogram[getBinNo(x)].ReturnM1();
-		}
+	{
+		return histogram[getBinNo(x)];
+	}
 	
 	double getCenterOfBin(int bin) const
 	{
@@ -112,18 +113,23 @@ public:
 	}
 	
 	double getLowerBoundaryOfBin(int bin) const
-		{
-			return (minVal+(bin)*binsize);
-		}
+	{
+		return (minVal+(bin)*binsize);
+	}
 
 	double getHigherBoundaryOfBin(int bin) const
-			{
-				return (minVal+(bin+1)*binsize);
-			}
+	{
+		return (minVal+(bin+1)*binsize);
+	}
 
 	int getNBins() const
 	{
 		return nBins;
+	}
+
+	double getNCounts() const
+	{
+		return nValues;
 	}
 	
 	
@@ -146,9 +152,10 @@ public:
 			errormessage<<"HistogramGeneralStatistik1D::addValue(). Value "<<x<<" outside boundaries "<<minVal<<" "<<maxVal<<std::endl;
 			throw std::runtime_error(errormessage.str());	
 		}
-		
-		histogram[getBinNo(x)].AddValue(statisticalWeight);
-		
+		// increment the histogram bins
+		histogram[getBinNo(x)] += statisticalWeight;
+		histogram_count[getBinNo(x)] += 1;
+		// cummulate total number of values
 		nValues+=1.0;
 	}
 	
@@ -161,33 +168,42 @@ public:
 			errormessage<<"HistogramGeneralStatistik1D::addValue(). Value "<<x<<" outside boundaries "<<minVal<<" "<<maxVal<<std::endl;
 			throw std::runtime_error(errormessage.str());
 		}
-		histogram[getBinNo(x)].clear();
-
-		histogram[getBinNo(x)].AddValue(statisticalWeight);
-
-
+		// reset the histogram bins, total value count
+		histogram[getBinNo(x)] = 0.;
+		histogram_count[getBinNo(x)] = 0;
+		reset_values_count();
+		// accumulate histogram bins
+		histogram[getBinNo(x)] += statisticalWeight;
+		histogram_count[getBinNo(x)] += 1;
+		nValues+=1.0;
 	}
 
+	void reset_values_count () {
+		nValues = 0.;
+		for (int n = 0; n < nBins; n++) {
+			nValues += (int) histogram_count[nBins];
+		}
+	}
 	
-	const std::vector<StatisticMoment>& getVectorValues() const
+	// const std::vector<StatisticMoment>& getVectorValues() const
+	// {
+	// 	return histogram;
+	// }
+
+
+
+	std::vector<double> getVectorBins() const
+	{
+		std::vector<double> positions;
+		positions.resize(nBins);
+
+		for(size_t n=0;n<nBins;n++)
 		{
-			return histogram;
+			positions[n]=getCenterOfBin(n);
 		}
 
-
-
-		std::vector<double> getVectorBins() const
-		{
-			std::vector<double> positions;
-			positions.resize(nBins);
-
-			for(size_t n=0;n<nBins;n++)
-			{
-				positions[n]=getCenterOfBin(n);
-			}
-
-			return positions;
-		}
+		return positions;
+	}
 	
 	
 	
@@ -200,7 +216,8 @@ private:
 	double maxVal; // obere Grenze
 	double binsize; //Intervalleinteilung
 
-	std::vector<StatisticMoment> histogram;
+	std::vector<double> histogram;
+	std::vector<int> histogram_count;
 };
 
 #endif //HistogramGeneralStatistik1D.h

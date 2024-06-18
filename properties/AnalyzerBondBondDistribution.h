@@ -5,7 +5,9 @@
 
 // INCLUDE
 #include <string>
+#include <sstream>
 #include <iostream>
+#include <fstream>
 #include <cmath>
 
 #include <LeMonADE/utility/Vector3D.h>
@@ -22,11 +24,11 @@ template < class IngredientsType > class AnalyzerBondBondDistribution : public A
 
 private:
     //! lower histrogram border
-    double low_dist_bound = 0.;
+    double low_dist_bound = -M_PI;
     //! upper histogram border
-    double upp_dist_bound = 2. * M_PI;
+    double upp_dist_bound = M_PI;
     //! number of histrgarm bins
-    int num_bins = 50;
+    int num_bins = 25;
     //! typedef for the underlying container holding the monomers
     typedef typename IngredientsType::molecules_type molecules_type;
     //! reference to the complete system
@@ -38,7 +40,7 @@ private:
     //! name of output files are outputFilePrefix_averages.dat and outputFilePrefix_timeseries.dat
     std::string outputFile;
     //! calculate the bond bond distrubution  of the monomer group
-    void cummulateBBD(const MonomerGroup<molecules_type>& group) const;
+    std::vector<double> cummulateBBD(const MonomerGroup<molecules_type>& group) const;
     //! analyze only after equilibration time has been reached
     uint32_t equilibrationTime;
 protected:
@@ -82,6 +84,13 @@ void AnalyzerBondBondDistribution<IngredientsType>::initialize() {
 
     // initialize histogram
     bbdist = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, num_bins);
+    //if no groups are set, use the complete system by default
+    //groups can be set using the provided access function
+    if(groups.size()==0){
+        groups.push_back(MonomerGroup<molecules_type>(ingredients.getMolecules()));
+        for(size_t n=0;n<ingredients.getMolecules().size();n++)
+            groups[0].push_back(n);
+    }
     // ready to analyze
     initialized=true;
 }
@@ -104,10 +113,15 @@ bool AnalyzerBondBondDistribution<IngredientsType>::execute() {
     // if the equilibriation time has been reached, evalulate
     if(ingredients.getMolecules().getAge() >= equilibrationTime)
     {
-        // loop through each monomer group (i.e. polymer)
-        // calculate the bond-bond angle for each neighboring bond-bond pair
-        // accumulate in the histogram
-
+        // loop through each monomer group (i.e. polymer)for(size_t n=0;n<groups.size();n++)
+        for(size_t n=0;n<groups.size();n++) {
+            // calculate the bond-bond angle for each neighboring bond-bond pair
+            // accumulate in the histogram
+            std::vector<double> angles = cummulateBBD(groups[n]);
+            for (int m = 0; m < angles.size(); m++) {
+                bbdist.addValue(angles[m], 1.);
+            }
+        }
     }
 
     return true;
@@ -116,9 +130,60 @@ bool AnalyzerBondBondDistribution<IngredientsType>::execute() {
 template<class IngredientsType>
 void AnalyzerBondBondDistribution<IngredientsType>::cleanup() {
 
-    // print results into a file
+    // open file stream
+    std::ofstream file;
+    file.open(outputFile.c_str());
 
+    // TODO check if file is open, etc.
+
+    // print results into a file
+    double sum = 0.;
+    for (int n = 0; n < bbdist.getNBins(); n++) {
+        sum += bbdist.getFirstMomentInBin(n);
+        file << bbdist.getCenterOfBin(n) << ", " << bbdist.getFirstMomentInBin(n) << std::endl;
+    }
+    file.close();
 }
+
+// cummulate bond bond angles for polymer chain
+template<class IngredientsType>
+std::vector<double> AnalyzerBondBondDistribution<IngredientsType>::cummulateBBD(
+    const MonomerGroup<molecules_type>& group) const
+    {
+        // get the group size
+        double group_size = group.size();
+
+        // list of angles
+        std::vector<double> angles;
+
+        //if group is empty, return zero vector
+        if(group_size==0){
+            return angles;
+        }
+
+        angles.resize(group_size - 1);
+        // loop through each neighboring bond-bond pair
+        for (int n = 0; n < (group_size - 2); n++){
+            // get the vectors representing the first and second bonds
+            VectorDouble3 bi;
+            bi.setX(group[n+1].getX() - group[n].getX());
+            bi.setY(group[n+1].getY() - group[n].getY());
+            bi.setZ(group[n+1].getZ() - group[n].getZ());
+            VectorDouble3 bj;
+            bj.setX(group[n+2].getX() - group[n+1].getX());
+            bj.setY(group[n+2].getY() - group[n+1].getY());
+            bj.setZ(group[n+2].getZ() - group[n+1].getZ());
+            // calculate the angle between the two bonds
+            double angle;
+            angle = bi*bi;
+            angle *= bj*bj;
+            angle = sqrt(angle);
+            angle = M_PI * (bi*bj)/angle;
+            // bbdist.addValue(angle, 1.);
+            angles[n] = angle;
+        }
+    return angles;
+    }
 
 #endif /*ANALYZER_BOND_BOND_DISTRIBUTION_H*/
 
