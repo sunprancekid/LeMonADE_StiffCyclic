@@ -134,7 +134,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
     return parms
 
 # method for getting scaling simulation data (N vs. R)
-def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None):
+def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None, fit_hook = False):
     # make sure that the proper parameters were passed to the method
     if N_col is None:
         exit()
@@ -168,7 +168,12 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
             y_fit = [ power_fit(i, *popt) for i in x_fit]
             plt.plot(x_fit, y_fit, '--', label = data_label[c] + " Fit", color = color[c])
             # plt.plot([], [], ' ', label="A = {:.3f}".format(popt[0]))
-            plt.plot([], [], ' ', label="$\\nu$ = {:.2f}".format(popt[1]))
+        if fit_hook:
+            # fit data to power law equation, determine parameters
+            A = y[15] / x[15]
+            x_fit = [ ((max(x) - min(x)) / (100 - 1)) * i + min(x) for i in range(100)]
+            y_fit = [ power_fit_hook(i, A) for i in x_fit]
+            plt.plot(x_fit, y_fit, '--', label = "Hookean Regime", color = "black", alpha = 0.5)
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     if logscale_x:
@@ -190,6 +195,10 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
 # model equation for power law fitting
 def power_fit(x, A, B):
     return A * (x ** B)
+
+# model equation for power law fitting in the hookean regime
+def power_fit_hook(x, A):
+    return A * (x ** 1.)
 
 ## CLASSES
 # none
@@ -258,5 +267,5 @@ if forceExtension:
         elif mod == "FElinearChainIdeal":
             mod = "Ideal, Linear Polymer Chains"
         # plot x_distance
-        plot_scaling(mod_parm, N_col = 'F', R_col = ['E2Ex'], logscale_x = True, logscale_y = False, x_min = .0001, x_max = 5., y_min = 0., y_max = 300, X_label = "External Force ($f_{x}$)", Y_label = "Distance", data_label = ["Chain Extension in X-direction"], Title = "Force Extension for " + mod + " (N = 100)", saveas = save_name + '.png', error = True, color = ['tab:purple'])
+        plot_scaling(mod_parm, N_col = 'F', R_col = ['E2Ex'], logscale_x = True, logscale_y = True, x_min = .00008, x_max = 10., y_min = 0.01, y_max = 500, X_label = "External Force ($f_{x}$)", Y_label = "Distance", data_label = ["Chain Extension in X-direction"], Title = "Force Extension for " + mod + " (N = 100)", saveas = save_name + '.png', error = False, color = ['tab:purple'], fit_hook = True)
 
