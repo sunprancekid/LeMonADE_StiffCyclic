@@ -28,24 +28,14 @@ private:
     //! bb is calculated for the groups in this vector
     std::vector<MonomerGroup<molecules_type> > groups;
     //! histogram that accummulates the bond bond angle values
-    HistogramGeneralStatistik1D
+    HistogramGeneralStatistik1D bbdist;
     //! timeseries of the Re2e. Components: [0]-> Re2e_x, [1]->Re2e_y, [2]->Re2e_z, [3]:Re2e_tot
     std::vector< std::vector<double> > Re2eTimeSeries;
-    //! vector of mcs times for writing the time series
-    std::vector<double> MCSTimes;
-    //! max length of internal buffer for each coordinate, before saving to disk
-    uint32_t bufferSize;
     //! name of output files are outputFilePrefix_averages.dat and outputFilePrefix_timeseries.dat
     std::string outputFile;
-    //! flag used in dumping time series output
-    bool isFirstFileDump;
-    //! save the current values in Rg2TimeSeriesX, etc., to disk
-    void dumpTimeSeries();
-    //! calculate the Rg squared of the monomer group
-    VectorDouble3 calculateRe2eComponents(const MonomerGroup<molecules_type>& group) const;
-    //! starting number of MCS when analyzer is initialized
-    uint32_t startMCS;
-    //! analyze after equilibration time
+    //! calculate the bond bond distrubution  of the monomer group
+    void cummulateBBD(const MonomerGroup<molecules_type>& group) const;
+    //! analyze only after equilibration time has been reached
     uint32_t equilibrationTime;
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
@@ -57,6 +47,8 @@ public:
                              std::string filename="BondBondDistribution.dat",
                              uint32_t equilibrationTime_=0);
 
+    //only used to make sure you initialize your groups before you do things
+    bool initialized;
     //! destructor. does nothing
     virtual ~AnalyzerBondBondDistribution(){}
     //! Initializes data structures, empty histogram n bins. Called by TaskManager::initialize()
@@ -65,8 +57,6 @@ public:
     virtual bool execute();
     //! Writes the final results to file
     virtual void cleanup();
-    //! Set the number of values, after which the time series is saved to disk
-    void setBufferSize(uint32_t size){bufferSize=size;}
     //! Change the output file name
     void setOutputFile(std::string filename){outputFile=filename;isFirstFileDump=true;}
     //! Set equilibration time
@@ -75,5 +65,51 @@ public:
     uint32_t getEquilibrationTime(){return equilibrationTime;}
 
 };
+
+// constructor
+
+// initlaizer
+template<class IngredientsType>
+void AnalyzerConstantForce<IngredientsType>::initialize() {
+
+    // initialize histogram
+
+    // histogram has been initialized
+    initialized=true;
+}
+
+// exectue
+// loop through monomer groups and calculate the bondbond distriubition
+template<class IngredientsType>
+bool AnalyzerConstantForce<IngredientsType>::execute() {
+
+    //check if groups have been initialized. if not, exit and explain
+    if(initialized==false)
+    {
+        std::stringstream errormessage;
+        errormessage<<"AnalyzerBondBondDistribution::execute()...analyzer not initialized\n"
+        <<"Use AnalyzerBondBondDistribution::initialize() or Taskmanager::init()\n";
+
+        throw std::runtime_error(errormessage.str());
+    }
+
+    // if the equilibriation time has been reached, evalulate
+    if(ingredients.getMolecules().getAge() >= equilibrationTime)
+    {
+        // loop through each monomer group (i.e. polymer)
+        // calculate the bond-bond angle for each neighboring bond-bond pair
+        // accumulate in the histogram
+
+    }
+
+    return true;
+}
+
+template<class IngredientsType>
+void AnalyzerConstantForce<IngredientsType>::cleanup() {
+
+    // print results into a file
+
+}
 
 
