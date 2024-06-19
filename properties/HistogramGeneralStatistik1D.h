@@ -178,7 +178,8 @@ public:
 		nValues+=1.0;
 	}
 
-	void reset_values_count () {
+	void reset_values_count ()
+	{
 		nValues = 0.;
 		for (int n = 0; n < nBins; n++) {
 			nValues += (int) histogram_count[nBins];

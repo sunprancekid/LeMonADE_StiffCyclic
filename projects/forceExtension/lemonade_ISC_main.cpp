@@ -20,6 +20,7 @@ using namespace std;
 #include <AnalyzerConstantForce.h>
 #include <AnalyzerEndToEndDistance.h>
 #include <AnalyzerBondBondDistribution.h>
+#include <AnalyzerBondBondCorrelation.h>
 
 int main(int argc, char* argv[])
 {
@@ -73,6 +74,7 @@ int main(int argc, char* argv[])
     // taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
     taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
     taskManager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil, bb_bins));
+    TaskManager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil, bb_bins));
     // TODO :: add RouseTimeScale Property Calculations
     // TODO :: add BondBondCorrelation Property Calculations
 
