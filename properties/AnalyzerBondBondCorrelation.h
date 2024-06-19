@@ -19,14 +19,18 @@
 // not in LeMonADE package
 #include <HistogramGeneralStatistik1D.h>
 
-template < class IngredientsType > class AnalyzerBondBondCorrelration : public AbstractAnalyzer
+template < class IngredientsType > class AnalyzerBondBondCorrelation : public AbstractAnalyzer
 {
 
 private:
     //! lower histrogram border
-    const double low_dist_bound = 1;
+    const double low_dist_bound = -M_PI;
     //! upper histogram border
-    double upp_dist_bound;
+    const double upp_dist_bound = M_PI;
+    //! number of bins for histogram
+    const int n_bins = 30;
+    //! length, as seperation distance, to calculate bbc for
+    int correlation_length;
     //! typedef for the underlying container holding the monomers
     typedef typename IngredientsType::molecules_type molecules_type;
     //! reference to the complete system
@@ -38,7 +42,7 @@ private:
     //! where to store analysis results
     std::string outputFile;
     //! calculate the bond bond distrubution  of the monomer group
-    std::vector<double> cummulateBBD(const MonomerGroup<molecules_type>& group) const;
+    std::vector<double> cummulateBBC(const MonomerGroup<molecules_type>& group) const;
     //! analyze only after equilibration time has been reached
     uint32_t equilibrationTime;
 protected:
@@ -47,14 +51,14 @@ protected:
 public:
 
     //! constructor
-    AnalyzerBondBondCorrelration(const IngredientsType& ing,
-                                 std::string filename="AnalyzerBondBondCorrelration.dat",
+    AnalyzerBondBondCorrelation(const IngredientsType& ing,
+                                 std::string filename="AnalyzerBondBondCorrelation.dat",
                                  uint32_t equilibrationTime_=0,
                                  int correlation_length_ = 30.);
     //only used to make sure you initialize your groups before you do things
     bool initialized;
     //! destructor. does nothing
-    virtual ~AnalyzerBondBondCorrelration(){}
+    virtual ~AnalyzerBondBondCorrelation(){}
     //! Initializes data structures, empty histogram n bins. Called by TaskManager::initialize()
     virtual void initialize();
     //! calculates bond angles between all monomers. Called by TaskManager::execute()
@@ -72,13 +76,13 @@ public:
 
 // constructor
 template<class IngredientsType>
-AnalyzerBondBondCorrelration<IngredientsType>::AnalyzerBondBondCorrelration(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_, int correlation_length_)
-: ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_), upp_dist_bound(double correlation_length_)
+AnalyzerBondBondCorrelation<IngredientsType>::AnalyzerBondBondCorrelation(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_, int correlation_length_)
+: ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_), correlation_length(correlation_length_)
 {initialized=false;}
 
 // initlaizer
 template<class IngredientsType>
-void AnalyzerBondBondCorrelration<IngredientsType>::initialize()
+void AnalyzerBondBondCorrelation<IngredientsType>::initialize()
 {
 
     // initialize histogram
@@ -98,15 +102,15 @@ void AnalyzerBondBondCorrelration<IngredientsType>::initialize()
 // exectue
 // loop through monomer groups and calculate the bondbond distriubition
 template<class IngredientsType>
-bool AnalyzerBondBondCorrelration<IngredientsType>::execute()
+bool AnalyzerBondBondCorrelation<IngredientsType>::execute()
 {
 
     //check if groups have been initialized. if not, exit and explain
     if(initialized==false)
     {
         std::stringstream errormessage;
-        errormessage<<"AnalyzerBondBondCorrelration::execute()...analyzer not initialized\n"
-        <<"Use AnalyzerBondBondCorrelration::initialize() or Taskmanager::init()\n";
+        errormessage<<"AnalyzerBondBondCorrelation::execute()...analyzer not initialized\n"
+        <<"Use AnalyzerBondBondCorrelation::initialize() or Taskmanager::init()\n";
 
         throw std::runtime_error(errormessage.str());
     }
@@ -118,7 +122,7 @@ bool AnalyzerBondBondCorrelration<IngredientsType>::execute()
         for(size_t n=0;n<groups.size();n++) {
             // calculate the bond-bond angle for all pairs seperated by distance s
             for (int m = 1; m <= bbcorr.getNBins(); m ++) {
-                std::vector<double> angles = cummulateBBC(groups[n], m);
+                std::vector<double> angles = cummulateBBC(groups[n]);
                 // accumulate the angles into the histogram
             }
 
@@ -135,7 +139,7 @@ bool AnalyzerBondBondCorrelration<IngredientsType>::execute()
 }
 
 template<class IngredientsType>
-void AnalyzerBondBondCorrelration<IngredientsType>::cleanup()
+void AnalyzerBondBondCorrelation<IngredientsType>::cleanup()
 {
 
     // open file stream
@@ -155,7 +159,7 @@ void AnalyzerBondBondCorrelration<IngredientsType>::cleanup()
 
 // cummulate bond bond angles for polymer chain
 template<class IngredientsType>
-std::vector<double> AnalyzerBondBondCorrelration<IngredientsType>::cummulateBBD(
+std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
     const MonomerGroup<molecules_type>& group) const
     {
         // get the group size
