@@ -38,11 +38,11 @@ private:
     //! bb is calculated for the groups in this vector
     std::vector<MonomerGroup<molecules_type> > groups;
     //! histogram that accummulates the bond bond angle values
-    HistogramGeneralStatistik1D bbcorr;
+    std::vector<HistogramGeneralStatistik1D> bbcorr;
     //! where to store analysis results
     std::string outputFile;
     //! calculate the bond bond distrubution  of the monomer group
-    std::vector<double> cummulateBBC(const MonomerGroup<molecules_type>& group) const;
+    std::vector<double> cummulateBBC(const MonomerGroup<molecules_type>& group, int s) const;
     //! analyze only after equilibration time has been reached
     uint32_t equilibrationTime;
 protected:
@@ -86,7 +86,11 @@ void AnalyzerBondBondCorrelation<IngredientsType>::initialize()
 {
 
     // initialize histogram
-    bbcorr = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, upp_dist_bound);
+    bbcorr.resize(correlation_length); // resize the array to the correlation length
+    for (int n = 0; n < correlation_length; n++) {
+        // initialize each element in the array with a new histogram
+        bbcorr[n] = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, n_bins);
+    }
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
     if(groups.size()==0)
@@ -121,20 +125,15 @@ bool AnalyzerBondBondCorrelation<IngredientsType>::execute()
         // loop through each monomer group (i.e. polymer)for(size_t n=0;n<groups.size();n++)
         for(size_t n=0;n<groups.size();n++) {
             // calculate the bond-bond angle for all pairs seperated by distance s
-            for (int m = 1; m <= bbcorr.getNBins(); m ++) {
-                std::vector<double> angles = cummulateBBC(groups[n]);
-                // accumulate the angles into the histogram
-            }
-
-            // TODO implement cummulateBBC method
-            // calculate cosTheta as a function of s, where s is the distance between i and j (abs |i-j|)
-            std::vector<double> angles = cummulateBBC(groups[n]);
-            for (int m = 0; m < angles.size(); m++) {
-                bbcorr.addValue(angles[m], 1.);
+            for (int m = 0; m < correlation_length; m ++) {
+                std::vector<double> angles = cummulateBBC(groups[n], m + 1);
+                // accumulate the angles into the histogram corresponding to the correlation length
+                for (int k = 0; k <= angles.size(); k++) {
+                    bbcorr[m].addValue(angles[k], 1.);
+                }
             }
         }
     }
-
     return true;
 }
 
@@ -150,9 +149,9 @@ void AnalyzerBondBondCorrelation<IngredientsType>::cleanup()
 
     // print results into a file
     double sum = 0.;
-    for (int n = 0; n < bbcorr.getNBins(); n++) {
-        sum += bbcorr.getFirstMomentInBin(n);
-        file << bbcorr.getCenterOfBin(n) << ", " << bbcorr.getFirstMomentInBin(n) << std::endl;
+    for (int n = 0; n < correlation_length; n++) {
+        // sum += bbcorr.getFirstMomentInBin(n);
+        std::cout << bbcorr.getCenterOfBin(n) << ", " << bbcorr.getFirstMomentInBin(n) << std::endl;
     }
     file.close();
 }
@@ -160,7 +159,7 @@ void AnalyzerBondBondCorrelation<IngredientsType>::cleanup()
 // cummulate bond bond angles for polymer chain
 template<class IngredientsType>
 std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
-    const MonomerGroup<molecules_type>& group) const
+    const MonomerGroup<molecules_type>& group, int s) const
     {
         // get the group size
         double group_size = group.size();
@@ -168,23 +167,26 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
         // list of angles
         std::vector<double> angles;
 
-        //if group is empty, return zero vector
-        if(group_size==0){
+        // if the group size is less than the correlation length + 1
+        if(group_size<=s+1){
+            // return an empty vector as it is there are no bonds seperated by this distance
             return angles;
         }
 
-        angles.resize(group_size - 1);
-        // loop through each neighboring bond-bond pair
-        for (int n = 0; n < (group_size - 2); n++){
+        // the number of unique bond pairs seperated by seperation distance s is
+        int N_s = group_size - s - 1;
+        angles.resize(N_s);
+        // loop through each unqiue bond pairs corresponding to the sepereration distance
+        for (int n = 0; n < N_s; n++){
             // get the vectors representing the first and second bonds
             VectorDouble3 bi;
             bi.setX(group[n+1].getX() - group[n].getX());
             bi.setY(group[n+1].getY() - group[n].getY());
             bi.setZ(group[n+1].getZ() - group[n].getZ());
             VectorDouble3 bj;
-            bj.setX(group[n+2].getX() - group[n+1].getX());
-            bj.setY(group[n+2].getY() - group[n+1].getY());
-            bj.setZ(group[n+2].getZ() - group[n+1].getZ());
+            bj.setX(group[n+s+1].getX() - group[n+s].getX());
+            bj.setY(group[n+s+1].getY() - group[n+s].getY());
+            bj.setZ(group[n+s+1].getZ() - group[n+s].getZ());
             // calculate the angle between the two bonds
             double angle;
             angle = bi*bi;
