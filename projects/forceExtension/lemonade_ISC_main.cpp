@@ -76,7 +76,6 @@ int main(int argc, char* argv[])
     taskManager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil, bb_bins));
     taskManager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
     // TODO :: add RouseTimeScale Property Calculations
-    // TODO :: add BondBondCorrelation Property Calculations
 
     taskManager.initialize();
 
