@@ -148,10 +148,8 @@ void AnalyzerBondBondCorrelation<IngredientsType>::cleanup()
     // TODO check if file is open, etc.
 
     // print results into a file
-    double sum = 0.;
     for (int n = 0; n < correlation_length; n++) {
-        // sum += bbcorr.getFirstMomentInBin(n);
-        std::cout << bbcorr.getCenterOfBin(n) << ", " << bbcorr.getFirstMomentInBin(n) << std::endl;
+        file << (n + 1) << ", " << bbcorr[n].getHistAverage() << std::endl;
     }
     file.close();
 }
