@@ -24,11 +24,11 @@ template < class IngredientsType > class AnalyzerBondBondDistribution : public A
 
 private:
     //! lower histrogram border
-    double low_dist_bound = -M_PI;
+    const double low_dist_bound = -M_PI;
     //! upper histogram border
-    double upp_dist_bound = M_PI;
-    //! number of histrgarm bins
-    int num_bins = 25;
+    const double upp_dist_bound = M_PI;
+    //! actual number of histogram bins
+    int num_bins;
     //! typedef for the underlying container holding the monomers
     typedef typename IngredientsType::molecules_type molecules_type;
     //! reference to the complete system
@@ -50,9 +50,9 @@ public:
 
     //! constructor
     AnalyzerBondBondDistribution(const IngredientsType& ing,
-                             std::string filename="BondBondDistribution.dat",
-                             uint32_t equilibrationTime_=0);
-
+                                 std::string filename="BondBondDistribution.dat",
+                                 uint32_t equilibrationTime_=0,
+                                 int nbins_ = 25);
     //only used to make sure you initialize your groups before you do things
     bool initialized;
     //! destructor. does nothing
@@ -74,19 +74,21 @@ public:
 
 // constructor
 template<class IngredientsType>
-AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_)
-: ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_)
+AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_, int nbins_)
+: ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_), num_bins(nbins_)
 {initialized=false;}
 
 // initlaizer
 template<class IngredientsType>
-void AnalyzerBondBondDistribution<IngredientsType>::initialize() {
+void AnalyzerBondBondDistribution<IngredientsType>::initialize()
+{
 
     // initialize histogram
     bbdist = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, num_bins);
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
-    if(groups.size()==0){
+    if(groups.size()==0)
+    {
         groups.push_back(MonomerGroup<molecules_type>(ingredients.getMolecules()));
         for(size_t n=0;n<ingredients.getMolecules().size();n++)
             groups[0].push_back(n);
@@ -98,7 +100,8 @@ void AnalyzerBondBondDistribution<IngredientsType>::initialize() {
 // exectue
 // loop through monomer groups and calculate the bondbond distriubition
 template<class IngredientsType>
-bool AnalyzerBondBondDistribution<IngredientsType>::execute() {
+bool AnalyzerBondBondDistribution<IngredientsType>::execute()
+{
 
     //check if groups have been initialized. if not, exit and explain
     if(initialized==false)
@@ -128,7 +131,8 @@ bool AnalyzerBondBondDistribution<IngredientsType>::execute() {
 }
 
 template<class IngredientsType>
-void AnalyzerBondBondDistribution<IngredientsType>::cleanup() {
+void AnalyzerBondBondDistribution<IngredientsType>::cleanup()
+{
 
     // open file stream
     std::ofstream file;

@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     // fifth argument :: double for constant force parameter
     double conForce = stod(argv[5]);
 
-    int nChains(1),type1(1);
+    int nChains(1),type1(1), bb_bins(30);
 
     typedef LOKI_TYPELIST_3(
         FeatureMoleculesIO,
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config_ev.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
     // taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
     taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
-    taskManager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil));
+    taskManager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil, bb_bins));
     // TODO :: add RouseTimeScale Property Calculations
     // TODO :: add BondBondCorrelation Property Calculations
 
