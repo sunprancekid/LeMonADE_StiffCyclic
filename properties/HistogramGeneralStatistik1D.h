@@ -122,6 +122,17 @@ public:
 		return (minVal+(bin+1)*binsize);
 	}
 
+	// return the average moment of the histogram
+	double getHistAverage () const
+	{
+		double avg = 0;
+		// loop through each bin, add the statistical contribution of the bins value to the sum
+		for (int n = 0; n < nBins; n++) {
+			avg += histogram[n] * (minVal+(n)*binsize + binsize/2.0);
+		}
+		return avg / nValues;
+	}
+
 	int getNBins() const
 	{
 		return nBins;
