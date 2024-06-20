@@ -24,9 +24,9 @@ template < class IngredientsType > class AnalyzerBondBondCorrelation : public Ab
 
 private:
     //! lower histrogram border
-    const double low_dist_bound = -M_PI;
+    const double low_dist_bound = -2 * M_PI;
     //! upper histogram border
-    const double upp_dist_bound = M_PI;
+    const double upp_dist_bound = 2 * M_PI;
     //! number of bins for histogram
     const int n_bins = 30;
     //! length, as seperation distance, to calculate bbc for
@@ -45,6 +45,8 @@ private:
     std::vector<double> cummulateBBC(const MonomerGroup<molecules_type>& group, int s) const;
     //! analyze only after equilibration time has been reached
     uint32_t equilibrationTime;
+    //! histogram bin tolerance
+    double TOL = 0.01;
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
     void setMonomerGroups(std::vector<MonomerGroup<molecules_type> > groupVector){groups=groupVector;}
@@ -89,7 +91,7 @@ void AnalyzerBondBondCorrelation<IngredientsType>::initialize()
     bbcorr.resize(correlation_length); // resize the array to the correlation length
     for (int n = 0; n < correlation_length; n++) {
         // initialize each element in the array with a new histogram
-        bbcorr[n] = HistogramGeneralStatistik1D(low_dist_bound, upp_dist_bound, n_bins);
+        bbcorr[n] = HistogramGeneralStatistik1D(low_dist_bound  - TOL, upp_dist_bound + TOL, n_bins);
     }
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
@@ -122,13 +124,13 @@ bool AnalyzerBondBondCorrelation<IngredientsType>::execute()
     // if the equilibriation time has been reached, evalulate
     if(ingredients.getMolecules().getAge() >= equilibrationTime)
     {
-        // loop through each monomer group (i.e. polymer)for(size_t n=0;n<groups.size();n++)
-        for(size_t n=0;n<groups.size();n++) {
+        // loop through each monomer group (i.e. polymer)
+        for(size_t n = 0; n < groups.size(); n++) {
             // calculate the bond-bond angle for all pairs seperated by distance s
             for (int m = 0; m < correlation_length; m ++) {
                 std::vector<double> angles = cummulateBBC(groups[n], m + 1);
                 // accumulate the angles into the histogram corresponding to the correlation length
-                for (int k = 0; k <= angles.size(); k++) {
+                for (int k = 0; k < angles.size(); k++) {
                     bbcorr[m].addValue(angles[k], 1.);
                 }
             }

@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
         bool ring = false; // determines whether a ring should be generated
         bool force = false; // determines whether molecules will experience a force
         double conForce = 0.; // base strength of force
-        std::string outfile = "config.bfm"; // output file that contains the configurations
+        std::string outfile = "config_init.bfm"; // output file that contains the configurations
         bool bendingPot = false; // determines whether a bending potential should be added
         double k_theta = 0.; // parameterized bending potential strength
 
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "Usage: " << argv[0] << " \ngen_config << OPTIONS >> \n[-o filenameOutput] \n[-n monomer in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strenth (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n monomer in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strenth (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n\n";
                     return 0;
             }
         }
@@ -165,6 +165,35 @@ int main(int argc, char* argv[])
         }
         // ingredients.setForceOn(true);
         // ingredients.setAmplitudeForce(conForce);
+
+        // assign the molecules that experience forces
+        if (ring) {
+            for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
+                if ((i % chainLength) == 0){
+                    // the first molecule in the ring experiences a positive force
+                    ingredients.modifyMolecules()[i].setAttributeTag(4);
+                } else if ((i % chainLength) == ((ingredients.getMolecules().size() / 2) - 1)) {
+                    // the middle molecule in the ring experiences a negative force
+                    ingredients.modifyMolecules()[i].setAttributeTag(5);
+                } else {
+                    // otherwise, set the attribute tag to 0
+                    ingredients.modifyMolecules()[i].setAttributeTag(0);
+                }
+            }
+        } else {
+            for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
+                if ((i % chainLength) == 0){
+                    // the first molecule in the chain experiences a positive force
+                    ingredients.modifyMolecules()[i].setAttributeTag(4);
+                } else if ((i % chainLength) == (ingredients.getMolecules().size())) {
+                    // the last molecule in the chain experiences a negative force
+                    ingredients.modifyMolecules()[i].setAttributeTag(5);
+                } else {
+                    // otherwise, set the attribute tag to 0
+                    ingredients.modifyMolecules()[i].setAttributeTag(0);
+                }
+            }
+        }
 
         // create character array for output file name
         // remove the output file if it already exists

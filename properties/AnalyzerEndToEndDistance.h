@@ -66,6 +66,7 @@ private:
     uint32_t startMCS;
     //! analyze after equilibration time
     uint32_t equilibrationTime;
+    //! integer representing the furthest monomer used for end-to-end vector calculation
     //! boolean that determines if the minimum image convention should be applied to distance vector calculations
     // bool minImage;
 protected:
@@ -94,6 +95,8 @@ public:
     void setEquilibrationTime(uint32_t time){equilibrationTime=time;}
     //! Get equilibration time
     uint32_t getEquilibrationTime(){return equilibrationTime;}
+    //! monomers that are subjected to a force according to their attributes tag
+    uint32_t indexMonomersForce[2];
 
 };
 
@@ -137,6 +140,15 @@ void AnalyzerEndToEndDistance<IngredientsType>::initialize()
         groups.push_back(MonomerGroup<molecules_type>(ingredients.getMolecules()));
         for(size_t n=0;n<ingredients.getMolecules().size();n++)
             groups[0].push_back(n);
+    }
+    //get the monomers with attributes subjected to force
+    uint32_t n = 0;
+    for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
+        if (ingredients.getMolecules()[i].getAttributeTag() != 0){
+            // std::cout << ingredients.getMolecules()[i].getAttributeTag() << "\n";
+            indexMonomersForce[n] = i;
+            n += 1;
+        }
     }
 
 }
@@ -245,9 +257,9 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
 
         // vector containing the difference between the first and last momomers in the group
         VectorDouble3 diff_vec;
-        diff_vec.setX(group[group_size - 1].getX() - group[0].getX());
-        diff_vec.setY(group[group_size - 1].getY() - group[0].getY());
-        diff_vec.setZ(group[group_size - 1].getZ() - group[0].getZ());
+        diff_vec.setX(group[indexMonomersForce[1]].getX() - group[indexMonomersForce[0]].getX());
+        diff_vec.setY(group[indexMonomersForce[1]].getY() - group[indexMonomersForce[0]].getY());
+        diff_vec.setZ(group[indexMonomersForce[1]].getZ() - group[indexMonomersForce[0]].getZ());
         return diff_vec;
 
         // get the minimum image distance vector between the first and last monomers
