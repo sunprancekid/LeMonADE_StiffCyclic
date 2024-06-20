@@ -19,6 +19,7 @@ using namespace std;
 
 // modules not found in LeMonADE Library
 // #include <clara>
+#include <UpdaterCreateRingMelt.h>
 
 int main(int argc, char* argv[])
 {
