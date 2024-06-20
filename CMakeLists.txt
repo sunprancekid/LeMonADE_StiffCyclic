@@ -16,10 +16,12 @@ include_directories (${LEMONADE_INCLUDE_DIR})
 include_directories (properties)
 include_directories (utilities)
 include_directories (updater)
+include_directories (feature)
 link_directories (${LEMONADE_LIBRARY_DIR})
 link_directories (properties)
 link_directories (utilities)
 link_directories (updater)
+link_directories (feature)
 set (EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 
 #define flags for the gcc compiler 

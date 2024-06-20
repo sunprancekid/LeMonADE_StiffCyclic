@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h> //for getopt
+#include <cstring>
 using namespace std;
 
 #include <LeMonADE/core/Ingredients.h>
@@ -108,7 +109,6 @@ int main(int argc, char* argv[])
         // build molecule(s) based on input arguments
         if (ring) {
             // build ring molecule
-            // taskManager.addUpdater(new UpdaterCreateRingMelt<IngredientsType>(ingredients, numChains, chainLength, boxSize, boxSize, boxSize), 0);
             UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength, boxSize, boxSize, boxSize);
             UCRM.initialize();
             UCRM.execute();
@@ -125,29 +125,22 @@ int main(int argc, char* argv[])
             ingredients.setPeriodicZ(true);
             // add monomer bonding
             ingredients.modifyBondset().addBFMclassicBondset();
-            // ingredients.modifyMolecules().setAge(0);
             ingredients.synchronize(ingredients);
             taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, numChains,chainLength,type1,type1),0);
             taskManager.initialize();
             taskManager.run();
             taskManager.cleanup();
-            /*UALC.initialize();
-            UALC.execute();
-            UALC.cleanup();*/
         }
 
         // add constant linear force
         // ingredients.setForceOn(true);
         // ingredients.setAmplitudeForce(conForce);
 
-
-        // synchronize ingredients, write to file
-        // taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
-        // taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
-        // taskManager.initialize();
-        // taskManager.run();
-        // taskManager.cleanup();
-
+        // create character array for output file name
+        // remove the config file if it already exists
+        char* outfile_char_array = new char[outfile.length() + 1];
+        strcpy(outfile_char_array, outfile.c_str());
+        remove(outfile_char_array);
 
         ingredients.synchronize(ingredients);
         AnalyzerWriteBfmFile<IngredientsType> AWBFM(outfile,ingredients);
