@@ -90,88 +90,9 @@ int main(int argc, char* argv[])
         RandomNumberGenerators rng;
         rng.seedAll();
 
-        // task manager contains updaters and synchronizers
-        // ingredients.synchronize(ingredients);
-        TaskManager taskManager;
-        // build molecule(s) based on input arguments
-        if (ring) {
-            // build ring molecule
-            UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength, boxSize, boxSize, boxSize);
-            UCRM.initialize();
-            UCRM.execute();
-            UCRM.cleanup();
-        } else {
-            // build chain molecule
-            // set box parameters
-            ingredients.setBoxX(boxSize);
-            ingredients.setBoxY(boxSize);
-            ingredients.setBoxZ(boxSize);
-            // turn on periodic boundaries
-            ingredients.setPeriodicX(true);
-            ingredients.setPeriodicY(true);
-            ingredients.setPeriodicZ(true);
-            // add monomer bonding
-            ingredients.modifyBondset().addBFMclassicBondset();
-            ingredients.synchronize(ingredients);
-            taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, numChains,chainLength,type1,type1),0);
-            taskManager.initialize();
-            taskManager.run();
-            taskManager.cleanup();
-        }
+        // add updaters and analyzers to task manager
 
-        // assign bending potential to polymers, if specified
-        if (bendingPot) {
-            // TODO assumes only one macromolecule, adjust algoritm to consider multiple
-            // add the bending information for ring chain (middle monomers affect 3 angles)
-            for(uint32_t i=2;i<chainLength-2;i++){
-                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i-2,i-1) , std::make_pair(i-1,i  ));
-                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i-1,i  ) , std::make_pair(i  ,i+1));
-                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i  ,i+1) , std::make_pair(i+1,i+2));
-            }
-            if (ring) {
-                // if the macromolecule is a ring, the first and last monomers are bonded
-                // add the bending information for ring chain (first and last monomers affect 3 angles)
-                size_t monomerIdxEnd = chainLength-1;
-                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(0,1) , std::make_pair(1,2));
-                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(monomerIdxEnd,0) , std::make_pair(0,1));
-                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(monomerIdxEnd-1,monomerIdxEnd) , std::make_pair(monomerIdxEnd,0));
-
-                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd-2,monomerIdxEnd-1) , std::make_pair(monomerIdxEnd-1,monomerIdxEnd));
-                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd-1,monomerIdxEnd) , std::make_pair(monomerIdxEnd,0));
-                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd,0) , std::make_pair(0,1));
-
-                // add the bending information for ring chain (second and before last monomers affect 2 angles)
-                size_t monomerIdx = 1;
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdxEnd,0)  , std::make_pair(0, monomerIdx));
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1,monomerIdx )  , std::make_pair(monomerIdx  ,monomerIdx+1));
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx  ,monomerIdx+1) , std::make_pair(monomerIdx+1,monomerIdx+2));
-
-                monomerIdx = chainLength-2;
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-2,monomerIdx-1) , std::make_pair(monomerIdx-1,monomerIdx));
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1,monomerIdx )  , std::make_pair(monomerIdx  ,monomerIdx+1));
-                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx  ,monomerIdx+1)  , std::make_pair(monomerIdx+1 ,0));
-            }
-            // set bending constant
-            ingredients.setBending_Potential_Constant(k_theta);
-            // synchronize
-            ingredients.synchronize(ingredients);
-        }
-
-        // add constant linear force
-        // ingredients.setForceOn(true);
-        // ingredients.setAmplitudeForce(conForce);
-
-        // create character array for output file name
-        // remove the output file if it already exists
-        char* outfile_char_array = new char[outfile.length() + 1];
-        strcpy(outfile_char_array, outfile.c_str());
-        remove(outfile_char_array);
-
-        ingredients.synchronize(ingredients);
-        AnalyzerWriteBfmFile<IngredientsType> AWBFM(outfile,ingredients);
-        AWBFM.initialize();
-        AWBFM.execute();
-        AWBFM.cleanup();
+        // run
     }
     catch(std::exception& err){std::cerr<<err.what();}
 
