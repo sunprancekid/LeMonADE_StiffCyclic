@@ -21,6 +21,7 @@ using namespace std;
 // modules not found in LeMonADE Library
 // #include <clara>
 #include <UpdaterCreateRingMelt.h>
+#include <FeaturePotentialBending.h>
 
 int main(int argc, char* argv[])
 {
@@ -76,25 +77,11 @@ int main(int argc, char* argv[])
             }
         }
 
-        // establish ingredients based on input parameters
-        if (bendingPot) {
-            // TODO add bending potential package
-            std::cout << "TODO add bending potential package to configurations generation routine." << std::endl;
-            exit(0);
-            // ingredients have four features
-            // typedef LOKI_TYPELIST_4(FeatureMoleculesIO, FeatureAttributes< >,FeatureExcludedVolumeSc<>, FeaturePotentialBending) Features;
-            // typedef ConfigureSystem<VectorInt3,Features, max_bonds> Config;
-            // typedef Ingredients<Config> IngredientsType;
-            // IngredientsType ingredients;
-        } else {
-            // do nothing
-        }
-        // generate configuration
-        // ingredients have three features
-        typedef LOKI_TYPELIST_3(
-            FeatureMoleculesIO,
-            FeatureAttributes<>,
-            FeatureExcludedVolumeSc< FeatureLatticePowerOfTwo < > >) Features;
+        // generate ingredients
+        typedef LOKI_TYPELIST_4(FeatureMoleculesIO,
+                                FeatureAttributes< >,
+                                FeatureExcludedVolumeSc<>,
+                                FeaturePotentialBending) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
@@ -132,12 +119,55 @@ int main(int argc, char* argv[])
             taskManager.cleanup();
         }
 
+        // assign bending potential to polymers, if specified
+        if (bendingPot) {
+            // TODO assumes only one macromolecule, adjust algoritm to consider multiple
+            // add the bending information for ring chain (middle monomers affect 3 angles)
+            for(uint32_t i=2;i<chainLength-2;i++){
+                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i-2,i-1) , std::make_pair(i-1,i  ));
+                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i-1,i  ) , std::make_pair(i  ,i+1));
+                ingredients.modifyMolecules()[i].setBendingBondInformation(std::make_pair(i  ,i+1) , std::make_pair(i+1,i+2));
+            }
+            if (ring) {
+                // if the macromolecule is a ring, the first and last monomers are bonded
+                // add the bending information for ring chain (first and last monomers affect 3 angles)
+                size_t monomerIdxEnd = chainLength-1;
+                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(0,1) , std::make_pair(1,2));
+                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(monomerIdxEnd,0) , std::make_pair(0,1));
+                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(monomerIdxEnd-1,monomerIdxEnd) , std::make_pair(monomerIdxEnd,0));
+
+                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd-2,monomerIdxEnd-1) , std::make_pair(monomerIdxEnd-1,monomerIdxEnd));
+                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd-1,monomerIdxEnd) , std::make_pair(monomerIdxEnd,0));
+                ingredients.modifyMolecules()[monomerIdxEnd].setBendingBondInformation(std::make_pair(monomerIdxEnd,0) , std::make_pair(0,1));
+
+                // add the bending information for ring chain (second and before last monomers affect 2 angles)
+                size_t monomerIdx = 1;
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdxEnd,0)  , std::make_pair(0, monomerIdx));
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1,monomerIdx )  , std::make_pair(monomerIdx  ,monomerIdx+1));
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx  ,monomerIdx+1) , std::make_pair(monomerIdx+1,monomerIdx+2));
+
+                monomerIdx = chainLength-2;
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-2,monomerIdx-1) , std::make_pair(monomerIdx-1,monomerIdx));
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1,monomerIdx )  , std::make_pair(monomerIdx  ,monomerIdx+1));
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx  ,monomerIdx+1)  , std::make_pair(monomerIdx+1 ,0));
+            }
+            // set bending constant
+            ingredients.setBending_Potential_Constant(k_theta);
+            // synchronize
+            ingredients.synchronize(ingredients);
+        }
+
         // add constant linear force
+        if (force) {
+            // TODO implement constant force
+            std::cout << "TODO :: implement addition of constant force feature.";
+            exit(0);
+        }
         // ingredients.setForceOn(true);
         // ingredients.setAmplitudeForce(conForce);
 
         // create character array for output file name
-        // remove the config file if it already exists
+        // remove the output file if it already exists
         char* outfile_char_array = new char[outfile.length() + 1];
         strcpy(outfile_char_array, outfile.c_str());
         remove(outfile_char_array);
