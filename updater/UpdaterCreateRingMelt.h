@@ -110,9 +110,9 @@ void UpdaterCreateRingMelt<IngredientsType>::initialize(){
   ingredients.setBoxZ(boxZ);
   
   //set periodicity
-  ingredients.setPeriodicX(false);
-  ingredients.setPeriodicY(false);
-  ingredients.setPeriodicZ(false);
+  ingredients.setPeriodicX(true);
+  ingredients.setPeriodicY(true);
+  ingredients.setPeriodicZ(true);
   
   ingredients.modifyMolecules().setAge(0);
   //add Bondset

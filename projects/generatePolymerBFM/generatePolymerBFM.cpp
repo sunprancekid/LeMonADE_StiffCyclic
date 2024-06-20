@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'r':
                     ring = true;
+                    break;
                 case 'b':
                     boxSize = atoi(optarg);
                     break;
@@ -101,12 +102,17 @@ int main(int argc, char* argv[])
         RandomNumberGenerators rng;
         rng.seedAll();
 
+        // task manager contains updaters and synchronizers
+        // ingredients.synchronize(ingredients);
+        TaskManager taskManager;
         // build molecule(s) based on input arguments
         if (ring) {
             // build ring molecule
-            // TODO add ring melt generator
-            std::cout << "TODO :: add ring melt generator." << std::endl;
-            exit(0);
+            // taskManager.addUpdater(new UpdaterCreateRingMelt<IngredientsType>(ingredients, numChains, chainLength, boxSize, boxSize, boxSize), 0);
+            UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength, boxSize, boxSize, boxSize);
+            UCRM.initialize();
+            UCRM.execute();
+            UCRM.cleanup();
         } else {
             // build chain molecule
             // set box parameters
@@ -120,6 +126,14 @@ int main(int argc, char* argv[])
             // add monomer bonding
             ingredients.modifyBondset().addBFMclassicBondset();
             // ingredients.modifyMolecules().setAge(0);
+            ingredients.synchronize(ingredients);
+            taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, numChains,chainLength,type1,type1),0);
+            taskManager.initialize();
+            taskManager.run();
+            taskManager.cleanup();
+            /*UALC.initialize();
+            UALC.execute();
+            UALC.cleanup();*/
         }
 
         // add constant linear force
@@ -128,14 +142,18 @@ int main(int argc, char* argv[])
 
 
         // synchronize ingredients, write to file
-        ingredients.synchronize(ingredients);
-        TaskManager taskManager;
-        taskManager.addUpdater(new UpdaterAddLinearChains<IngredientsType>(ingredients, numChains,chainLength,type1,type1),0);
         // taskManager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,nMCS));
-        taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
-        taskManager.initialize();
-        taskManager.run();
-        taskManager.cleanup();
+        // taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
+        // taskManager.initialize();
+        // taskManager.run();
+        // taskManager.cleanup();
+
+
+        ingredients.synchronize(ingredients);
+        AnalyzerWriteBfmFile<IngredientsType> AWBFM(outfile,ingredients);
+        AWBFM.initialize();
+        AWBFM.execute();
+        AWBFM.cleanup();
     }
     catch(std::exception& err){std::cerr<<err.what();}
 
