@@ -101,7 +101,7 @@ check () {
     fi
 
     # initialize the file that contains the simulation parameters
-    if [[ BOOL_FILE -eq 0 ]]; then
+    if [[ $BOOL_FILE -eq 0 ]]; then
         # the file was not specified by the user, assign the default
         PARMFILE="01_raw_data/${JOB}/${JOB}.csv"
     else
@@ -121,9 +121,9 @@ check () {
     fi
 
     # report instruvtions to user, if verbose execution
-    if [[ $VERBOSE -eq 1 ]]; then
-        ## TODO add verbose execution
-    fi
+#     if [[ $VERBOSE -eq 1 ]]; then
+#         ## TODO add verbose execution
+#     fi
 }
 
 ## OPTIONS
@@ -134,7 +134,7 @@ while getopts "hvstj:p:f:l:e:c:" option; do
         v) # exectue script verbosely
             declare -i BOOL_VERB=1 ;;
 		s) # submit simulations to SLURM
-			declare -i BOOL_SUBMIT_SLURM=1 ;;\
+			declare -i BOOL_SUBMIT_SLURM=1 ;;
         t) # test submit status
             declare -i BOOL_TEST=1;;
 		j) # update job name
@@ -171,21 +171,35 @@ if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
     # submit simulations to linux cluster
     echo "./submit_batch_job.sh::TODO:: implement method for submiting simulations on remote linux cluster."
     exit 0
+    # only do this once: compile leomonade, compile local programs
+    # log on to linux cluster
+    # navigate to execute directory (/beetmp)
+    # copy simulation hirearchy to temp dir
+    # generate slurm script for each set of parameters
+    # submit slurm script via sbatch
 else
     # execute jobs locally
     # parse csv file, get simulation id and directory
-    declare -i N_LINES=$(wc -l < PARMFILE)
+    declare -i N_LINES=$(wc -l < $PARMFILE)
+    echo "${N_LINES}"
     for i in $(seq 2 $N_LINES); do
         # get the simulation id (file column in file)
-        SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
+        SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
         # get the simulation directory (second column in file)
-        SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 2)
+        SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
+        if [[ $BOOL_VERB -eq 1 ]]; then
+            echo "Running ${SIMID} in ${JOBDIR}${SIMDIR}"
+        fi
+
         # if a checkfile has been specified
         if [[ $BOOL_CHECKFILE -eq 1 ]]; then
             # if the check file exists in the simulation directory
-            if [ -f $CHECKFILE ]; then
+            if [ -f ${JOBDIR}${SIMDIR}$CHECKFILE ]; then
                 # skip execution of this set of parameters
                 # continue to the next iteration of the loop
+                if [[ $BOOL_VERB -eq 1 ]]; then
+                    echo "checkfile ${JOBDIR}${SIMDIR}${CHECKFILE} already exists, moving to next set of simulation parameters."
+                fi
                 continue
             fi
         fi
@@ -206,7 +220,3 @@ else
         cd $CURRDIR
     done
 fi
-
-# submit simulations
-# either loop through locally and submit serial
-# or logon to computing cluster and exectue
