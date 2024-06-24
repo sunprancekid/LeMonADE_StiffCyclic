@@ -31,7 +31,8 @@ help() {
     # none
 
     ## ARGUMENTS
-    # none
+    # first argument: exit code
+    local exitcode=$1
 
     ## SCRIPT
     # report usage
@@ -51,9 +52,13 @@ help() {
 	echo -e " -l << ARG >> | specify remote linux cluster (default is ${LINUXSERV})."
 	echo -e " -e << ARG >> | specify path to LeMonADE executables (default is ${EXECDIR})."
 	echo -e "\n"
+
+    # exit with exit code
+    exit $exitcode
 }
 
 # checks that correct options have been passed to method before script execution
+# initlaized variables for unspecified options
 check () {
 
     ## PARAMETERS
@@ -64,31 +69,70 @@ check () {
 
     ## SCRIPT
     # check option booolean
+    if [[ $BOOL_JOB -eq 0 ]]; then
+        # if the job name was not specified, report to user and exit the program
+        echo "./submit_batch_job.sh::ERROR:: must specify job name. See option arguments.\n"
+        help $NONZERO_EXITCODE
+    fi
+
+    # initialize the path to the simulation directory hirearchy
+    if [[ $BOOL_PATH -eq 0 ]]; then
+        # the path has not been specified, assign the default
+        PATH="01_raw_data/${JOB}/"
+    else
+        # the path has been specified, assign whatever was passed through the option
+        PATH="${OPTPATH}"
+    fi
+    # check if the path exists. if it does not, make it
+    if [ ! -d $PATH ]; then
+        mkdir -p $PATH
+    fi
+
+    # initialize the file that contains the simulation parameters
+    if [[ BOOL_FILE -eq 0 ]]; then
+        # the file was not specified by the user, assign the default
+        PARMFILE="01_raw_data/${JOB}/${JOB}.csv"
+    else
+        # the file was specified by the user, assign that value
+        PARMFILE="${OPTFILE}"
+    fi
+    # check that the file exists
+    if [ ! -f $PARMFILE ]; then
+        # if the file does not exist, report to user and exit program
+        echo "./submit_batch_job.sh::ERROR:: simulation parameter file ${FILE} does not exist.\n"
+        help $NONZERO_EXITCODE
+    fi
+
+    # report instruvtions to user, if verbose execution
+    if [[ $VERBOSE -eq 1 ]]; then
+        ## TODO add verbose execution
+    fi
 }
 
 ## OPTIONS
 while getopts "hvsj:p:f:l:e:" option; do
 	case $option in
 		h) # print script parameters to CLT
-			help
-			exit 0 ;;
+			help 0 ;;
         v) # exectue script verbosely
             declare -i BOOL_VERB=1 ;;
 		s) # submit simulations to SLURM
 			declare -i BOOL_SUBMIT_SLURM=1 ;;
 		j) # update job name
+            declare -i BOOL_JOB=1
 			JOB="${OPTARG}" ;;
         p) # update path
-            PATH="${OPTARG}";;
+            declare -i BOOL_PATH=1
+            OPTPATH="${OPTARG}";;
         f) # update parameter file
-            FILE="${OPTARG}";;
+            declare -i BOOL_FILE=1
+            OPTFILE="${OPTARG}";;
 		l) # update linux cluster
 			LINUXSERV="${OPTARG}" ;;
         e) # update LeMonADE executables
             EXECDIR="${OPTARG}";;
         \?) # sonstiges
-            help
-            exit $NONZERO_EXITCODE
+            help $NONZERO_EXITCODE
     esac
 done
 
