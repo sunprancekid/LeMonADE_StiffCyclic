@@ -104,12 +104,19 @@ gen_simparm() {
 				fi
 				mkdir -p ${PATH_SIMPARM}${SIMDIR}
 				# write files directory, generate simulation executables
-				if [ "${r}" -eq "TRUE" ]; then
-					echo "./generatePolymerBFM -r -n ${n} -k ${k} > ${SIMID}.txt" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "PATH=\"./\"" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				if [ "${r}" == "TRUE" ]; then
+					echo "\${PATH}generatePolymerBFM -r -n ${n} -k ${k} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				else
-					echo "./generatePolymerBFM -n ${n} -k ${k} > ${SIMID}.txt" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}generatePolymerBFM -n ${n} -k ${k} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				fi
-				echo "./simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				# add parameters to parm file
 				echo "${SIMID},${SIMDIR},${n},${r},${k}" >> $FILE_SIMPARM
@@ -178,19 +185,14 @@ for i in $(seq 2 $N_LINES); do
 	SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
 	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
 		# copy the simulation excutables to the execute directory
-		cp "${EXECDIR}generatePolymerBFM" ${MAINDIR}/${JOB}/${SIMDIR}
-		cp "${EXECDIR}simulatePolymerBFM" ${MAINDIR}/${JOB}/${SIMDIR}
 		# move to the simulation directory
 		CURRDIR=$(echo $PWD)
 		cd "${MAINDIR}/${JOB}/${SIMDIR}"
 		echo $PWD
 		# exectue the simulation
 		if [ $BOOL_SUB -eq 1 ]; then
-			./${SIMID}.sh
+			./${SIMID}.sh -p ~/Desktop/IPF/LeMonADE_StiffCyclic/build/bin/
 		fi
-		# delete the simulation executables
-		rm "./generatePolymerBFM"
-		rm "./simulatePolymerBFM"
 		# return to the main directory
 		cd $CURRDIR
 	fi

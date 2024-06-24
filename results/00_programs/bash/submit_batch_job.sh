@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 ## Matthew A. Dorsey
 ## Intitute for Polymer Resarch - Institute for Polymer Theory
 ## North Carolina State University
@@ -126,6 +129,56 @@ check () {
 #     fi
 }
 
+# method for generating a standardized slurm script
+gen_slurm_script () {
+
+    ## PARAMETERS
+    # name of file contains slurm submission instructions
+    local FILENAME="${SIMID}.slurm.sub"
+    # directory that the file is stored in
+    local FILEPATH="${JOBDIR}${SIMDIR}"
+
+    ## ARGUMENTS
+    # none
+
+    ## SCRIPT
+    # none
+
+    echo "#!/bin/bash" > $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "#SBATCH -J ${JOB}_${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
+    echo "#SBATCH --nodes=1" >> $FILEPATH$FILENAME  # number of nodes
+    echo "#SBATCH --ntasks=1" >> $FILEPATH$FILENAME   # number of processor cores (i.e. tasks)
+    echo "#SBATCH --error=${JOB}_${SIMID}.%j.err" >> $FILEPATH$FILENAME
+    echo "#SBATCH --output=${JOB}_${SIMID}.%j.out" >> $FILEPATH$FILENAME
+    # echo "#SBATCH --mail-type=FAIL" >> $FILEPATH$FILENAME
+    # echo "#SBATCH --mail-user=dorsey@ipfdd.de" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### PARAMETERS ###" >> $FILEPATH$FILENAME
+    echo "echo \"Current directory: \${SLURM_SUBMIT_DIR}\"" >> $FILEPATH$FILENAME
+    echo "EXECDIR=/beetmp/dorsey/tmp/ # location of slurm execution" >> $FILEPATH$FILENAME
+    echo "cd \${EXECDIR}" >> $FILEPATH$FILENAME
+    echo "mkdir -p ${SIMID} " >> $FILEPATH$FILENAME
+    echo "cd ${SIMID}" >> $FILEPATH$FILENAME
+    echo "echo \"Running ${SIMID} on host \$(hostname) in \$(pwd)\"" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### load modules, executables" >> $FILEPATH$FILENAME
+    echo "# module load slurm/15.08.8" >> $FILEPATH$FILENAME
+    echo "# module load gcc/6.1.0" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### copy everything from the submit directory to the execute directory ###" >> $FILEPATH$FILENAME
+    echo "cp $(pwd)/${JOBDIR}${SIMDIR}${SIMID}.sh ." >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    echo "### run job ####" >> $FILEPATH$FILENAME
+    echo "srun ./${SIMID}.sh -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
+    echo "" >> $FILEPATH$FILENAME
+    ## TODO :: add instructions for copying results back
+    echo "### copy back results, delete everthing ###" >> $FILEPATH$FILENAME
+    echo "cp * $(pwd)/${JOBDIR}${SIMDIR}" >> $FILEPATH$FILENAME
+    echo "cd ../" >> $FILEPATH$FILENAME
+    echo "rm -rf ${SIMID}" >> $FILEPATH$FILENAME
+}
+
 ## OPTIONS
 while getopts "hvstj:p:f:l:e:c:" option; do
 	case $option in
@@ -168,6 +221,30 @@ check
 
 # determine how to submit simulation jobs
 if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
+    # login to linux server, update library and compile programs
+#     ssh $LINUXSERV "cd /beetmp/dorsey/LeMonADE_StiffCyclic/; git pull; ./results/00_programs/bash/build_LeMonADE.sh -l /beetmp/dorsey/LeMonADE/;"
+    # make the job directory
+    ssh $LINUXSERV "cd /beetmp/dorsey/; mkdir -p sub/${JOB};"
+    # loop through parameter file, write slurm script to directory hirearchy
+    declare -i N_LINES=$(wc -l < $PARMFILE)
+    for i in $(seq 2 $N_LINES); do
+        # get the simulation id (file column in file)
+        SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
+        # get the simulation directory (second column in file)
+        SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
+        # TODO checkfile
+        # write slurm script to local directory
+        gen_slurm_script
+        # copy slurm script to submit subdirectory on host cluster, submit
+        ssh $LINUXSERV "cd /beetmp/dorsey/sub/${JOB}; cp $(pwd)/${JOBDIR}${SIMDIR}${SIMID}.slurm.sub .; sbatch ${SIMID}.slurm.sub;"
+        # TODO submit the slurm script.
+        # TODO create path for executables stored in another location
+        # TODO echo date and time to outfile
+        exit
+    done
+    exit
+    # copy directory hirearchy
+    exit # leave the remote cluster
     # submit simulations to linux cluster
     echo "./submit_batch_job.sh::TODO:: implement method for submiting simulations on remote linux cluster."
     exit 0
@@ -181,7 +258,6 @@ else
     # execute jobs locally
     # parse csv file, get simulation id and directory
     declare -i N_LINES=$(wc -l < $PARMFILE)
-    echo "${N_LINES}"
     for i in $(seq 2 $N_LINES); do
         # get the simulation id (file column in file)
         SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
