@@ -15,7 +15,14 @@ DEFAULT_LEOMONADE_PATH='/home/users/dorsey/Desktop/IPF/LeMonADE_install/'
 
 
 ## OPTIONS
-# none
+while getopts "l:" option; do
+	case $option in
+		l) # adjust default LeMonADE library
+			DEFAULT_LEOMONADE_PATH="${OPTARG}" ;;
+        \?) # sonstiges
+            exit $NONZERO_EXITCODE
+    esac
+done
 
 
 ## ARGUMENTS
@@ -30,6 +37,6 @@ fi
 
 mkdir build
 cd build
-cmake -DLEMONADE_DIR=/home/users/dorsey/Desktop/IPF/LeMonADE_install/ ..
+cmake -DLEMONADE_DIR="${DEFAULT_LEOMONADE_PATH}" ..
 make
 cd ..
