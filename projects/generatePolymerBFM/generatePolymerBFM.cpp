@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
                 if ((i % chainLength) == 0){
                     // the first molecule in the chain experiences a positive force
                     ingredients.modifyMolecules()[i].setAttributeTag(4);
-                } else if ((i % chainLength) == (ingredients.getMolecules().size())) {
+                } else if ((i % chainLength) == (ingredients.getMolecules().size() - 1)) {
                     // the last molecule in the chain experiences a negative force
                     ingredients.modifyMolecules()[i].setAttributeTag(5);
                 } else {

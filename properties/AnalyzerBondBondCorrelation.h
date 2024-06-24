@@ -23,10 +23,14 @@ template < class IngredientsType > class AnalyzerBondBondCorrelation : public Ab
 {
 
 private:
-    //! lower histrogram border
-    const double low_dist_bound = -2 * M_PI;
-    //! upper histogram border
-    const double upp_dist_bound = 2 * M_PI;
+    //! lower histrogram border for bond bond angles
+    const double low_bond_angle_bound = -M_PI;
+    //! upper histogram border for bond bond angles
+    const double upp_bond_angle_bound = M_PI;
+    //! lower histogram border for bond length
+    const double low_bond_len_bound = 0.;
+    //! upper histogram border for bond length
+    const double upp_bond_len_bound = 4.;
     //! number of bins for histogram
     const int n_bins = 30;
     //! length, as seperation distance, to calculate bbc for
@@ -88,10 +92,16 @@ void AnalyzerBondBondCorrelation<IngredientsType>::initialize()
 {
 
     // initialize histogram
-    bbcorr.resize(correlation_length); // resize the array to the correlation length
-    for (int n = 0; n < correlation_length; n++) {
-        // initialize each element in the array with a new histogram
-        bbcorr[n] = HistogramGeneralStatistik1D(low_dist_bound  - TOL, upp_dist_bound + TOL, n_bins);
+    bbcorr.resize(correlation_length + 1); // resize the array to the correlation length + 1
+    for (int n = 0; n < bbcorr.size(); n++) {
+        if (n == 0) {
+            // for the first histogram, initialize between the min and max bond length
+            bbcorr[n] = HistogramGeneralStatistik1D(low_bond_len_bound  - TOL, upp_bond_len_bound + TOL, n_bins);
+        }
+        else {
+            // initialize each element in the array with a new histogram
+            bbcorr[n] = HistogramGeneralStatistik1D(low_bond_angle_bound  - TOL, upp_bond_angle_bound + TOL, n_bins);
+        }
     }
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
@@ -127,10 +137,12 @@ bool AnalyzerBondBondCorrelation<IngredientsType>::execute()
         // loop through each monomer group (i.e. polymer)
         for(size_t n = 0; n < groups.size(); n++) {
             // calculate the bond-bond angle for all pairs seperated by distance s
-            for (int m = 0; m < correlation_length; m ++) {
-                std::vector<double> angles = cummulateBBC(groups[n], m + 1);
+            for (int m = 0; m < bbcorr.size(); m ++) {
+                // std::cout << " m = " << m << std::endl;
+                std::vector<double> angles = cummulateBBC(groups[n], m);
                 // accumulate the angles into the histogram corresponding to the correlation length
                 for (int k = 0; k < angles.size(); k++) {
+                    // std::cout << " k = " << k << std::endl;
                     bbcorr[m].addValue(angles[k], 1.);
                 }
             }
@@ -172,29 +184,46 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
             // return an empty vector as it is there are no bonds seperated by this distance
             return angles;
         }
-
-        // the number of unique bond pairs seperated by seperation distance s is
-        int N_s = group_size - s - 1;
-        angles.resize(N_s);
-        // loop through each unqiue bond pairs corresponding to the sepereration distance
-        for (int n = 0; n < N_s; n++){
-            // get the vectors representing the first and second bonds
-            VectorDouble3 bi;
-            bi.setX(group[n+1].getX() - group[n].getX());
-            bi.setY(group[n+1].getY() - group[n].getY());
-            bi.setZ(group[n+1].getZ() - group[n].getZ());
-            VectorDouble3 bj;
-            bj.setX(group[n+s+1].getX() - group[n+s].getX());
-            bj.setY(group[n+s+1].getY() - group[n+s].getY());
-            bj.setZ(group[n+s+1].getZ() - group[n+s].getZ());
-            // calculate the angle between the two bonds
-            double angle;
-            angle = bi*bi;
-            angle *= bj*bj;
-            angle = sqrt(angle);
-            angle = M_PI * (bi*bj)/angle;
-            // bbcorr.addValue(angle, 1.);
-            angles[n] = angle;
+        if (s == 0) {
+            // for the zeroth correlation length
+            // accumulate the length of each bond vector
+            angles.resize(group_size - 1);
+            for (int n = 0; n < group_size - 1; n++) {
+                // get the vector corresponding to the nth bond
+                VectorDouble3 bi;
+                bi.setX(group[n+1].getX() - group[n].getX());
+                bi.setY(group[n+1].getY() - group[n].getY());
+                bi.setZ(group[n+1].getZ() - group[n].getZ());
+                // calculate the length
+                double len = bi*bi;
+                len = sqrt(len);
+                angles[n] = len;
+            }
+        } else {
+            // accumulate the angle between bonds seperated by distance s
+            // the number of unique bond pairs seperated by seperation distance s is
+            int N_s = group_size - s - 1;
+            angles.resize(N_s);
+            // loop through each unqiue bond pairs corresponding to the sepereration distance
+            for (int n = 0; n < N_s; n++){
+                // get the vectors representing the first and second bonds
+                VectorDouble3 bi;
+                bi.setX(group[n+1].getX() - group[n].getX());
+                bi.setY(group[n+1].getY() - group[n].getY());
+                bi.setZ(group[n+1].getZ() - group[n].getZ());
+                VectorDouble3 bj;
+                bj.setX(group[n+s+1].getX() - group[n+s].getX());
+                bj.setY(group[n+s+1].getY() - group[n+s].getY());
+                bj.setZ(group[n+s+1].getZ() - group[n+s].getZ());
+                // calculate the angle between the two bonds
+                double angle;
+                angle = bi*bi;
+                angle *= bj*bj;
+                angle = sqrt(angle);
+                angle = M_PI * (bi*bj)/angle;
+                // bbcorr.addValue(angle, 1.);
+                angles[n] = angle;
+            }
         }
     return angles;
     }
