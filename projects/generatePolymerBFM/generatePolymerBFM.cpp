@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n monomer in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strenth (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
                     return 0;
             }
         }
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
             if (bendingPot_CA) {
                 ingredients.setBending_Potential_Type_CA();
             } else {
-                ingredients.setBendingPotential_Type_CSA();
+                ingredients.setBending_Potential_Type_CSA();
             }
             // synchronize
             ingredients.synchronize(ingredients);
