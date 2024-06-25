@@ -18,17 +18,22 @@ declare -i BOOL_SUB=0
 declare -i BOOL_UPP=0
 # boolean determining if the script should download a directory from the could
 declare -i BOOL_DWN=0
+## PARAMETERS -- SLURM
+# string represnting the maximum job time length
+MAX_SLURM_TIME="05:00"
 ## PARAMETERS -- JOB
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
 PARM_RING=( "TRUE" "FALSE" )
+# array containing which potential to test
+PARM_CSA=( "TRUE" "FALSE" )
 # array containing bending potential strings to test
 PARM_BEND=( 1 3 5 7 10 13 16 20 25 )
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name
-JOB="bendingPARM_CSA"
+JOB="bendingPARM"
 # linux server
 LINUXSERV="gandalf"
 # path to LeMonADE executables
@@ -93,35 +98,46 @@ gen_simparm() {
 				n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
 			fi
 
-			for k in "${PARM_BEND[@]}"; do
-				# generate the simulation directory
-				if [ "${r}" == "TRUE" ]; then
-					SIMID="RING_N${n}K${k}"
-					SIMDIR="RING/N${n}/K${k}/"
+			for c in ${PARM_CSA[@]}; do
+
+				if [ "${c}" == "TRUE" ]; then
+					C="CSA"
+					C_FLAG=""
 				else
-					SIMID="CHAIN_N${n}K${k}"
-					SIMDIR="CHAIN/N${n}/K${k}/"
+					C="CA"
+					C_FLAG="-c "
 				fi
-				mkdir -p ${PATH_SIMPARM}${SIMDIR}
-				# write files directory, generate simulation executables
-				echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				if [ "${r}" == "TRUE" ]; then
-					echo "\${PATH}generatePolymerBFM -r -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				else
-					echo "\${PATH}generatePolymerBFM -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				fi
-				echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-				# add parameters to parm file
-				echo "${SIMID},${SIMDIR},${n},${r},${k}" >> $FILE_SIMPARM
+
+				for k in "${PARM_BEND[@]}"; do
+					# generate the simulation directory
+					if [ "${r}" == "TRUE" ]; then
+						SIMID="${C}_RING_N${n}K${k}"
+						SIMDIR="${C}/RING/N${n}/K${k}/"
+					else
+						SIMID="${C}_CHAIN_N${n}K${k}"
+						SIMDIR="${C}/CHAIN/N${n}/K${k}/"
+					fi
+					mkdir -p ${PATH_SIMPARM}${SIMDIR}
+					# write files directory, generate simulation executables
+					echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					if [ "${r}" == "TRUE" ]; then
+						echo "\${PATH}generatePolymerBFM ${C_FLAG}-r -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					else
+						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					fi
+					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					# add parameters to parm file
+					echo "${SIMID},${SIMDIR},${n},${r},${k}" >> $FILE_SIMPARM
+				done
 			done
 		done
 	done
