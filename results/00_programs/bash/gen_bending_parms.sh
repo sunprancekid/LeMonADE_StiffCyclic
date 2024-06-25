@@ -104,7 +104,9 @@ gen_simparm() {
 				fi
 				mkdir -p ${PATH_SIMPARM}${SIMDIR}
 				# write files directory, generate simulation executables
-				echo "PATH=\"./\"" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -112,11 +114,11 @@ gen_simparm() {
 				echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				if [ "${r}" == "TRUE" ]; then
-					echo "\${PATH}generatePolymerBFM -r -n ${n} -k ${k} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}generatePolymerBFM -r -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				else
-					echo "\${PATH}generatePolymerBFM -n ${n} -k ${k} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}generatePolymerBFM -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				fi
-				echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} > ${SIMID}.txt" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+				echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 				# add parameters to parm file
 				echo "${SIMID},${SIMDIR},${n},${r},${k}" >> $FILE_SIMPARM

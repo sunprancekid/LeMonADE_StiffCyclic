@@ -146,11 +146,11 @@ gen_slurm_script () {
 
     echo "#!/bin/bash" > $FILEPATH$FILENAME
     echo "" >> $FILEPATH$FILENAME
-    echo "#SBATCH -J ${JOB}_${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
+    echo "#SBATCH -J ${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
     echo "#SBATCH --nodes=1" >> $FILEPATH$FILENAME  # number of nodes
     echo "#SBATCH --ntasks=1" >> $FILEPATH$FILENAME   # number of processor cores (i.e. tasks)
-    echo "#SBATCH --error=${JOB}_${SIMID}.%j.err" >> $FILEPATH$FILENAME
-    echo "#SBATCH --output=${JOB}_${SIMID}.%j.out" >> $FILEPATH$FILENAME
+    echo "#SBATCH --error=${SIMID}.%j.err" >> $FILEPATH$FILENAME
+    echo "#SBATCH --output=${SIMID}.%j.out" >> $FILEPATH$FILENAME
     # echo "#SBATCH --mail-type=FAIL" >> $FILEPATH$FILENAME
     # echo "#SBATCH --mail-user=dorsey@ipfdd.de" >> $FILEPATH$FILENAME
     echo "" >> $FILEPATH$FILENAME
@@ -222,8 +222,8 @@ check
 # determine how to submit simulation jobs
 if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
     # login to linux server, update library and compile programs
-#     ssh $LINUXSERV "cd /beetmp/dorsey/LeMonADE_StiffCyclic/; git pull; ./results/00_programs/bash/build_LeMonADE.sh -l /beetmp/dorsey/LeMonADE/;"
-    # make the job directory
+    ssh $LINUXSERV "cd /beetmp/dorsey/LeMonADE_StiffCyclic/; git pull; ./results/00_programs/bash/build_LeMonADE.sh -l /beetmp/dorsey/LeMonADE/;"
+    # make the job directory, which contains that submission scripts
     ssh $LINUXSERV "cd /beetmp/dorsey/; mkdir -p sub/${JOB};"
     # loop through parameter file, write slurm script to directory hirearchy
     declare -i N_LINES=$(wc -l < $PARMFILE)
@@ -232,28 +232,32 @@ if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
         SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
         # get the simulation directory (second column in file)
         SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
-        # TODO checkfile
+
+        # if a checkfile has been specified
+        if [[ $BOOL_CHECKFILE -eq 1 ]]; then
+            # if the check file exists in the simulation directory
+            if [ -f ${JOBDIR}${SIMDIR}$CHECKFILE ]; then
+                # skip execution of this set of parameters
+                # continue to the next iteration of the loop
+                if [[ $BOOL_VERB -eq 1 ]]; then
+                    echo "checkfile ${JOBDIR}${SIMDIR}${CHECKFILE} already exists, moving to next set of simulation parameters."
+                fi
+                continue
+            fi
+        fi
+
+        if [[ $BOOL_VERBOSE -eq 1 ]]; then
+            echo "Submitting ${SIMID} in to ${LINUXSERV}."
+        fi
         # write slurm script to local directory
         gen_slurm_script
         # copy slurm script to submit subdirectory on host cluster, submit
         ssh $LINUXSERV "cd /beetmp/dorsey/sub/${JOB}; cp $(pwd)/${JOBDIR}${SIMDIR}${SIMID}.slurm.sub .; sbatch ${SIMID}.slurm.sub;"
-        # TODO submit the slurm script.
-        # TODO create path for executables stored in another location
-        # TODO echo date and time to outfile
-        exit
+        if [[ $TEST_BOOL -eq 1 ]]; then
+            # if testing the script, exit the program
+            exit
+        fi
     done
-    exit
-    # copy directory hirearchy
-    exit # leave the remote cluster
-    # submit simulations to linux cluster
-    echo "./submit_batch_job.sh::TODO:: implement method for submiting simulations on remote linux cluster."
-    exit 0
-    # only do this once: compile leomonade, compile local programs
-    # log on to linux cluster
-    # navigate to execute directory (/beetmp)
-    # copy simulation hirearchy to temp dir
-    # generate slurm script for each set of parameters
-    # submit slurm script via sbatch
 else
     # execute jobs locally
     # parse csv file, get simulation id and directory
