@@ -165,6 +165,44 @@ public:
 };
 
 
+/*****************************************************************/
+/**
+ * @class ReadBendingPotentialType
+ *
+ * @brief Handles BFM-File-Reads \b #!bending_potential_type
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+
+template < class IngredientsType>
+class ReadBendingPotentialType: public ReadToDestination<IngredientsType>
+{
+public:
+  ReadBendingPotentialType(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+  virtual ~ReadBendingPotentialType(){}
+  virtual void execute();
+};
+
+
+/*****************************************************************/
+/**
+ * @class WriteBendingPotentialType
+ *
+ * @brief Handles BFM-File-Write \b #!bending_potential_type
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+
+template < class IngredientsType>
+class WriteBendingPotentialType:public AbstractWrite<IngredientsType>
+{
+public:
+  WriteBendingPotentialType(const IngredientsType& i)
+  :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(true);}
+
+  virtual ~WriteBendingPotentialType(){}
+
+  virtual void writeStream(std::ostream& strm);
+};
+
 
 /*****************************************************************/
 /**
@@ -223,11 +261,39 @@ public:
   {
       return Bending_Potential_Constant;
   }
+
+  //! assign the bending potential type as cosine squared angle (CSA) potential
+  void setBending_Potential_Type_CSA()
+  {
+    Bending_Potential_CSA = true;
+    Bending_Potential_Type_Assigned = true;
+  }
+
+  //! assign the bending potential as the cosine angle (CA) potential
+  void setBending_Potential_Type_CA ()
+  {
+    Bending_Potential_CSA = false;
+    Bending_Potential_Type_Assigned = true;
+  }
+
+  //! return boolean determining if the bending potential is using the cosine squared angle (CSA) potential
+  bool isBending_Potential_CSA() const
+  {
+    return Bending_Potential_CSA;
+  }
+
+  //! return boolean determining if the bending potential is using the cosine angle potential
+  bool isBending_Potential_CA() const
+  {
+    return not Bending_Potential_CSA;
+  }
   
   
 private:
     
   double Bending_Potential_Constant; //!< The constant as prefactor of the bending potential
+  bool Bending_Potential_CSA = true; //! boolean determining whether the bending potential should use the CSA potential
+  bool Bending_Potential_Type_Assigned = false; //! boolean determining whether the bending potential type has been assigned
    
 };
 
@@ -238,6 +304,11 @@ private:
 template<class IngredientsType>
 bool FeaturePotentialBending::checkMove(const IngredientsType& ingredients, MoveLocalSc& move) const
 {
+    // if the bending potential has not been assigned yet, assign a CSA potential
+    // if (! Bending_Potential_Type_Assigned) {
+    //   Bending_Potential_CSA = true;
+    //   Bending_Potential_Type_Assigned = true;
+    // }
     //add the probability factor coming from this feature, then return true,
     //because the total probability is evaluated by FeatureBoltzmann at the end.
     
@@ -283,8 +354,13 @@ bool FeaturePotentialBending::checkMove(const IngredientsType& ingredients, Move
             // Finite chain length effects on the coil–globule transition of stiff-chain macromolecules: A Monte Carlo simulation 
             // The Journal of Chemical Physics 1998, Vol. 109, No. 13 DOI: 10.1063/1.477184
             //
-            double tmp =(double(bondvector1_old*bondvector2_old)/(bondvector1_old.getLength()*bondvector2_old.getLength())-1.0);
-            VB_old += Bending_Potential_Constant*(tmp*tmp);
+            double tmp =-(double(bondvector1_old*bondvector2_old)/(bondvector1_old.getLength()*bondvector2_old.getLength())-1.0);
+            if (Bending_Potential_CSA) {
+              VB_old += Bending_Potential_Constant*(tmp*tmp);
+            } else {
+              VB_old += Bending_Potential_Constant*tmp;
+            }
+
             //
             
             // Bending potential VB(theta_i)=-KB*cos(theta_i - theta0)=>(theta0=0):VB(theta_i)=-KB*[(a*b)/(|a|*|b|)]
@@ -326,8 +402,13 @@ bool FeaturePotentialBending::checkMove(const IngredientsType& ingredients, Move
             // Finite chain length effects on the coil–globule transition of stiff-chain macromolecules: A Monte Carlo simulation 
             // The Journal of Chemical Physics 1998, Vol. 109, No. 13 DOI: 10.1063/1.477184
             //
-            double tmp_b = (double(bondvector1_new*bondvector2_new)/(bondvector1_new.getLength()*bondvector2_new.getLength())-1.0);
-            VB_new += Bending_Potential_Constant*(tmp_b*tmp_b);
+            double tmp_b = -(double(bondvector1_new*bondvector2_new)/(bondvector1_new.getLength()*bondvector2_new.getLength())-1.0);
+            if (Bending_Potential_CSA) {
+              VB_new += Bending_Potential_Constant*(tmp_b*tmp_b);
+            } else {
+              VB_new += Bending_Potential_Constant*(tmp_b);
+            }
+
             //
             
             // Bending potential VB(theta_i)=-KB*cos(theta_i - theta0)=>(theta0=0):VB(theta_i)=-KB*[(a*b)/(|a|*|b|)]
@@ -411,6 +492,7 @@ void FeaturePotentialBending::exportRead(FileImport< IngredientsType >& fileRead
 {
   fileReader.registerRead("#!bending_potential_bonds",new ReadBendingBondInformation<IngredientsType>(fileReader.getDestination()));
   fileReader.registerRead("#!bending_potential_constant",new ReadBendingBondConstant<IngredientsType>(fileReader.getDestination()));
+  fileReader.registerRead("#!bending_potential_type_CSA",new ReadBendingPotentialType<IngredientsType>(fileReader.getDestination()));
 }
 
 
@@ -428,6 +510,7 @@ void FeaturePotentialBending::exportWrite(AnalyzerWriteBfmFile< IngredientsType 
 {
   fileWriter.registerWrite("#!bending_potential_bonds",new WriteBendingBondInformation<IngredientsType>(fileWriter.getIngredients_()));
   fileWriter.registerWrite("#!bending_potential_constant", new WriteBendingBondConstant<IngredientsType>(fileWriter.getIngredients_()));
+  fileWriter.registerWrite("#!bending_potential_type_CSA", new WriteBendingPotentialType<IngredientsType>(fileWriter.getIngredients_()));
 }
 
 
@@ -686,6 +769,33 @@ template < class IngredientsType>
 void WriteBendingBondConstant<IngredientsType>::writeStream(std::ostream& stream)
 {
     stream<<"#!bending_potential_constant=" << (this->getSource().getBending_Potential_Constant()) << std::endl<< std::endl;
+}
+
+template < class IngredientsType >
+void ReadBendingPotentialType<IngredientsType>::execute()
+{
+  std::cout<<"reading BendingPotentialType...";
+
+  bool CSA = true;
+  string CSA_string;
+  IngredientsType& ingredients=this->getDestination();
+  std::istream& source=this->getInputStream();
+
+  std::string line;
+  getline(source,line);
+  CSA_string = line.c_str();
+  if (CSA_string == "0" || CSA_string == "false") {
+    ingredients.setBending_Potential_Type_CA();
+  } else {
+    ingredients.setBending_Potential_Type_CSA();
+  }
+  std::cout << "#!bending_potential_type_CSA=" << (ingredients.isBending_Potential_CSA()) << std::endl;
+}
+
+template < class IngredientsType >
+void WriteBendingPotentialType<IngredientsType>::writeStream(std::ostream& stream)
+{
+  stream<<"#!bending_potential_type_CSA=" << (this->getSource().isBending_Potential_CSA()) << std::endl<< std::endl;
 }
 
 
