@@ -39,11 +39,12 @@ int main(int argc, char* argv[])
         std::string outfile = "config_init.bfm"; // output file that contains the configurations
         bool bendingPot = false; // determines whether a bending potential should be added
         double k_theta = 0.; // parameterized bending potential strength
+        bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:h"))  != EOF){
+        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:ch"))  != EOF){
             switch (option_char)
             {
                 // TODO add force oscilation and amplitude
@@ -70,9 +71,12 @@ int main(int argc, char* argv[])
                     force = true;
                     conForce = stod(optarg);
                     break;
+                case 'c':
+                    bendingPot_CA = true;
+                    break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n monomer in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strenth (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n monomer in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strenth (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
                     return 0;
             }
         }
@@ -153,6 +157,11 @@ int main(int argc, char* argv[])
             }
             // set bending constant
             ingredients.setBending_Potential_Constant(k_theta);
+            if (bendingPot_CA) {
+                ingredients.setBending_Potential_Type_CA();
+            } else {
+                ingredients.setBendingPotential_Type_CSA();
+            }
             // synchronize
             ingredients.synchronize(ingredients);
         }
