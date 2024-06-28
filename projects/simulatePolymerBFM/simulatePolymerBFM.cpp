@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
         taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
-        taskmanager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil));
+        // taskmanager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil));
         taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
 
         // if the outfile exists, delete it
