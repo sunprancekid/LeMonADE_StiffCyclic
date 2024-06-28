@@ -24,9 +24,9 @@ template < class IngredientsType > class AnalyzerBondBondDistribution : public A
 
 private:
     //! lower histrogram border
-    const double low_dist_bound = -M_PI;
+    const double low_dist_bound = -1.;
     //! upper histogram border
-    const double upp_dist_bound = M_PI;
+    const double upp_dist_bound = 1.;
     //! actual number of histogram bins
     int num_bins;
     //! typedef for the underlying container holding the monomers
@@ -182,8 +182,7 @@ std::vector<double> AnalyzerBondBondDistribution<IngredientsType>::cummulateBBD(
             angle = bi*bi;
             angle *= bj*bj;
             angle = sqrt(angle);
-            angle = M_PI * (bi*bj)/angle;
-            // bbdist.addValue(angle, 1.);
+            angle = (bi*bj)/angle;
             angles[n] = angle;
         }
     return angles;

@@ -4,15 +4,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from scipy.optimize import curve_fit
 from scipy.stats import norm
-# TODO :: add recombinator library for boot strapping
 
 ## PARAMETERS
 # file that contains parameters for scaling simulations
 scaling_parmcsv = '01_raw_data/scaling/scaling.csv'
 # file that contains parameter for forceExtension simulations
 forceExtension_parmcsv = '01_raw_data/forceExtension/forceExtension.csv'
+# file that contains parameters for bendingPARM simulations
+bendingPARM_parmcsv = '01_raw_data/bendingPARM/bendingPARM.csv'
 # default image resolution
 default_dpi = 200
 
@@ -37,7 +39,7 @@ def clean_file(filepath, commentchar = '#'):
 # parse data from end-to-end file, return average
 # filepath :: path to file containing data
 # avgcol :: column header that contains relevant data
-def parse_data(filepath, avgcol = None, header = None):
+def parse_data(filepath, avgcol = None, avgrow = None, header = None, tab = False):
 
     # check that the file exists
     file = Path(filepath)
@@ -46,11 +48,24 @@ def parse_data(filepath, avgcol = None, header = None):
         return 0
 
     # load the file as a data frame
-    df = pd.read_csv(filepath, sep = '\t', header = header)
-    return df[avgcol].to_list()
+    if tab:
+        df = pd.read_csv(filepath, sep = '\t', header = header)
+    else:
+        df = pd.read_csv(filepath, header = header)
+
+    if avgrow is not None:
+        rowlist = []
+        row = df.iloc[avgrow]
+        for i in range(1,len(row)):
+            rowlist.append(row[i])
+        return rowlist
+    elif avgcol is not None:
+        return df[avgcol].to_list()
+    else:
+        return []
 
 # method for getting simulation results from files
-def parse_results(parms = None, dir = None, simfile = None, col = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False):
+def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False):
 
     # make sure required information has been provided
     if title is None:
@@ -77,12 +92,19 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
             # skip to next entry
             continue
         clean_file(dir + r['path'] + simfile)
-        vals = parse_data(dir + r['path'] + simfile, avgcol = col)
+        if col is not None:
+            vals = parse_data(dir + r['path'] + simfile, avgcol = col, tab = tabsep)
+        elif row is not None:
+            vals = parse_data(dir + r['path'] + simfile, avgrow = row, tab = tabsep)
+        else:
+            print("parse_results :: must specify either column or row for " + dir + r['path'] + simfile)
+            exit()
         if title == 'ROG':
             vals = [math.sqrt(i) for i in vals]
         # calculate the first moment if, specified
         avg = 0
-        if bootstrapping:
+        nvals = len(vals)
+        if bootstrapping and (nvals > 50):
             # fit data to normal distribution, determine average
             n_bins = 50
             mu, std = norm.fit(vals)
@@ -110,7 +132,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
             M1_arr.append(avg)
 
         # calculate the second moment, if specified
-        if M2:
+        if M2 and (nvals > 2):
             avg2 = 0
             for i in vals:
                 avg2 += pow(i,2)
@@ -118,7 +140,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, title = 
             M2_arr.append(math.sqrt(avg2))
 
         # calculate the variance, if specified
-        if var:
+        if var and (nvals > 2):
             if not bootstrapping:
                 # if boot strapping was not used
                 std = 0
@@ -174,9 +196,9 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
             x_fit = [ ((max(x) - min(x)) / (100 - 1)) * i + min(x) for i in range(100)]
             y_fit = [ power_fit_hook(i, A) for i in x_fit]
             plt.plot(x_fit, y_fit, '--', label = "Hookean Regime", color = "black", alpha = 0.5)
-        if fit_pincus:
-            # fit data to power law equation, determine parameters
-            A = y[25] /
+        # if fit_pincus:
+        #     # fit data to power law equation, determine parameters
+        #     A = y[25]
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     if logscale_x:
@@ -193,6 +215,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     if saveas is not None:
         plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
     plt.show()
+    plt.close()
 
 
 # model equation for power law fitting
@@ -203,6 +226,140 @@ def power_fit(x, A, B):
 def power_fit_hook(x, A):
     return A * (x ** 1.)
 
+# model equation for exponential decay fitting
+def exp_decay_fit(x, A, B):
+    return A * (math.e ** (- x / B))
+
+# method for plotting the bond bond correlation for bending potential simulation data against s, the bond distance
+def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, saveas = None, logscale_y = True, Title = None, Y_label = None, X_label = None, dpi = None):
+
+    if k is None:
+        exit()
+    if df is None:
+        exit()
+    if X_label is None:
+        X_label = "Bond-Bond Distance ($s$)"
+    if Y_label is None:
+        Y_label = "Bond-Bond Correlation ($\\langle cos \\theta \\rangle$)"
+    if Title is None:
+        Title = "Bond-Bond Correlation\nas a function Bond-Bond Seperation Distance"
+    if dpi is None:
+        dpi = 200
+
+    # for each k, average bond correlation associated with the bond distance
+    for i in k:
+        # get the df row associated with k
+        kdf = df.loc[df['k'] == i]
+        # get the data associated with k
+        s = []
+        bbc = []
+        expect = []
+        x = []
+        y = []
+        for j in range(1, max_s + 1):
+            val = kdf.iloc[0]['l' + str(j) + '_M1']
+            if val > 0.:
+                s.append(j)
+                # bbc.append(math.log(val))
+                bbc.append(val / math.pi)
+                expect.append(math.exp(-j/i))
+                if j < 3:
+                    x.append(j)
+                    y.append(val / math.pi)
+        plt.scatter(s, bbc, label = '$k_{\\theta}$ = ' + str(i), marker = 'o', s = 20)
+        if plot_fit:
+            # fit first two data points to expotential decau curve, determine parameters
+            popt, pcov = curve_fit(exp_decay_fit, x, y)
+            x_fit = [ ((max(s) - min(s)) / (100 - 1)) * i + min(s) for i in range(100)]
+            y_fit = [ exp_decay_fit(i, *popt) for i in x_fit]
+            plt.plot(x_fit, y_fit, 'k--')
+    plt.legend()
+    plt.xlim(0, max_s)
+    plt.ylim(.01, 1.)
+    if logscale_y:
+        plt.yscale('log', base = math.e)
+
+    # adjust y-axis labels
+    def ticks(y, pos):
+        return r'$e^{:.0f}$'.format(np.log(y))
+    ax = plt.gca()
+    ax.yaxis.set_major_formatter(mtick.FuncFormatter(ticks))
+
+    if Title is not None:
+        plt.title(Title)
+    if Y_label is not None:
+        plt.ylabel(Y_label)
+    if X_label is not None:
+        plt.xlabel(X_label)
+    if saveas is not None:
+        plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
+    else:
+        plt.show()
+    plt.close()
+
+# method for plotting presitance length from bending potential simulations
+def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_CA = False, saveas = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, fit_bbc = True):
+
+    if df is None:
+        exit()
+    if X_label is None:
+        X_label = "Bending Potential Strength ($k$)"
+    if Y_label is None:
+        Y_label = "Presistance Length ($l_{p} / \\langle l \\rangle$)"
+    if dpi is None:
+        dpi = 200
+
+    k = df['k'].tolist()
+    l0 = df['l0_M1'].tolist()
+    l1 = df['l1_M1'].tolist()
+    y = []
+    CS_expect = []
+    CSA_expect = []
+    for i in range(len(k)):
+        y.append(-1 / math.log(l1[i] / math.pi))
+    if plot_expectation_CA:
+        n = [i for i in range(1,100)]
+        n_CA = [i for i in n]
+        plt.plot(n, n_CA, 'r--', label = "$k$")
+    if plot_expectation_CSA:
+        n = [i for i in range(1, 100)]
+        n_CSA = [ math.pow(math.pi * i, 0.5) for i in n]
+        plt.plot(n, n_CSA, 'r--', label = "$(\\pi k)^{{1 / 2}}$")
+    plt.scatter(k, y, s=20, label = "$\\ell_{p, \\theta}$")
+    if fit_bbc:
+        l_acc = []
+        for i in k:
+            kdf = df.loc[df['k'] == i]
+            x = []
+            y = []
+            for j in range(3):
+                val = kdf.iloc[0]['l' + str(j) + '_M1']
+                x.append(j)
+                y.append(val / math.pi)
+            popt, pcov = curve_fit(exp_decay_fit, x, y)
+            l_acc.append(popt[1])
+        plt.scatter(k, l_acc, s=20, label = "$\\ell_{p, ac}$")
+    plt.xlim(1, 100)
+    plt.ylim(1, 100)
+    if logscale:
+        plt.xscale("log")
+        plt.yscale("log")
+    plt.legend(loc = "upper left")
+    if X_label is not None:
+        plt.xlabel(X_label)
+    if Y_label is not None:
+        plt.ylabel(Y_label)
+    if Title is not None:
+        plt.title(Title)
+    if saveas is not None:
+        plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
+    else:
+        plt.show()
+    plt.close()
+
+
+
+
 ## CLASSES
 # none
 
@@ -212,6 +369,8 @@ def power_fit_hook(x, A):
 scaling = ("scaling" in sys.argv)
 # performe force extension analysis
 forceExtension = ("forceExtension" in sys.argv)
+# perform bending parameter analysis
+bendingPARM = ("bendingPARM" in sys.argv)
 
 ## SCRIPT
 # load defaults / settings from yaml
@@ -225,9 +384,9 @@ if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
     # TODO :: add boot strapping
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True)
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True)
-    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, var = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+    scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, var = True, tabsep = True)
     # save the results
     if not os.path.exists("02_processed_data/scaling/"):
         os.mkdir("02_processed_data/scaling/")
@@ -254,7 +413,7 @@ if forceExtension:
     # get simulation parameters
     FE_parms = pd.read_csv(forceExtension_parmcsv)
     # average simulation properties
-    FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True)
+    FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
     # save results
     if not os.path.exists("02_processed_data/forceExtension/"):
         os.mkdir("02_processed_data/forceExtension/")
@@ -272,3 +431,40 @@ if forceExtension:
         # plot x_distance
         plot_scaling(mod_parm, N_col = 'F', R_col = ['E2Ex'], logscale_x = True, logscale_y = True, x_min = .00008, x_max = 10., y_min = 0.01, y_max = 500, X_label = "External Force ($f_{x}$)", Y_label = "Distance", data_label = ["Chain Extension in X-direction"], Title = "Force Extension for " + mod + " (N = 100)", saveas = save_name + '.png', error = False, color = ['tab:purple'], fit_hook = True)
 
+if bendingPARM:
+    # load parameters, add property calculations from simulations
+    bendingparms = pd.read_csv(bendingPARM_parmcsv)
+    bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+    bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+    for i in range(30):
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
+    # save results
+    if not os.path.exists("02_processed_data/bendingPARM/"):
+        os.mkdir("02_processed_data/bendingPARM/")
+    bendingparms.to_csv("02_processed_data/bendingPARM/bendingPARM.csv")
+    # loop through each potential, type of structure (ring or chain)
+    for pot in bendingparms['pot'].unique():
+        for ring in bendingparms['R'].unique():
+            # if ring == True and pot == "CSA":
+            #     continue
+            print(pot + ", " + str(ring))
+            # estblish title and save name depending on conditions
+            if ring == True:
+                chain = "Ring"
+                N_string = "200"
+            else:
+                chain = "Chain"
+                N_string = "100"
+            plotdf = bendingparms.loc[(bendingparms['pot'] == pot) & (bendingparms['R'] == ring)]
+            # plot the bending parameter scaling against s
+            title_bbc = f"Bond-Bond Correlation for {chain}s with {pot} Potential (N = {N_string})"
+            saveas_bbc = "BBC_" + pot + "_" + chain + ".png"
+            plot_bendingpot_bbc(df = plotdf, k = [1, 3, 5, 7, 10, 13], max_s = 29, plot_fit = True, Title = title_bbc, saveas = "02_processed_data/bendingPARM/" + saveas_bbc)
+            # plot the bending parameter scaling against k
+            title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
+            saveas_lp = "lp_" + pot + "_" + chain + ".png"
+            plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True)
+            # plot the chain length against the bending potential
+            # title_rx = f"X Chain Extentions for {chain}s with {pot} Potential (N = {N_string})"
+            # saveas_rx = "rx_" + pot + "_" + chain + ".png"
+            # plot_chainextension(df = plotdf, Title = title_rx, X_label = "", Y_label = "", saveas = saveas_rx)

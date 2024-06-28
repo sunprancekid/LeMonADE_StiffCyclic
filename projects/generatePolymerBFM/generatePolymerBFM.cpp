@@ -82,10 +82,11 @@ int main(int argc, char* argv[])
         }
 
         // generate ingredients
-        typedef LOKI_TYPELIST_4(FeatureMoleculesIO,
+        typedef LOKI_TYPELIST_5(FeatureMoleculesIO,
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
-                                FeaturePotentialBending) Features;
+                                FeaturePotentialBending,
+                                FeatureLinearForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
@@ -166,14 +167,14 @@ int main(int argc, char* argv[])
             ingredients.synchronize(ingredients);
         }
 
-        // add constant linear force
+        // add force
         if (force) {
-            // TODO implement constant force
-            std::cout << "TODO :: implement addition of constant force feature.";
-            exit(0);
+            // add constant linear force
+            ingredients.setForceOn(true);
+            ingredients.setAmplitudeForce(conForce);
+            // synchronize
+            ingredients.synchronize(ingredients);
         }
-        // ingredients.setForceOn(true);
-        // ingredients.setAmplitudeForce(conForce);
 
         // assign the molecules that experience forces
         if (ring) {
@@ -181,7 +182,7 @@ int main(int argc, char* argv[])
                 if ((i % chainLength) == 0){
                     // the first molecule in the ring experiences a positive force
                     ingredients.modifyMolecules()[i].setAttributeTag(4);
-                } else if ((i % chainLength) == ((ingredients.getMolecules().size() / 2) - 1)) {
+                } else if ((i % chainLength) == floor(ingredients.getMolecules().size() / 2.)) {
                     // the middle molecule in the ring experiences a negative force
                     ingredients.modifyMolecules()[i].setAttributeTag(5);
                 } else {

@@ -24,9 +24,9 @@ template < class IngredientsType > class AnalyzerBondBondCorrelation : public Ab
 
 private:
     //! lower histrogram border for bond bond angles
-    const double low_bond_angle_bound = -M_PI;
+    const double low_bond_angle_bound = -1.;
     //! upper histogram border for bond bond angles
-    const double upp_bond_angle_bound = M_PI;
+    const double upp_bond_angle_bound = 1.;
     //! lower histogram border for bond length
     const double low_bond_len_bound = 0.;
     //! upper histogram border for bond length
@@ -162,8 +162,8 @@ void AnalyzerBondBondCorrelation<IngredientsType>::cleanup()
     // TODO check if file is open, etc.
 
     // print results into a file
-    for (int n = 0; n < correlation_length; n++) {
-        file << (n + 1) << ", " << bbcorr[n].getHistAverage() << std::endl;
+    for (int n = 0; n <= correlation_length; n++) {
+        file << (n) << ", " << bbcorr[n].getHistAverage() << std::endl;
     }
     file.close();
 }
@@ -220,8 +220,7 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
                 angle = bi*bi;
                 angle *= bj*bj;
                 angle = sqrt(angle);
-                angle = M_PI * (bi*bj)/angle;
-                // bbcorr.addValue(angle, 1.);
+                angle = (bi*bj)/angle;
                 angles[n] = angle;
             }
         }

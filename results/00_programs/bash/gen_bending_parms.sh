@@ -18,9 +18,6 @@ declare -i BOOL_SUB=0
 declare -i BOOL_UPP=0
 # boolean determining if the script should download a directory from the could
 declare -i BOOL_DWN=0
-## PARAMETERS -- SLURM
-# string represnting the maximum job time length
-MAX_SLURM_TIME="05:00"
 ## PARAMETERS -- JOB
 # array containing N to test
 PARM_N=( 100 )
@@ -78,7 +75,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,N,R,k"
+	HEADER_SIMPARM="id,path,pot,N,R,k"
 
 	## ARGUMENTS
 	# none
@@ -136,7 +133,7 @@ gen_simparm() {
 					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					# add parameters to parm file
-					echo "${SIMID},${SIMDIR},${n},${r},${k}" >> $FILE_SIMPARM
+					echo "${SIMID},${SIMDIR},${C},${n},${r},${k}" >> $FILE_SIMPARM
 				done
 			done
 		done
