@@ -51,6 +51,10 @@ private:
     uint32_t equilibrationTime;
     //! histogram bin tolerance
     double TOL = 0.01;
+    //! number of statistics that are taken for each bond of distance s
+    int bbc_statistic_int = 2;
+    //! integer number representing the starting monomer in the chain / ring used for data collection
+    int start_monomer_int = 4;
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
     void setMonomerGroups(std::vector<MonomerGroup<molecules_type> > groupVector){groups=groupVector;}
@@ -205,7 +209,10 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
             int N_s = group_size - s - 1;
             angles.resize(N_s);
             // loop through each unqiue bond pairs corresponding to the sepereration distance
-            for (int n = 0; n < N_s; n++){
+            for (int n = start_monomer_int; n < start_monomer_int + bbc_statistic_int; n++){
+                if (n+s+1 >= group_size) {
+                    break;
+                }
                 // get the vectors representing the first and second bonds
                 VectorDouble3 bi;
                 bi.setX(group[n+1].getX() - group[n].getX());
