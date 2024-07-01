@@ -235,7 +235,7 @@ gen_simparm() {
                         # use the force integer to calculate the real force value passed to the simulation executable
                         FORCE_VAL=$( logscale $f )
                         # generate flags for simulation executables
-                        GENFLAGS="-n ${n} -f ${FORCE_VAL}"
+                        GENFLAGS="-n ${n} -f ${FORCE_VAL} -b 512"
                         SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}"
                         if [ $k != 0 ]; then
                             GENFLAGS="${GENFLAGS} -k ${k}"

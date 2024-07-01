@@ -418,6 +418,7 @@ if forceExtension:
     if not os.path.exists("02_processed_data/forceExtension/"):
         os.mkdir("02_processed_data/forceExtension/")
     FE_parms.to_csv("02_processed_data/forceExtension/forceExtension.csv")
+    exit()
     # perform analysis for each unqiue set of 'modules'
     for mod in FE_parms['mod'].unique():
         # isolate the parameters corresponding to the module

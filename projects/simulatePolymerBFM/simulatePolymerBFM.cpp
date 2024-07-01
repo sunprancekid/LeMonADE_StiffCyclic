@@ -69,10 +69,11 @@ int main(int argc, char* argv[])
         }
 
         // generate ingredients
-        typedef LOKI_TYPELIST_4(FeatureMoleculesIO,
+        typedef LOKI_TYPELIST_5(FeatureMoleculesIO,
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
-                                FeaturePotentialBending) Features;
+                                FeaturePotentialBending,
+                                FeatureLinearForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
@@ -87,6 +88,7 @@ int main(int argc, char* argv[])
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
         taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
+        taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
         // taskmanager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil));
         taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
 
