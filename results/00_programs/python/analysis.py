@@ -261,11 +261,11 @@ def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, save
             if val > 0.:
                 s.append(j)
                 # bbc.append(math.log(val))
-                bbc.append(val / math.pi)
+                bbc.append(val)
                 expect.append(math.exp(-j/i))
                 if j < 3:
                     x.append(j)
-                    y.append(val / math.pi)
+                    y.append(val)
         plt.scatter(s, bbc, label = '$k_{\\theta}$ = ' + str(i), marker = 'o', s = 20)
         if plot_fit:
             # fit first two data points to expotential decau curve, determine parameters
