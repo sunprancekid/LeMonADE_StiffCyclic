@@ -232,7 +232,6 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
                 angle = sqrt(angle);
                 angle = (bi*bj)/angle;
                 angles[n] = angle;
-                std::cout << angle << std::endl;
             }
         }
     return angles;
