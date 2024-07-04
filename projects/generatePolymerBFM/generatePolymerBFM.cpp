@@ -155,6 +155,18 @@ int main(int argc, char* argv[])
                 ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-2,monomerIdx-1) , std::make_pair(monomerIdx-1,monomerIdx));
                 ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1,monomerIdx )  , std::make_pair(monomerIdx  ,monomerIdx+1));
                 ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx  ,monomerIdx+1)  , std::make_pair(monomerIdx+1 ,0));
+            } else {
+                // if the macro molecule is a chain, the first and second monomers in the chain are partially bonded to the rest of the chain
+                // the beginning of the chain
+                ingredients.modifyMolecules()[0].setBendingBondInformation(std::make_pair(0,1), std::make_pair(1,2));
+                ingredients.modifyMolecules()[1].setBendingBondInformation(std::make_pair(0,1), std::make_pair(1,2));
+                ingredients.modifyMolecules()[1].setBendingBondInformation(std::make_pair(1,2), std::make_pair(2,3));
+                // the end of the chain
+                size_t monomerIdx = chainLength - 1;
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-2, monomerIdx-1), std::make_pair(monomerIdx-1, monomerIdx));
+                monomerIdx = chainLength - 2;
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-2, monomerIdx-1), std::make_pair(monomerIdx-1, monomerIdx));
+                ingredients.modifyMolecules()[monomerIdx].setBendingBondInformation(std::make_pair(monomerIdx-1, monomerIdx), std::make_pair(monomerIdx, monomerIdx + 1));
             }
             // set bending constant
             ingredients.setBending_Potential_Constant(k_theta);

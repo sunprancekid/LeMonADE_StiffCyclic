@@ -31,9 +31,9 @@ PARM_N=( 100 )
 # array containing whether to test rings structures or not
 PARM_RING=( 0 1 ) # TODO add bonded rings
 # array containing which potential to test
-PARM_CSA=( "FALSE" )
+PARM_CSA=( "TRUE" )
 # array containing bending potential strings to test
-PARM_BEND=( 0 7 13 )
+PARM_BEND=( 0 7 13 30 )
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
