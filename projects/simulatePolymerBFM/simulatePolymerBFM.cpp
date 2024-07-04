@@ -24,7 +24,7 @@ using namespace std;
 #include <FeaturePotentialBending.h>
 #include <AnalyzerEndToEndDistance.h>
 #include <AnalyzerBondBondCorrelation.h>
-#include <AnalyzerBondBondDistribution.h>
+#include <AnalyzerBondVectorDistribution.h>
 
 int main(int argc, char* argv[])
 {
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
         taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
         taskmanager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-        // taskmanager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil));
+        taskmanager.addAnalyzer(new AnalyzerBondVectorDistribution<IngredientsType>(ingredients, "BVD.dat", t_equil));
         taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
 
         // if the outfile exists, delete it

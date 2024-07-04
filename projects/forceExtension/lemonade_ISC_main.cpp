@@ -19,7 +19,6 @@ using namespace std;
 // modules not found in LeMonADE Library
 #include <AnalyzerConstantForce.h>
 #include <AnalyzerEndToEndDistance.h>
-#include <AnalyzerBondBondDistribution.h>
 #include <AnalyzerBondBondCorrelation.h>
 
 int main(int argc, char* argv[])
@@ -73,7 +72,6 @@ int main(int argc, char* argv[])
     taskManager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>("config_ev.bfm",ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
     // taskManager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
     taskManager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
-    taskManager.addAnalyzer(new AnalyzerBondBondDistribution<IngredientsType>(ingredients, "BBD.dat", t_equil, bb_bins));
     taskManager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
     // TODO :: add RouseTimeScale Property Calculations
 

@@ -1,7 +1,7 @@
 
 // HEADER
-#ifndef ANALYZER_BOND_BOND_DISTRIBUTION_H
-#define ANALYZER_BOND_BOND_DISTRIBUTION_H
+#ifndef ANALYZER_BOND_VECTOR_DISTRIBUTION_H
+#define ANALYZER_BOND_VECTOR_DISTRIBUTION_H
 
 // INCLUDE
 #include <string>
@@ -19,7 +19,7 @@
 // not in LeMonADE package
 #include <HistogramGeneralStatistik1D.h>
 
-template < class IngredientsType > class AnalyzerBondBondDistribution : public AbstractAnalyzer
+template < class IngredientsType > class AnalyzerBondVectorDistribution : public AbstractAnalyzer
 {
 
 private:
@@ -49,14 +49,14 @@ protected:
 public:
 
     //! constructor
-    AnalyzerBondBondDistribution(const IngredientsType& ing,
+    AnalyzerBondVectorDistribution(const IngredientsType& ing,
                                  std::string filename="BondBondDistribution.dat",
                                  uint32_t equilibrationTime_=0,
                                  int nbins_ = 25);
     //only used to make sure you initialize your groups before you do things
     bool initialized;
     //! destructor. does nothing
-    virtual ~AnalyzerBondBondDistribution(){}
+    virtual ~AnalyzerBondVectorDistribution(){}
     //! Initializes data structures, empty histogram n bins. Called by TaskManager::initialize()
     virtual void initialize();
     //! calculates bond angles between all monomers. Called by TaskManager::execute()
@@ -74,13 +74,13 @@ public:
 
 // constructor
 template<class IngredientsType>
-AnalyzerBondBondDistribution<IngredientsType>::AnalyzerBondBondDistribution(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_, int nbins_)
+AnalyzerBondVectorDistribution<IngredientsType>::AnalyzerBondVectorDistribution(const IngredientsType& ing, std::string filename, uint32_t equilibrationTime_, int nbins_)
 : ingredients(ing), outputFile(filename), equilibrationTime(equilibrationTime_), num_bins(nbins_)
 {initialized=false;}
 
 // initlaizer
 template<class IngredientsType>
-void AnalyzerBondBondDistribution<IngredientsType>::initialize()
+void AnalyzerBondVectorDistribution<IngredientsType>::initialize()
 {
 
     // initialize histogram
@@ -100,15 +100,15 @@ void AnalyzerBondBondDistribution<IngredientsType>::initialize()
 // exectue
 // loop through monomer groups and calculate the bondbond distriubition
 template<class IngredientsType>
-bool AnalyzerBondBondDistribution<IngredientsType>::execute()
+bool AnalyzerBondVectorDistribution<IngredientsType>::execute()
 {
 
     //check if groups have been initialized. if not, exit and explain
     if(initialized==false)
     {
         std::stringstream errormessage;
-        errormessage<<"AnalyzerBondBondDistribution::execute()...analyzer not initialized\n"
-        <<"Use AnalyzerBondBondDistribution::initialize() or Taskmanager::init()\n";
+        errormessage<<"AnalyzerBondVectorDistribution::execute()...analyzer not initialized\n"
+        <<"Use AnalyzerBondVectorDistribution::initialize() or Taskmanager::init()\n";
 
         throw std::runtime_error(errormessage.str());
     }
@@ -131,7 +131,7 @@ bool AnalyzerBondBondDistribution<IngredientsType>::execute()
 }
 
 template<class IngredientsType>
-void AnalyzerBondBondDistribution<IngredientsType>::cleanup()
+void AnalyzerBondVectorDistribution<IngredientsType>::cleanup()
 {
 
     // open file stream
@@ -151,7 +151,7 @@ void AnalyzerBondBondDistribution<IngredientsType>::cleanup()
 
 // cummulate bond bond angles for polymer chain
 template<class IngredientsType>
-std::vector<double> AnalyzerBondBondDistribution<IngredientsType>::cummulateBBD(
+std::vector<double> AnalyzerBondVectorDistribution<IngredientsType>::cummulateBBD(
     const MonomerGroup<molecules_type>& group) const
     {
         // get the group size
@@ -188,6 +188,6 @@ std::vector<double> AnalyzerBondBondDistribution<IngredientsType>::cummulateBBD(
     return angles;
     }
 
-#endif /*ANALYZER_BOND_BOND_DISTRIBUTION_H*/
+#endif /*ANALYZER_BOND_VECTOR_DISTRIBUTION_H*/
 
 
