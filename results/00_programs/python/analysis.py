@@ -19,6 +19,9 @@ bendingPARM_parmcsv = '01_raw_data/bendingPARM/bendingPARM.csv'
 default_dpi = 200
 # generic tolerance for curve fitting
 TOL=.0001
+# equilibrium bond vector distribution for real polymer chain without bending potential
+# equildict = {'vec' : ["$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"], 'height': [0.0632855, 0.206359, 0.215854, 0.0550903, 0.231382, 0.228029]}
+equildict = {'vec' : [0, 1, 2, 3, 4, 5], 'height': [0.0632855, 0.206359, 0.215854, 0.0550903, 0.231382, 0.228029]}
 
 
 ## METHODS
@@ -498,6 +501,49 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     plt.close()
 
 
+# method that generates bond vector diagrams for simulations which have generated that file
+def check_bvd (parms = None, dir = None, dpi = None, show = False):
+
+    # check that mandatory information was passed to method
+    if parms is None:
+        print("ERROR :: check_bvd :: must provide dataframe to method.")
+        exit()
+    if dir is None:
+        print("ERROR :: check_bvd :: must provide path to main directory contain simulation files to method.")
+        exit()
+
+    # specify defaults if not provided by user
+    if dpi is None:
+        dpi = default_dpi
+
+    # loop through each simulation, check for bvd files
+    for i, r in parms.iterrows():
+        # if the file does not exist, skip to the next file
+        simfile = dir + r['path'] + 'BVD.dat'
+        if not os.path.exists(simfile):
+            continue
+        # else, the file exists so make the graph
+        pad = 0.1
+        bar_width = 0.4
+        df = pd.read_csv(simfile, names = ['vec', 'height'])
+        equildf = pd.DataFrame.from_dict(equildict)
+        # TODO surpress warnings
+        for i in df.index:
+            df.at[i, 'vec'] = df.at[i, 'vec'] - bar_width / 2
+            equildf.at[i, 'vec'] = equildf.at[i, 'vec'] + bar_width / 2
+        fig, ax = plt.subplots()
+        ax.bar(df['vec'], df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
+        ax.bar(equildf['vec'], equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
+        ax.set_xticks(np.linspace(0., 5., 6))
+        ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
+        ax.set_xlabel("Bond Vector")
+        ax.set_ylabel("Probability Distribution")
+        ax.legend()
+        ax.set_title(f"Bond Vector Distribution ({r['id']})")
+        plt.savefig(dir + r['path'] + 'BVD_dist.png', dpi = dpi)
+        if show:
+            plt.show()
+        plt.close()
 
 
 ## CLASSES

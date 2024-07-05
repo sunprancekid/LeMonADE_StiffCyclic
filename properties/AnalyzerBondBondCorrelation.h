@@ -209,22 +209,21 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
             // accumulate the angle between bonds seperated by distance s
             // the number of unique bond pairs seperated by seperation distance s is
             int N_s = group_size - s - 1;
-            angles.resize(bbc_statistic_int);
+            angles.resize(N_s);
             // loop through each unqiue bond pairs corresponding to the sepereration distance
-            for (int n = 0; n < bbc_statistic_int; n++){
-                if (start_monomer_int+n+s+1 >= group_size) {
-                    std::cout << start_monomer_int+n+s+1 << std::endl;
+            for (int n = start_monomer_int; n < start_monomer_int + bbc_statistic_int; n++){
+                if (n+s+1 >= group_size) {
                     break;
                 }
                 // get the vectors representing the first and second bonds
                 VectorDouble3 bi;
-                bi.setX(group[start_monomer_int+n+1].getX() - group[start_monomer_int+n].getX());
-                bi.setY(group[start_monomer_int+n+1].getY() - group[start_monomer_int+n].getY());
-                bi.setZ(group[start_monomer_int+n+1].getZ() - group[start_monomer_int+n].getZ());
+                bi.setX(group[n+1].getX() - group[n].getX());
+                bi.setY(group[n+1].getY() - group[n].getY());
+                bi.setZ(group[n+1].getZ() - group[n].getZ());
                 VectorDouble3 bj;
-                bj.setX(group[start_monomer_int+n+s+1].getX() - group[start_monomer_int+n+s].getX());
-                bj.setY(group[start_monomer_int+n+s+1].getY() - group[start_monomer_int+n+s].getY());
-                bj.setZ(group[start_monomer_int+n+s+1].getZ() - group[start_monomer_int+n+s].getZ());
+                bj.setX(group[n+s+1].getX() - group[n+s].getX());
+                bj.setY(group[n+s+1].getY() - group[n+s].getY());
+                bj.setZ(group[n+s+1].getZ() - group[n+s].getZ());
                 // calculate the angle between the two bonds
                 double angle;
                 angle = bi*bi;
@@ -234,7 +233,7 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
                 angles[n] = angle;
             }
         }
-    return angles;
+        return angles;
     }
 
 #endif /*ANALYZER_BOND_BOND_CORRELATION_H*/
