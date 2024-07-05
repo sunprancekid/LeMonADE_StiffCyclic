@@ -24,7 +24,7 @@ PARM_N=( 100 )
 # array containing whether to test rings structures or not
 PARM_RING=( "TRUE" "FALSE" )
 # array containing which potential to test
-PARM_CSA=( "TRUE" "FALSE" )
+PARM_CSA=( "FALSE" "TRUE" )
 # array containing bending potential strings to test
 PARM_BEND=( 1 3 5 7 10 13 16 20 25 )
 # default directory for upload / download, generating parameters

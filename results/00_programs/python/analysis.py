@@ -403,7 +403,7 @@ def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, save
                 # bbc.append(math.log(val))
                 bbc.append(val)
                 expect.append(math.exp(-j/i))
-                if j < 3:
+                if j < 5:
                     x.append(j)
                     y.append(val)
         plt.scatter(s, bbc, label = '$k_{\\theta}$ = ' + str(i), marker = 'o', s = 20)
@@ -472,7 +472,7 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
             kdf = df.loc[df['k'] == i]
             x = []
             y = []
-            for j in range(3):
+            for j in range(1, 6):
                 val = kdf.iloc[0]['l' + str(j) + '_M1']
                 x.append(j)
                 y.append(val)
@@ -525,7 +525,7 @@ update = ("update" in sys.argv)
 if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
-    # TODO :: add boot strapping
+    # parse results, generate results
     scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
     scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
     scaling_parms = parse_results(parms = scaling_parms, dir = '01_raw_data/scaling/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, var = True, tabsep = True)
@@ -545,11 +545,6 @@ if scaling:
             mod = "Ideal, Linear Polymer Chains"
         # plot end-to-end distance
         plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale_x = True, logscale_y = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
-        # plot radius of gyration for real chains
-        # plot_scaling (mod_parm, N_col = 'N', R_col = 'ROG_M1', logscale = True, x_min = 10, x_max = 1000, y_min = 10, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = "Radius of Gyration", Title = "Radius of Gyration Scaling for " + mod , saveas = save_name + "_rog.png", fit = True)
-
-        # combined plots
-
 
 if forceExtension:
     if update or (not os.path.exists("02_processed_data/forceExtension/forceExtension.csv")):
@@ -603,6 +598,7 @@ if forceExtension:
 if bendingPARM:
     # load parameters, add property calculations from simulations
     bendingparms = pd.read_csv(bendingPARM_parmcsv)
+    check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/')
     bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
     bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
     for i in range(30):
@@ -614,9 +610,6 @@ if bendingPARM:
     # loop through each potential, type of structure (ring or chain)
     for pot in bendingparms['pot'].unique():
         for ring in bendingparms['R'].unique():
-            # if ring == True and pot == "CSA":
-            #     continue
-            print(pot + ", " + str(ring))
             # estblish title and save name depending on conditions
             if ring == True:
                 chain = "Ring"

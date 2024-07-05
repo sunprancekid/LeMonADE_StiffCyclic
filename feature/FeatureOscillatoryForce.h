@@ -29,6 +29,7 @@
 #define LEMONADE_OSCILLATORYFORCE_H
 
 #include <LeMonADE/feature/Feature.h>
+#include <LeMonADE/utility/Vector3D.h>
 #include <LeMonADE/updater/moves/MoveBase.h>
 #include <LeMonADE/updater/moves/MoveLocalSc.h>
 #include <LeMonADE/updater/moves/MoveLocalScDiag.h>
@@ -55,7 +56,8 @@ class FeatureOscillatoryForce:public Feature
 {
 public:
 
-    FeatureOscillatoryForce(): ForceOn(false){};
+    // TODO add force vec setter to default
+    FeatureOscillatoryForce(): ConstantForceOn(false){forceVec.setAllCoordinates(1.,0.,0.)};
     virtual ~FeatureOscillatoryForce(){};
 
     //the FeatureBoltzmann: adds a probability for the move
@@ -75,19 +77,19 @@ public:
     bool checkMove(const IngredientsType& ingredients,MoveLocalScDiag& move) const;
 
     //! set the strength of the force
-    void setAmplitudeForce(double amplitudeForce){
-        Amplitude_Force = amplitudeForce;
-        prob=exp(-Amplitude_Force);
+    void setBaseForce(double baseForce){
+        Base_Force = baseForce;
+        prob=exp(-Base_Force);
     }
 
     //! set force on or off
-    void setForceOn(bool forceOn){ForceOn = forceOn;}
+    void setForceOn(bool forceOn){ConstantForceOn = forceOn;}
 
     //! get strength of the force
-    double getAmplitudeForce() const {return Amplitude_Force;}
+    double getBaseForce() const {return Base_Force;}
 
     //! applies a force on the monomers or not
-    bool isForceOn() const {return ForceOn;}
+    bool isConstantForceOn() const {return ConstantForceOn;}
 
     //! Export the relevant functionality for reading bfm-files to the responsible reader object
     template <class IngredientsType>
@@ -98,12 +100,15 @@ public:
     void exportWrite(AnalyzerWriteBfmFile <IngredientsType>& fileWriter) const;
 private:
 
+    //! vector representing force orientation
+    VectorDouble3 forceVec;
+    // TODO add routine to setting vector
+    // TODO add routine for returning vector
+    // TODO save and load force vector
     //! Force is On (True) or Off (False)
-    // TODO change to constant force (force base, without amplitude or period)
-    bool ForceOn;
-    //! force in x direction
-    // TODO change to base_force
-    double Amplitude_Force;
+    bool ConstantForceOn;
+    //! magnitude of base force (without oscilation / amplitude)
+    double Base_Force;
     //! boolean determining if force oscilation is on or off
     // TODO add oscilatory force (force base, amplitude and period are specified)
     //! double representing oscilatory force period (MCS)
@@ -116,20 +121,16 @@ private:
     //! acceptance probability in each simulatin dimension
     // TODO change to 3D vector
     double prob;
-    //! vector representing force orientation
-    // TODO add vector
-    // TODO add routine to setting vector
-    // TODO add routine for returning vector
-    // TODO save and load force vector
 
 };
+
 ////////////////////////////////////////////////////////////////////////////////
 //////////define member functions //////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 template<class IngredientsType>
 bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, MoveLocalSc& move) const
 {
-    if(ForceOn){
+    if(ConstantForceOn){
 
         const uint32_t monoIndex(move.getIndex());
         const int32_t tag(ingredients.getMolecules()[monoIndex].getAttributeTag());
@@ -151,7 +152,7 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
 template<class IngredientsType>
 bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, MoveLocalScDiag& move) const
 {
-    if(ForceOn){
+    if(ConstantForceOn){
         const uint32_t monoIndex(move.getIndex());
         const int32_t tag(ingredients.getMolecules()[monoIndex].getAttributeTag());
         const int32_t dx(move.getDir().getX());
@@ -225,7 +226,7 @@ public:
 template<class IngredientsType>
 void WriteForceFieldOn<IngredientsType>::writeStream(std::ostream& stream)
 {
-    stream<<"#!force_field_on=" << (this->getSource().isForceOn() ? "1" : "0") << std::endl<< std::endl;
+    stream<<"#!force_field_on=" << (this->getSource().isConstantForceOn() ? "1" : "0") << std::endl<< std::endl;
 }
 
 
@@ -259,7 +260,7 @@ void ReadAmplitudeForce<IngredientsType>::execute()
     amplitudeForce = atof(line.c_str());
     std::cout << "#!force_amplitude=" << (amplitudeForce) << std::endl;
 
-    ingredients.setAmplitudeForce(amplitudeForce);
+    ingredients.setBaseForce(amplitudeForce);
 }
 
 
@@ -285,7 +286,7 @@ public:
 template<class IngredientsType>
 void WriteAmplitudeForce<IngredientsType>::writeStream(std::ostream& stream)
 {
-    stream<<"#!force_amplitude=" << (this->getSource().getAmplitudeForce()) << std::endl<< std::endl;
+    stream<<"#!force_amplitude=" << (this->getSource().getBaseForce()) << std::endl<< std::endl;
 }
 
 

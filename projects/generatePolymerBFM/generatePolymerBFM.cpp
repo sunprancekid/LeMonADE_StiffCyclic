@@ -22,6 +22,7 @@ using namespace std;
 // #include <clara>
 #include <UpdaterCreateRingMelt.h>
 #include <FeaturePotentialBending.h>
+// #include <FeatureOscillatoryForce.h>
 
 int main(int argc, char* argv[])
 {
@@ -87,6 +88,7 @@ int main(int argc, char* argv[])
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
                                 FeatureLinearForce) Features;
+                                // FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
