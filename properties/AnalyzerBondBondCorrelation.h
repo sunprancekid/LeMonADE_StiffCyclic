@@ -211,7 +211,7 @@ std::vector<double> AnalyzerBondBondCorrelation<IngredientsType>::cummulateBBC(
             int N_s = group_size - s - 1;
             angles.resize(N_s);
             // loop through each unqiue bond pairs corresponding to the sepereration distance
-            for (int n = start_monomer_int; n < start_monomer_int + bbc_statistic_int; n++){
+            for (int n = 0; n < N_s; n++){
                 if (n+s+1 >= group_size) {
                     break;
                 }
