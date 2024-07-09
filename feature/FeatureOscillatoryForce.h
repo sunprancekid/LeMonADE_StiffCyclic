@@ -155,69 +155,73 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         //dV=f*dr
         // positive force applied on attribute 4 in positive forceVec direction
         // negative force applied on attribute 5 in negative forceVec direction
-        if( ( tag == 4 ) && ( dx  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getX());
-            return true;
-        }
-        if( ( tag == 4 ) && ( dx  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getX());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dx  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getX());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dx  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getX());
-            return true;
-        }
+        // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
-        // y-direction
-        if( ( tag == 4 ) && ( dy  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getY());
-            return true;
-        }
-        if( ( tag == 4 ) && ( dy  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getY());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dy  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getY());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dy  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getY());
-            return true;
-        }
-
-        // x-direction
-        if( ( tag == 4 ) && ( dz  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getZ());
-            return true;
-        }
-        if( ( tag == 4 ) && ( dz  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getZ());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dz  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getZ());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dz  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getZ());
-            return true;
+        if ( dx == 1 ) {
+            // positive x-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getX());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getX());
+                return true;
+            }
+        } else if ( dx == -1 ) { // negative x-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getX());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getX());
+                return true;
+            }
+        } else if ( dy == 1 ) {
+            // positive y-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getY());
+                return true;
+            } else if (tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getY());
+                return true;
+            }
+        } else if ( dy == -1 ) {
+            // negative y-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getY());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getY());
+                return true;
+            }
+        } else if ( dz == 1 ) {
+            // positive z-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getZ());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getZ());
+                return true;
+            }
+        } else if ( dz == -1 ) {
+            // negative z-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getZ());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getZ());
+                return true;
+            }
         }
     }
     return true;
@@ -236,73 +240,74 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         //dV=f*dr
         // positive force applied on attribute 4 in positive forceVec direction
         // negative force applied on attribute 5 in negative forceVec direction
+        // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
-        // x-direction
-        if( ( tag == 4 ) && ( dx  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getX());
-            return true;
+        if ( dx == 1 ) {
+            // positive x-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getX());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getX());
+                return true;
+            }
+        } else if ( dx == -1 ) { // negative x-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getX());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getX());
+                return true;
+            }
+        } else if ( dy == 1 ) {
+            // positive y-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getY());
+                return true;
+            } else if (tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getY());
+                return true;
+            }
+        } else if ( dy == -1 ) {
+            // negative y-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getY());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getY());
+                return true;
+            }
+        } else if ( dz == 1 ) {
+            // positive z-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+                move.multiplyProbability(prob.getZ());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
+                move.multiplyProbability(1./prob.getZ());
+                return true;
+            }
+        } else if ( dz == -1 ) {
+            // negative z-direction
+            if ( tag == 4 ) {
+                // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(1./prob.getZ());
+                return true;
+            } else if ( tag == 5 ) {
+                // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+                move.multiplyProbability(prob.getZ());
+                return true;
+            }
         }
-        if( ( tag == 4 ) && ( dx  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getX());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dx  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getX());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dx  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getX());
-            return true;
-        }
-
-        // y-direction
-        if( ( tag == 4 ) && ( dy  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getY());
-            return true;
-        }
-        if( ( tag == 4 ) && ( dy  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getY());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dy  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getY());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dy  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getY());
-            return true;
-        }
-
-        // x-direction
-        if( ( tag == 4 ) && ( dz  == 1 ) ){
-            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-            move.multiplyProbability(prob.getZ());
-            return true;
-        }
-        if( ( tag == 4 ) && ( dz  == -1 ) ){
-            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(1./prob.getZ());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dz  == -1 ) ){
-            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-            move.multiplyProbability(prob.getZ());
-            return true;
-        }
-        if( ( tag == 5 ) && ( dz  == 1 ) ){
-            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
-            move.multiplyProbability(1./prob.getZ());
-            return true;
-        }
-
     }
     return true;
 }
