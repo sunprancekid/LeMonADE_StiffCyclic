@@ -8,7 +8,7 @@ using namespace std;
 #include <LeMonADE/feature/FeatureMoleculesIO.h>
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureExcludedVolumeSc.h>
-#include <LeMonADE/feature/FeatureLinearForce.h>
+// #include <LeMonADE/feature/FeatureLinearForce.h>
 
 #include <LeMonADE/updater/UpdaterAddLinearChains.h>
 #include <LeMonADE/updater/UpdaterSimpleSimulator.h>
@@ -22,7 +22,7 @@ using namespace std;
 // #include <clara>
 #include <UpdaterCreateRingMelt.h>
 #include <FeaturePotentialBending.h>
-// #include <FeatureOscillatoryForce.h>
+#include <FeatureOscillatoryForce.h>
 
 int main(int argc, char* argv[])
 {
@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
-                                FeatureLinearForce) Features;
-                                // FeatureOscillatoryForce) Features;
+                                // FeatureLinearForce) Features;
+                                FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
@@ -185,7 +185,8 @@ int main(int argc, char* argv[])
         if (force) {
             // add constant linear force
             ingredients.setForceOn(true);
-            ingredients.setAmplitudeForce(conForce);
+            ingredients.setBaseForce(conForce);
+            ingredients.setForceVector(1., 1., 1.);
             // synchronize
             ingredients.synchronize(ingredients);
         }

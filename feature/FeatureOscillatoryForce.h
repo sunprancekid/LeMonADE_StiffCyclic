@@ -36,6 +36,7 @@
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureBoltzmann.h>
 #include <LeMonADE/io/FileImport.h>
+#include <bits/stdc++.h> // used to parse comma seperated force vector
 
 /*****************************************************************************/
 /**
@@ -56,8 +57,8 @@ class FeatureOscillatoryForce:public Feature
 {
 public:
 
-    // TODO add force vec setter to default
-    FeatureOscillatoryForce(): ConstantForceOn(false){forceVec.setAllCoordinates(1.,0.,0.)};
+    // constructor: assign default force vector and base force
+    FeatureOscillatoryForce(): ConstantForceOn(false){setForceVector(1., 0., 0.); setBaseForce(0.);};
     virtual ~FeatureOscillatoryForce(){};
 
     //the FeatureBoltzmann: adds a probability for the move
@@ -76,14 +77,29 @@ public:
     template<class IngredientsType>
     bool checkMove(const IngredientsType& ingredients,MoveLocalScDiag& move) const;
 
+    //! force vector setter
+    void setForceVector(double x, double y, double z) {
+        forceVec.setAllCoordinates(x, y, z);
+        // assign the normalization factor
+        normfact = sqrt(forceVec * forceVec);
+        // if a force has already been assigned, recalculate the probabilities
+        setBaseForce(Base_Force);
+    }
+
+    //! return vector representing force magnitude and direction
+    VectorDouble3 getForceVector() const {return forceVec;}
+
     //! set the strength of the force
     void setBaseForce(double baseForce){
         Base_Force = baseForce;
-        prob=exp(-Base_Force);
+        prob.setAllCoordinates(exp(-(Base_Force / normfact) * forceVec.getX()), exp(-(Base_Force / normfact) * forceVec.getY()), exp(-(Base_Force / normfact) * forceVec.getZ()));
     }
 
     //! set force on or off
-    void setForceOn(bool forceOn){ConstantForceOn = forceOn;}
+    void setForceOn(bool forceOn){
+        // set boolean
+        ConstantForceOn = forceOn;
+    }
 
     //! get strength of the force
     double getBaseForce() const {return Base_Force;}
@@ -102,9 +118,6 @@ private:
 
     //! vector representing force orientation
     VectorDouble3 forceVec;
-    // TODO add routine to setting vector
-    // TODO add routine for returning vector
-    // TODO save and load force vector
     //! Force is On (True) or Off (False)
     bool ConstantForceOn;
     //! magnitude of base force (without oscilation / amplitude)
@@ -118,9 +131,10 @@ private:
     // TODO add method for returning osciallatory force amplitude
     // TODO add method for checking if osciallatory force is on or off
     //!probability
-    //! acceptance probability in each simulatin dimension
-    // TODO change to 3D vector
-    double prob;
+    //! normalization factor for calculating acceptance probability in each dimension
+    double normfact;
+    //! move probability in each simulation dimension according to force magnitude and vector
+    VectorDouble3 prob;
 
 };
 
@@ -135,20 +149,80 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         const uint32_t monoIndex(move.getIndex());
         const int32_t tag(ingredients.getMolecules()[monoIndex].getAttributeTag());
         const int32_t dx(move.getDir().getX());
+        const int32_t dy(move.getDir().getY());
+        const int32_t dz(move.getDir().getZ());
         //Metropolis: zeta = exp (-dV)
         //dV=f*dr
-        // positive force applied on attribute 4 and negative force on attribute 5
+        // positive force applied on attribute 4 in positive forceVec direction
+        // negative force applied on attribute 5 in negative forceVec direction
         if( ( tag == 4 ) && ( dx  == 1 ) ){
-            move.multiplyProbability(prob);
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getX());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dx  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getX());
             return true;
         }
         if( ( tag == 5 ) && ( dx  == -1 ) ){
-            move.multiplyProbability(prob);
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getX());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dx  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getX());
+            return true;
+        }
+
+        // y-direction
+        if( ( tag == 4 ) && ( dy  == 1 ) ){
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getY());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dy  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getY());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dy  == -1 ) ){
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getY());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dy  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getY());
+            return true;
+        }
+
+        // x-direction
+        if( ( tag == 4 ) && ( dz  == 1 ) ){
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getZ());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dz  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getZ());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dz  == -1 ) ){
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getZ());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dz  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getZ());
             return true;
         }
     }
     return true;
 }
+
 template<class IngredientsType>
 bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, MoveLocalScDiag& move) const
 {
@@ -156,19 +230,152 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         const uint32_t monoIndex(move.getIndex());
         const int32_t tag(ingredients.getMolecules()[monoIndex].getAttributeTag());
         const int32_t dx(move.getDir().getX());
+        const int32_t dy(move.getDir().getY());
+        const int32_t dz(move.getDir().getZ());
         //Metropolis: zeta = exp (-dV)
         //dV=f*dr
-        // positive force applied on attribute 4 and negative force on attribute 5
+        // positive force applied on attribute 4 in positive forceVec direction
+        // negative force applied on attribute 5 in negative forceVec direction
+
+        // x-direction
         if( ( tag == 4 ) && ( dx  == 1 ) ){
-            move.multiplyProbability(prob);
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getX());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dx  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getX());
             return true;
         }
         if( ( tag == 5 ) && ( dx  == -1 ) ){
-            move.multiplyProbability(prob);
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getX());
             return true;
         }
+        if( ( tag == 5 ) && ( dx  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getX());
+            return true;
+        }
+
+        // y-direction
+        if( ( tag == 4 ) && ( dy  == 1 ) ){
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getY());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dy  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getY());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dy  == -1 ) ){
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getY());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dy  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getY());
+            return true;
+        }
+
+        // x-direction
+        if( ( tag == 4 ) && ( dz  == 1 ) ){
+            // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
+            move.multiplyProbability(prob.getZ());
+            return true;
+        }
+        if( ( tag == 4 ) && ( dz  == -1 ) ){
+            // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(1./prob.getZ());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dz  == -1 ) ){
+            // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
+            move.multiplyProbability(prob.getZ());
+            return true;
+        }
+        if( ( tag == 5 ) && ( dz  == 1 ) ){
+            // POSITIVE charge is LESS likely to move in the SAME direction as the force vector
+            move.multiplyProbability(1./prob.getZ());
+            return true;
+        }
+
     }
     return true;
+}
+
+
+/*****************************************************************/
+/**
+ * @class ReadForceFieldVector
+ *
+ * @brief Handles BFM-File-Reads \b #!force_field_vector
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceFieldVector: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceFieldVector(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceFieldVector(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceFieldVector<IngredientsType>::execute()
+{
+    std::cout<<"reading ForceFieldVector...";
+
+    // bool fieldIsOn = false;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line; // line parsed from config file
+    vector<string> v; // contains each vector component
+    getline(source,line); // parse line from file
+    std::stringstream ss(line);
+    while (ss.good()) {
+        // loop through string
+        string substr;
+        getline(ss, substr, ',');
+        v.push_back(substr);
+    }
+    // set force vec, report to user
+    double x = std::stod(v[0]);
+    double y = std::stod(v[1]);
+    double z = std::stod(v[2]);
+    std::cout << "#!force_field_vector=" << x << "," << y << "," << z << std::endl;
+
+    ingredients.setForceVector(x, y, z);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceFieldVector
+ *
+ * @brief Handles BFM-File-Write \b #!force_field_vector
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceFieldVector:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceFieldVector(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceFieldVector(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceFieldVector<IngredientsType>::writeStream(std::ostream& stream)
+{
+    VectorDouble3 fv = this->getSource().getForceVector();
+    stream<<"#!force_vector=" << fv.getX() << "," << fv.getY() << "," << fv.getZ() << std::endl<< std::endl;
 }
 
 /*****************************************************************/
@@ -308,6 +515,7 @@ void FeatureOscillatoryForce::exportRead(FileImport< IngredientsType >& fileRead
 {
     fileReader.registerRead("#!force_field_on", new ReadForceFieldOn<FeatureOscillatoryForce>(*this));
     fileReader.registerRead("#!force_amplitude", new ReadAmplitudeForce<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_vector", new ReadForceFieldVector<FeatureOscillatoryForce>(*this));
 
 }
 
@@ -326,7 +534,7 @@ void FeatureOscillatoryForce::exportWrite(AnalyzerWriteBfmFile< IngredientsType 
 {
     fileWriter.registerWrite("#!force_field_on",new WriteForceFieldOn<FeatureOscillatoryForce>(*this));
     fileWriter.registerWrite("#!force_amplitude", new WriteAmplitudeForce<FeatureOscillatoryForce>(*this));
-
+    fileWriter.registerWrite("#!force_vector", new WriteForceFieldVector<FeatureOscillatoryForce>(*this));
 }
 
 

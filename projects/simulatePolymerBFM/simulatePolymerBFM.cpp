@@ -8,7 +8,7 @@ using namespace std;
 #include <LeMonADE/feature/FeatureMoleculesIO.h>
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureExcludedVolumeSc.h>
-#include <LeMonADE/feature/FeatureLinearForce.h>
+// #include <LeMonADE/feature/FeatureLinearForce.h>
 
 #include <LeMonADE/updater/UpdaterAddLinearChains.h>
 #include <LeMonADE/updater/UpdaterSimpleSimulator.h>
@@ -25,6 +25,7 @@ using namespace std;
 #include <AnalyzerEndToEndDistance.h>
 #include <AnalyzerBondBondCorrelation.h>
 #include <AnalyzerBondVectorDistribution.h>
+#include <FeatureOscillatoryForce.h>
 
 int main(int argc, char* argv[])
 {
@@ -73,7 +74,8 @@ int main(int argc, char* argv[])
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
-                                FeatureLinearForce) Features;
+                                // FeatureLinearForce) Features;
+                                FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
         IngredientsType ingredients;
