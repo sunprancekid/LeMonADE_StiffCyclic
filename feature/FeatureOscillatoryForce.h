@@ -253,7 +253,8 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
                 move.multiplyProbability(1./prob.getX());
                 return true;
             }
-        } else if ( dx == -1 ) { // negative x-direction
+        } else if ( dx == -1 ) {
+            // negative x-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
                 move.multiplyProbability(1./prob.getX());

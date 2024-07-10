@@ -97,6 +97,16 @@ public:
     uint32_t getEquilibrationTime(){return equilibrationTime;}
     //! monomers that are subjected to a force according to their attributes tag
     uint32_t indexMonomersForce[2];
+    //! vector that total distance is projected onto
+    VectorDouble3 projVec;
+    //! boolean that determines if the distance should be calculated in terms of the projection vector
+    bool calcProjVec;
+    //! assigns vector that distance should be  projected onto
+    void setE2EProjVec(double x, double y, double z) {projVec.setAllCoordinates(x, y, z); calcProjVec = true;};
+    //! assigns projection vector as 3d double vector type
+    void setE2EProjVec(VectorDouble3 v) {setE2EProjVec(v.getX(), v.getY(), v.getZ());};
+    //! returns the projection vector
+    VectorDouble3 getE2EProjVec() {return projVec;};
 
 };
 
@@ -119,9 +129,9 @@ AnalyzerEndToEndDistance<IngredientsType>::AnalyzerEndToEndDistance(
 ,outputFile(filename)
 ,isFirstFileDump(true)
 ,equilibrationTime(equilibrationTime_)
+,calcProjVec(false)
 {
 }
-
 
 /**
  * @details fills all monomers into the groups vector as a single group,
@@ -150,7 +160,14 @@ void AnalyzerEndToEndDistance<IngredientsType>::initialize()
             n += 1;
         }
     }
-
+    // check if the constant force is on
+    if (ingredients.isConstantForceOn()) {
+        std::cout << "Constant force is on." << std::endl;
+        exit(0);
+    } else {
+        std::cout << "Constant force is off." << std::endl;
+        exit(0);
+    }
 }
 
 /**
@@ -260,10 +277,12 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
         diff_vec.setX(group[indexMonomersForce[1]].getX() - group[indexMonomersForce[0]].getX());
         diff_vec.setY(group[indexMonomersForce[1]].getY() - group[indexMonomersForce[0]].getY());
         diff_vec.setZ(group[indexMonomersForce[1]].getZ() - group[indexMonomersForce[0]].getZ());
+        if (calcProjVec) {
+            double mag = (diff_vec * projVec) / (projVec * projVec);
+            std::cout << mag << std::endl;
+            exit(0);
+            diff_vec = mag * projVec;
+        }
         return diff_vec;
-
-        // get the minimum image distance vector between the first and last monomers
-        // return LemonadeDistCalcs::MinImageVector(group[0], group[group_size - 1], ingredients);
-
     }
     #endif
