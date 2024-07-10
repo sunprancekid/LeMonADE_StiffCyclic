@@ -191,7 +191,18 @@ bool AnalyzerEndToEndDistance<IngredientsType>::execute()
         Re2eTimeSeries[0].push_back(Re2eComponents.getX());
         Re2eTimeSeries[1].push_back(Re2eComponents.getY());
         Re2eTimeSeries[2].push_back(Re2eComponents.getZ());
-        Re2eTimeSeries[3].push_back(std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+        // if a projection vector has been specified
+        if (calcProjVec) {
+            // determine whether the projected distance is positive or negative relative to the normal vector
+            double projmag = (Re2eComponents * projVec);
+            if (projmag > 0.) {
+                Re2eTimeSeries[3].push_back(std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+            } else {
+                Re2eTimeSeries[3].push_back(-std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+            }
+        } else{
+            Re2eTimeSeries[3].push_back(std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+        }
         // std::cout << std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)) << "\n";
         // exit(0);
     }
