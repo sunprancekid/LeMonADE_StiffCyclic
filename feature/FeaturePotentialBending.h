@@ -339,7 +339,7 @@ bool FeaturePotentialBending::checkMove(const IngredientsType& ingredients, Move
             
             // old bond
             VectorInt3 bondvector1_old = b1_terminal - b1_offset;
-            VectorInt3 bondvector2_old = b2_terminal - b2_offset;;
+            VectorInt3 bondvector2_old = b2_terminal - b2_offset;
             
             // Bending potential VB(theta_i)=KB*(1-cos(theta_i))=KB*[1-(a*b)/(|a|*|b|)]
             // see Martemyanova, J. A. / Stukan, M. R. / Ivanov, V. A. / Müller, M. / Paul, W. / Binder, K. 
