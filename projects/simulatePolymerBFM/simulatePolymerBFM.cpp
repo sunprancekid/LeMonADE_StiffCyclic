@@ -102,13 +102,6 @@ int main(int argc, char* argv[])
 
         // run
         taskmanager.initialize();
-
-        // assign distance projection vector if a constant force has been assigned
-        // if (ingredients.isConstantForceOn()) {
-        //     // the force is on, so pass the force vector to the E2E analyzer
-        //     taskmanager.setE2EProjVec(ingredients.getForceVector());
-        //     std::cout << taskmanager.getE2EProjVec() << std::endl;
-        // }
         taskmanager.run(ceil(max_MCs/save_interval));
         taskmanager.cleanup();
     }

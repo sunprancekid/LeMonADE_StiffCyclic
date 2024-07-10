@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
             // add constant linear force
             ingredients.setForceOn(true);
             ingredients.setBaseForce(conForce);
-            ingredients.setForceVector(1., 1., 1.);
+            ingredients.setForceVector(1., 1., 0.);
             // synchronize
             ingredients.synchronize(ingredients);
         }

@@ -162,11 +162,10 @@ void AnalyzerEndToEndDistance<IngredientsType>::initialize()
     }
     // check if the constant force is on
     if (ingredients.isConstantForceOn()) {
-        std::cout << "Constant force is on." << std::endl;
-        exit(0);
-    } else {
-        std::cout << "Constant force is off." << std::endl;
-        exit(0);
+        // if the constant force is on, set the projection vector as the force vector
+        setE2EProjVec(ingredients.getForceVector());
+        // std::cout << calcProjVec << std::endl;
+        // exit(0);
     }
 }
 
@@ -279,8 +278,6 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
         diff_vec.setZ(group[indexMonomersForce[1]].getZ() - group[indexMonomersForce[0]].getZ());
         if (calcProjVec) {
             double mag = (diff_vec * projVec) / (projVec * projVec);
-            std::cout << mag << std::endl;
-            exit(0);
             diff_vec = mag * projVec;
         }
         return diff_vec;
