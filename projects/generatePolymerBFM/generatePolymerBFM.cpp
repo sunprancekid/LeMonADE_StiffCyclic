@@ -8,7 +8,6 @@ using namespace std;
 #include <LeMonADE/feature/FeatureMoleculesIO.h>
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureExcludedVolumeSc.h>
-// #include <LeMonADE/feature/FeatureLinearForce.h>
 
 #include <LeMonADE/updater/UpdaterAddLinearChains.h>
 #include <LeMonADE/updater/UpdaterSimpleSimulator.h>
@@ -17,6 +16,7 @@ using namespace std;
 
 #include <LeMonADE/utility/RandomNumberGenerators.h>
 #include <LeMonADE/utility/TaskManager.h>
+#include <LeMonADE/utility/Vector3D.h>
 
 // modules not found in LeMonADE Library
 // #include <clara>
@@ -41,11 +41,12 @@ int main(int argc, char* argv[])
         bool bendingPot = false; // determines whether a bending potential should be added
         double k_theta = 0.; // parameterized bending potential strength
         bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
+        std::string forceVecString = "111";
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:ch"))  != EOF){
+        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:v:ch"))  != EOF){
             switch (option_char)
             {
                 // TODO add force oscilation and amplitude
@@ -72,12 +73,15 @@ int main(int argc, char* argv[])
                     force = true;
                     conForce = stod(optarg);
                     break;
+                case 'v':
+                    forceVecString = optarg;
+                    break;
                 case 'c':
                     bendingPot_CA = true;
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
                     return 0;
             }
         }
@@ -87,7 +91,6 @@ int main(int argc, char* argv[])
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
-                                // FeatureLinearForce) Features;
                                 FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
@@ -186,7 +189,23 @@ int main(int argc, char* argv[])
             // add constant linear force
             ingredients.setForceOn(true);
             ingredients.setBaseForce(conForce);
-            ingredients.setForceVector(1., 1., 0.);
+            // parse the force vector
+            VectorDouble3 fv;
+            for(std::string::size_type i = 0; i < forceVecString.size(); ++i) {
+                std::string s(1, forceVecString[i]);
+                if (i == 0) {
+                    // x component
+                    fv.setX(stod(s));
+                } else if (i == 1) {
+                    // y component
+                    fv.setY(stod(s));
+                } else if (i == 2) {
+                    // z component
+                    fv.setZ(stod(s));
+
+                }
+            }
+            ingredients.setForceVector(fv);
             // synchronize
             ingredients.synchronize(ingredients);
         }

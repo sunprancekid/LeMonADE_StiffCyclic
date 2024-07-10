@@ -86,6 +86,11 @@ public:
         setBaseForce(Base_Force);
     }
 
+    //! force vector setter for VectorDouble3 type
+    void setForceVector (VectorDouble3 v) {
+        setForceVector(v.getX(), v.getY(), v.getZ());
+    }
+
     //! return vector representing force magnitude and direction
     VectorDouble3 getForceVector() const {return forceVec;}
 
