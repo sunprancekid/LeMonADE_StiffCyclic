@@ -584,7 +584,8 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
         bdvmse = df['BVDMSE_M2'].tolist()
         # plot slope already calculated
         ax2 = ax1.twinx()
-        ax2.scatter(k, bdvmse, s = 20, label = "BVD MSE")
+        ax2.plot(k, bdvmse, 'x', label = "BVD MSE", color = "tab:red")
+        ax1.plot([], [], 'x', label = "BVD MSE", color = "tab:red")
         ax2.set_ylabel("Bond Vector Distribution Mean Square Error")
         ax2.set_ylim(0, None)
     ax1.set_xlim(1, 100)
@@ -736,8 +737,6 @@ if bendingPARM:
             title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
             plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = True, show = True)
-            exit()
             # TODO plot the chain length against the persistence length
             # TODO plot the BVD MSE against the persistence length
-            # TODO plot the BVD MSE against the bending potential strength
 
