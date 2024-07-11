@@ -1,5 +1,6 @@
 ## PACKAGES
 import sys, os, math
+import csv
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -25,6 +26,25 @@ equildict = {'vec' : [0, 1, 2, 3, 4, 5], 'height': [0.0632855, 0.206359, 0.21585
 
 
 ## METHODS
+
+## USED FOR EQUATION FITTING
+# model equation for power law fitting
+def power_fit(x, A, B):
+    return A * (x ** B)
+
+# model equation for power law fitting in the hookean regime
+def power_fit_hook(x, A):
+    return A * (x ** 1.)
+
+# model equation for exponential decay fitting
+def exp_decay_fit(x, A, B):
+    return A * (math.e ** (- x / B))
+
+# model equation for logistic5 equation
+def log5_fit (x, A, B, C, D, E, F):
+    return A + ((B - A) / ((1. + (C / (x - F)) ** D) ** E))
+
+## USED FOR PARSING SIMULATION RESULTS FROM FILES
 # clean file, remove any comments from file structure
 def clean_file(filepath, commentchar = '#'):
 
@@ -71,6 +91,9 @@ def parse_data(filepath, avgcol = None, avgrow = None, header = None, tab = Fals
 
 # method for getting simulation results from files
 def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False):
+
+# method that generates bond vector diagrams for simulations which have generated that file
+def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False):
 
     # make sure required information has been provided
     if title is None:
@@ -131,7 +154,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
             # calculate using the formula
             for i in vals:
                 avg += i
-            avg = avg / len(vals)
+            avg = avg / nvals
         if M1:
             # if specified, append to array
             M1_arr.append(avg)
@@ -160,8 +183,9 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
     if var: parms[title + "_var"] = var_arr
     return parms
 
+## USED FOR PLOTTING SIMULATION RESULTS
 # method for getting scaling simulation data (N vs. R)
-def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None, plot_log5 = False, plot_slope = False):
+def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None, plot_log5 = False, plot_slope = False, flip_axis = False):
     # make sure that the proper parameters were passed to the method
     if N_col is None:
         exit()
@@ -180,15 +204,24 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
         for u in parms[N_col].unique():
             x.append(u)
             y_mean = parms[parms[N_col] == u]
-            y.append(abs(y_mean[R_col[c] + '_M2'].mean()))
+            if logscale_y:
+                y.append(abs(y_mean[R_col[c] + '_M1'].mean()))
+            else:
+                y.append(y_mean[R_col[c] + '_M1'].mean())
             v.append(y_mean[R_col[c] + '_var'].mean() / 2)
         # plot values
         if error:
             # plot with error bars
-            plt.errorbar(x, y, yerr = v, label = data_label[c], fmt = 'o', color = color[c])
+            if flip_axis:
+                plt.errorbar(y, x, xerr = v, label = data_label[c], fmt = 'o', color = color[c])
+            else:
+                plt.errorbar(x, y, yerr = v, label = data_label[c], fmt = 'o', color = color[c])
         else:
             # plot without error bars
-            ax1.plot(x, y, 'o', label = data_label[c], fillstyle = 'none', color = color[c])
+            if flip_axis:
+                ax1.plot(y, x, 'o', label = data_label[c], fillstyle = 'none', color = color[c])
+            else:
+                ax1.plot(x, y, 'o', label = data_label[c], fillstyle = 'none', color = color[c])
         # fit data to power low, if specified
         if fit:
             # fit data to power law equation, determine parameters
@@ -253,16 +286,22 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     if Title is not None:
         ax1.set_title(Title)
     if Y_label is not None:
-        ax1.set_ylabel(Y_label)
+        if flip_axis:
+            ax1.set_xlabel(Y_label)
+        else:
+            ax1.set_ylabel(Y_label)
     if X_label is not None:
-        ax1.set_xlabel(X_label)
+        if flip_axis:
+            ax1.set_ylabel(X_label)
+        else:
+            ax1.set_xlabel(X_label)
     if saveas is not None:
         fig.savefig(saveas, dpi = dpi, bbox_inches='tight')
     plt.show()
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specift columns from data frame to plot!")
@@ -278,9 +317,14 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isol
         # for each unique isolated value
         iso_df = parms[parms[iso_col] == iso]
         x = iso_df[X_col].tolist()
-        y = iso_df[Y_col + '_M2'].tolist()
-        v = iso_df[Y_col + '_var'].tolist()
-        y = [abs(i) for i in y]
+        if M2:
+            y = iso_df[Y_col + '_M2'].tolist()
+        else:
+            y = iso_df[Y_col + '_M1'].tolist()
+        if error:
+            v = iso_df[Y_col + '_var'].tolist()
+        if logscale_y is True:
+            y = [abs(i) for i in y]
         # fit the data to a log5 curve
         if plot_log5 or plot_slope:
             # convert data to log scale
@@ -292,10 +336,11 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isol
                     continue
                 x_log.append(math.log(x[i]) / math.log(10.))
                 y_log.append(math.log(abs(y[i])) / math.log(10.))
-                if v[i] > TOL:
-                    v_log.append(v[i])
-                else:
-                    v_log.append(TOL)
+                if error:
+                    if v[i] > TOL:
+                        v_log.append(v[i])
+                    else:
+                        v_log.append(TOL)
             # initialize paramaters for curve fitting
             lb = [min(y_log), max(y_log) - (TOL / 100), -100, -100, -40, min(x_log) - 2 * TOL]
             ub = [max(y_log), max(y_log), 200, 100, 40, min(x_log) - TOL]
@@ -325,14 +370,24 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isol
             # plot the simulation data (and the log5 fit, if called)
             if plot_data and plot_log5:
                 line = plt.plot(x_fit, y_fit, '--')
-                plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color())
+                if flip_axis:
+                    plt.plot(y, x, 'o', label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color())
+                else:
+                    plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color())
             elif plot_log5:
                 line = plt.plot(x_fit, y_fit, '--', label = isolabel.format(iso))
             elif plot_data:
-                plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'none')
+                if flip_axis:
+                    plt.plot(y, x, 'o', label = isolabel.format(iso), fillstyle = 'full')
+                else:
+                    plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'full')
     # finish formatting the graph, once all of the plots have been added
-    plt.xlim(x_min, x_max)
-    plt.ylim(y_min, y_max)
+    if flip_axis:
+        plt.xlim(y_min, y_max)
+        plt.ylim(x_min, x_max)
+    else:
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
     if logscale_x:
         plt.xscale('log')
     if logscale_y:
@@ -345,33 +400,20 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isol
         plt.title(Title)
     if Y_label is not None:
         if plot_slope:
-            plt.ylabel("Change in " + Y_label)
+            Y_label = "Change in " + Y_label
+        if flip_axis:
+            plt.xlabel(Y_label)
         else:
             plt.ylabel(Y_label)
     if X_label is not None:
-        plt.xlabel(X_label)
+        if flip_axis:
+            plt.ylabel(X_label)
+        else:
+            plt.xlabel(X_label)
     if saveas is not None:
         plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
     plt.show()
     plt.close()
-
-
-
-# model equation for power law fitting
-def power_fit(x, A, B):
-    return A * (x ** B)
-
-# model equation for power law fitting in the hookean regime
-def power_fit_hook(x, A):
-    return A * (x ** 1.)
-
-# model equation for exponential decay fitting
-def exp_decay_fit(x, A, B):
-    return A * (math.e ** (- x / B))
-
-# model equation for logistic5 equation
-def log5_fit (x, A, B, C, D, E, F):
-    return A + ((B - A) / ((1. + (C / (x - F)) ** D) ** E))
 
 # method for plotting the bond bond correlation for bending potential simulation data against s, the bond distance
 def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, saveas = None, logscale_y = True, Title = None, Y_label = None, X_label = None, dpi = None):
@@ -501,8 +543,6 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     plt.close()
 
 
-# method that generates bond vector diagrams for simulations which have generated that file
-def check_bvd (parms = None, dir = None, dpi = None, show = False):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -525,25 +565,40 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False):
         # else, the file exists so make the graph
         pad = 0.1
         bar_width = 0.4
+        # check if the file already has a header
         df = pd.read_csv(simfile, names = ['vec', 'height'])
         equildf = pd.DataFrame.from_dict(equildict)
         # TODO surpress warnings
+        vec_diff = []
+        sim_bar_xloc = []
+        equil_bar_xloc = []
+        mse = 0.
         for i in df.index:
-            df.at[i, 'vec'] = df.at[i, 'vec'] - bar_width / 2
-            equildf.at[i, 'vec'] = equildf.at[i, 'vec'] + bar_width / 2
-        fig, ax = plt.subplots()
-        ax.bar(df['vec'], df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
-        ax.bar(equildf['vec'], equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
-        ax.set_xticks(np.linspace(0., 5., 6))
-        ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
-        ax.set_xlabel("Bond Vector")
-        ax.set_ylabel("Probability Distribution")
-        ax.legend()
-        ax.set_title(f"Bond Vector Distribution ({r['id']})")
-        plt.savefig(dir + r['path'] + 'BVD_dist.png', dpi = dpi)
-        if show:
-            plt.show()
-        plt.close()
+            # calculate the difference between the equilibrium and actual BVD distribution
+            val = df.at[i, 'height'] - equildf.at[i, 'height']
+            mse += math.pow(val, 2.)
+            vec_diff.append(val)
+            # set bar center for plots
+            if plot:
+                sim_bar_xloc.append(df.at[i, 'vec'] - bar_width / 2)
+                equil_bar_xloc.append(equildf.at[i, 'vec'] + bar_width / 2)
+        # the vector difference to the dataframe and rewrite to the
+        df['me'] = vec_diff
+        df.to_csv(dir + r['path'] + "BVD.csv", header = False)
+        if plot:
+            fig, ax = plt.subplots()
+            ax.bar(sim_bar_xloc, df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
+            ax.bar(equil_bar_xloc, equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
+            ax.set_xticks(np.linspace(0., 5., 6))
+            ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
+            ax.set_xlabel("Bond Vector")
+            ax.set_ylabel("Probability Distribution")
+            ax.legend()
+            ax.set_title(f"Bond Vector Distribution ({r['id']})")
+            plt.savefig(dir + r['path'] + 'BVD_dist.png', dpi = dpi)
+            if show:
+                plt.show()
+            plt.close()
 
 
 ## CLASSES
@@ -596,8 +651,10 @@ if forceExtension:
     if update or (not os.path.exists("02_processed_data/forceExtension/forceExtension.csv")):
         # get simulation parameters
         FE_parms = pd.read_csv(forceExtension_parmcsv)
+        # calcuate bond vector difference
+        check_bvd(parms = FE_parms, dir = '01_raw_data/forceExtension/', plot = True)
         # average simulation properties
-        FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+        FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
         FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
         FE_parms = parse_results(parms = FE_parms, dir = '01_raw_data/forceExtension/', simfile = 'ROG.dat', col = 4, title = 'ROGtot', M1 = True, M2 = True, var = True, bootstrapping = False, tabsep = True)
         # save results
@@ -624,12 +681,10 @@ if forceExtension:
                 if top_df.empty:
                     continue
                 save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}"
-                # # plot force extension data for all bending constants, as well as log5 fit
-                # plot_force_extension(top_df, X_col = 'F', Y_col = 'E2Ex', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', logscale_x = True, logscale_y = True, x_min = .00008, x_max = 10., y_min = 0.01, y_max = 500, X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_data.png', plot_data = True, plot_log5 = True)
-                # # plot slope of log5 fit for all bending constants
-                # plot_force_extension(top_df, X_col = 'F', Y_col = 'E2Ex', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', logscale_x = True, logscale_y = False, x_min = .00008, x_max = 10., y_min = 0., X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", Title = f"Force Extension Slope for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_slope.png', plot_log5 = True, plot_slope = True)
-                # # plot slope of log5 fit for all bending constants
-                # plot_force_extension(top_df, X_col = 'F', Y_col = 'E2Ex', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', logscale_x = True, logscale_y = True, x_min = .00008, x_max = 10., y_min = 0.01, y_max = 500, X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", Title = f"Force Extension Curve for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_log5.png', plot_log5 = True)
+                # plot force extension data for all bending constants, as well as log5 fit
+                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_data.png', plot_data = True, flip_axis = True)
+                # plot error in bond vector distribution against force for all bending constants
+                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force ($f_{x}$)", Y_label = "Bond Vector Distribution Mean Square Error", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True)
                 # create unique force extension plots for each unique bending constant
                 for k in FE_parms['K'].unique():
                     # establish file names
@@ -639,7 +694,7 @@ if forceExtension:
                     if isoK_df.empty:
                         print(save_name + " does not exist!")
                         continue
-                    plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Ex'], logscale_x = True, logscale_y = True, x_min = .00008, x_max = 10., y_min = 0.01, y_max = 500, X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = False, color = ['tab:purple'], plot_log5 = False, plot_slope = False)
+                    plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
 
 if bendingPARM:
     # load parameters, add property calculations from simulations
@@ -672,7 +727,5 @@ if bendingPARM:
             title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
             plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True)
-            # plot the chain length against the bending potential
-            # title_rx = f"X Chain Extentions for {chain}s with {pot} Potential (N = {N_string})"
-            # saveas_rx = "rx_" + pot + "_" + chain + ".png"
-            # plot_chainextension(df = plotdf, Title = title_rx, X_label = "", Y_label = "", saveas = saveas_rx)
+            # plot the chain length against the persistence length
+
