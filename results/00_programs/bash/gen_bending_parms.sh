@@ -37,11 +37,11 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 ## PARAMETERS -- SIMULATION
 # number of MCSs between each property calculation
-declare -i N_MCS=1000000000
+declare -i N_MCS=2000000000
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=100000000
+declare -i t_equilibrium=1000000000
 
 
 ## FUNCTIONS
