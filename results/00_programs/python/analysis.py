@@ -92,9 +92,6 @@ def parse_data(filepath, avgcol = None, avgrow = None, header = None, tab = Fals
 # method for getting simulation results from files
 def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False):
 
-# method that generates bond vector diagrams for simulations which have generated that file
-def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False):
-
     # make sure required information has been provided
     if title is None:
         pass
@@ -182,6 +179,64 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False)
     if M2: parms[title + "_M2"] = M2_arr
     if var: parms[title + "_var"] = var_arr
     return parms
+
+# method that generates bond vector diagrams for simulations which have generated that file
+def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False):
+    # check that mandatory information was passed to method
+    if parms is None:
+        print("ERROR :: check_bvd :: must provide dataframe to method.")
+        exit()
+    if dir is None:
+        print("ERROR :: check_bvd :: must provide path to main directory contain simulation files to method.")
+        exit()
+
+    # specify defaults if not provided by user
+    if dpi is None:
+        dpi = default_dpi
+
+    # loop through each simulation, check for bvd files
+    for i, r in parms.iterrows():
+        # if the file does not exist, skip to the next file
+        simfile = dir + r['path'] + 'BVD.dat'
+        if not os.path.exists(simfile):
+            continue
+        # else, the file exists so make the graph
+        pad = 0.1
+        bar_width = 0.4
+        # check if the file already has a header
+        df = pd.read_csv(simfile, names = ['vec', 'height'])
+        equildf = pd.DataFrame.from_dict(equildict)
+        # TODO surpress warnings
+        vec_diff = []
+        sim_bar_xloc = []
+        equil_bar_xloc = []
+        mse = 0.
+        for i in df.index:
+            # calculate the difference between the equilibrium and actual BVD distribution
+            val = df.at[i, 'height'] - equildf.at[i, 'height']
+            mse += math.pow(val, 2.)
+            vec_diff.append(val)
+            # set bar center for plots
+            if plot:
+                sim_bar_xloc.append(df.at[i, 'vec'] - bar_width / 2)
+                equil_bar_xloc.append(equildf.at[i, 'vec'] + bar_width / 2)
+        # the vector difference to the dataframe and rewrite to the
+        df['me'] = vec_diff
+        df.to_csv(dir + r['path'] + "BVD.csv", header = False)
+        if plot:
+            fig, ax = plt.subplots()
+            ax.bar(sim_bar_xloc, df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
+            ax.bar(equil_bar_xloc, equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
+            ax.set_xticks(np.linspace(0., 5., 6))
+            ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
+            ax.set_xlabel("Bond Vector")
+            ax.set_ylabel("Probability Distribution")
+            ax.legend()
+            ax.set_title(f"Bond Vector Distribution ({r['id']})")
+            plt.savefig(dir + r['path'] + 'BVD_dist.png', dpi = dpi)
+            if show:
+                plt.show()
+            plt.close()
 
 ## USED FOR PLOTTING SIMULATION RESULTS
 # method for getting scaling simulation data (N vs. R)
@@ -483,7 +538,7 @@ def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, save
     plt.close()
 
 # method for plotting presitance length from bending potential simulations
-def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_CA = False, saveas = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, fit_bbc = True):
+def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_CA = False, saveas = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, fit_bbc = True, BVDMSE = False, show = False):
 
     if df is None:
         exit()
@@ -500,17 +555,18 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     y = []
     CS_expect = []
     CSA_expect = []
+    fig, ax1 = plt.subplots()
     for i in range(len(k)):
         y.append(-1 / math.log(l1[i]))
     if plot_expectation_CA:
         n = [i for i in range(1,100)]
         n_CA = [i for i in n]
-        plt.plot(n, n_CA, 'r--', label = "$k$")
+        ax1.plot(n, n_CA, 'r--', label = "$k$")
     if plot_expectation_CSA:
         n = [i for i in range(1, 100)]
         n_CSA = [ math.pow(math.pi * i, 0.5) for i in n]
-        plt.plot(n, n_CSA, 'r--', label = "$(\\pi k)^{{1 / 2}}$")
-    plt.scatter(k, y, s=20, label = "$\\ell_{p, \\theta}$")
+        ax1.plot(n, n_CSA, 'r--', label = "$(\\pi k)^{{1 / 2}}$")
+    ax1.scatter(k, y, s=20, label = "$\\ell_{p, \\theta}$")
     if fit_bbc:
         l_acc = []
         for i in k:
@@ -523,82 +579,31 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
                 y.append(val)
             popt, pcov = curve_fit(exp_decay_fit, x, y)
             l_acc.append(popt[1])
-        plt.scatter(k, l_acc, s=20, label = "$\\ell_{p, ac}$")
-    plt.xlim(1, 100)
-    plt.ylim(1, 100)
+        ax1.scatter(k, l_acc, s=20, label = "$\\ell_{p, ac}$")
+    if BVDMSE:
+        bdvmse = df['BVDMSE_M2'].tolist()
+        # plot slope already calculated
+        ax2 = ax1.twinx()
+        ax2.scatter(k, bdvmse, s = 20, label = "BVD MSE")
+        ax2.set_ylabel("Bond Vector Distribution Mean Square Error")
+        ax2.set_ylim(0, None)
+    ax1.set_xlim(1, 100)
+    ax1.set_ylim(1, 100)
     if logscale:
-        plt.xscale("log")
-        plt.yscale("log")
-    plt.legend(loc = "upper left")
+        ax1.set_xscale("log")
+        ax1.set_yscale("log")
+    ax1.legend(loc = "upper left")
     if X_label is not None:
-        plt.xlabel(X_label)
+        ax1.set_xlabel(X_label)
     if Y_label is not None:
-        plt.ylabel(Y_label)
+        ax1.set_ylabel(Y_label)
     if Title is not None:
-        plt.title(Title)
+        ax1.set_title(Title)
     if saveas is not None:
-        plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
-    else:
+        fig.savefig(saveas, dpi = dpi, bbox_inches='tight')
+    if show:
         plt.show()
     plt.close()
-
-
-
-    # check that mandatory information was passed to method
-    if parms is None:
-        print("ERROR :: check_bvd :: must provide dataframe to method.")
-        exit()
-    if dir is None:
-        print("ERROR :: check_bvd :: must provide path to main directory contain simulation files to method.")
-        exit()
-
-    # specify defaults if not provided by user
-    if dpi is None:
-        dpi = default_dpi
-
-    # loop through each simulation, check for bvd files
-    for i, r in parms.iterrows():
-        # if the file does not exist, skip to the next file
-        simfile = dir + r['path'] + 'BVD.dat'
-        if not os.path.exists(simfile):
-            continue
-        # else, the file exists so make the graph
-        pad = 0.1
-        bar_width = 0.4
-        # check if the file already has a header
-        df = pd.read_csv(simfile, names = ['vec', 'height'])
-        equildf = pd.DataFrame.from_dict(equildict)
-        # TODO surpress warnings
-        vec_diff = []
-        sim_bar_xloc = []
-        equil_bar_xloc = []
-        mse = 0.
-        for i in df.index:
-            # calculate the difference between the equilibrium and actual BVD distribution
-            val = df.at[i, 'height'] - equildf.at[i, 'height']
-            mse += math.pow(val, 2.)
-            vec_diff.append(val)
-            # set bar center for plots
-            if plot:
-                sim_bar_xloc.append(df.at[i, 'vec'] - bar_width / 2)
-                equil_bar_xloc.append(equildf.at[i, 'vec'] + bar_width / 2)
-        # the vector difference to the dataframe and rewrite to the
-        df['me'] = vec_diff
-        df.to_csv(dir + r['path'] + "BVD.csv", header = False)
-        if plot:
-            fig, ax = plt.subplots()
-            ax.bar(sim_bar_xloc, df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
-            ax.bar(equil_bar_xloc, equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
-            ax.set_xticks(np.linspace(0., 5., 6))
-            ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
-            ax.set_xlabel("Bond Vector")
-            ax.set_ylabel("Probability Distribution")
-            ax.legend()
-            ax.set_title(f"Bond Vector Distribution ({r['id']})")
-            plt.savefig(dir + r['path'] + 'BVD_dist.png', dpi = dpi)
-            if show:
-                plt.show()
-            plt.close()
 
 
 ## CLASSES
@@ -697,17 +702,21 @@ if forceExtension:
                     plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
 
 if bendingPARM:
-    # load parameters, add property calculations from simulations
-    bendingparms = pd.read_csv(bendingPARM_parmcsv)
-    check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/')
-    bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
-    bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
-    for i in range(30):
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
-    # save results
-    if not os.path.exists("02_processed_data/bendingPARM/"):
-        os.mkdir("02_processed_data/bendingPARM/")
-    bendingparms.to_csv("02_processed_data/bendingPARM/bendingPARM.csv")
+    if update or (not os.path.exists("02_processed_data/bendingPARM/bendingPARM.csv")):
+        # load parameters, add property calculations from simulations
+        bendingparms = pd.read_csv(bendingPARM_parmcsv)
+        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/')
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
+        for i in range(30):
+            bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
+        # save results
+        if not os.path.exists("02_processed_data/bendingPARM/"):
+            os.mkdir("02_processed_data/bendingPARM/")
+        bendingparms.to_csv("02_processed_data/bendingPARM/bendingPARM.csv")
+    else:
+        bendingparms = pd.read_csv("02_processed_data/bendingPARM/bendingPARM.csv")
     # loop through each potential, type of structure (ring or chain)
     for pot in bendingparms['pot'].unique():
         for ring in bendingparms['R'].unique():
@@ -726,6 +735,9 @@ if bendingPARM:
             # plot the bending parameter scaling against k
             title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
-            plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True)
-            # plot the chain length against the persistence length
+            plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = True, show = True)
+            exit()
+            # TODO plot the chain length against the persistence length
+            # TODO plot the BVD MSE against the persistence length
+            # TODO plot the BVD MSE against the bending potential strength
 
