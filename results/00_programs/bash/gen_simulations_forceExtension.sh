@@ -35,7 +35,7 @@ PARM_RING=( 0 1 ) # TODO add bonded rings
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing bending potential strings to test
-PARM_BEND=( 0 7 13 30 )
+PARM_BEND=( 0 7 30 50 100 )
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
@@ -52,7 +52,7 @@ declare -i N_MCS=1000000000
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=100000000
+declare -i t_equilibrium=500000000
 
 
 ## FUNCTIONS

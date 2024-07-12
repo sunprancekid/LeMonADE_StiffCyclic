@@ -550,7 +550,6 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
         dpi = 200
 
     k = df['k'].tolist()
-    l0 = df['l0_M1'].tolist()
     l1 = df['l1_M1'].tolist()
     y = []
     CS_expect = []
@@ -587,7 +586,7 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
         ax2.plot(k, bdvmse, 'x', label = "BVD MSE", color = "tab:red")
         ax1.plot([], [], 'x', label = "BVD MSE", color = "tab:red")
         ax2.set_ylabel("Bond Vector Distribution Mean Square Error")
-        ax2.set_ylim(0, None)
+        ax2.set_ylim(0, 0.5)
     ax1.set_xlim(1, 100)
     ax1.set_ylim(1, 100)
     if logscale:
@@ -605,6 +604,61 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     if show:
         plt.show()
     plt.close()
+
+# method for plotting simulated parameters R against various calulated persistence lengths
+def plot_property_against_lp (df = None, R_col = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, lp_cos = False, lp_exp = False, xmin = None, ymin = None, xmax = None, ymax = None):
+
+    # check that relevant parameters were passed to method
+    if df is None:
+        print("ERROR :: plot_property_against_lp :: must pass dataframe to method.")
+        exit()
+    if (not lp_cos) and (not lp_exp):
+        print("ERROR :: plot_property_against_lp :: must specify at least one method for calculating persistence length.")
+        exit()
+    if R_col is None:
+        print("ERROR :: plot_property_against_lp :: must specify property to calculate (R_col).")
+        exit()
+
+    # assign defaults
+    if dpi is None:
+        dpi = default_dpi
+    if X_label is None:
+        X_label = "Persistence Length ($\\ell_{p}$)"
+    if Y_label is None:
+        Y_label = "Property ($R$)"
+
+    # parse data from data frame
+    r = df[R_col].tolist()
+    k = df['k'].tolist()
+    if lp_cos:
+        l1 = df['l1_M1'].tolist()
+        # calculate the persistence length per
+    if lp_exp:
+        l_acc = []
+        for i in k:
+            kdf = df.loc[df['k'] == i]
+            x = []
+            y = []
+            for j in range(1, 6):
+                val = kdf.iloc[0]['l' + str(j) + '_M1']
+                x.append(j)
+                y.append(val)
+            popt, pcov = curve_fit(exp_decay_fit, x, y)
+            l_acc.append(popt[1])
+        plt.plot(l_acc, r, 'o', fillstyle = 'full')
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
+    if logscale:
+        plt.xscale('log')
+        plt.yscale('log')
+    if X_label is not None:
+        plt.xlabel(X_label)
+    if Y_label is not None:
+        plt.ylabel(Y_label)
+    if Title is not None:
+        plt.title(Title)
+    plt.show()
+
 
 
 ## CLASSES
@@ -738,5 +792,7 @@ if bendingPARM:
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
             plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = True, show = True)
             # TODO plot the chain length against the persistence length
+            plot_property_against_lp(df = plotdf, R_col = 'E2Etot_M1', lp_exp = True, logscale = True, Y_label = "End-to-End Distance", xmin = 1., xmax = 100., ymin = 10., ymax = 300.)
             # TODO plot the BVD MSE against the persistence length
+            plot_property_against_lp(df = plotdf, R_col = 'BVDMSE_M2', lp_exp = True, logscale = True, Y_label = "Bond Vector Distribution Mean Square Difference", xmin = 1., xmax = 100., ymin = 0.001, ymax = .5)
 
