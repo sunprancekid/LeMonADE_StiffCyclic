@@ -13,5 +13,3 @@ link_directories (${LEMONADE_LIBRARY_DIR})
 
 add_executable(CreateTwoConcatenatedRings mainCreateTwoConcatenatedRings.cpp)
 
-target_link_libraries(CreateTwoConcatenatedRings LeMonADE)
-
