@@ -606,7 +606,7 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     plt.close()
 
 # method for plotting simulated parameters R against various calulated persistence lengths
-def plot_property_against_lp (df = None, R_col = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, lp_cos = False, lp_exp = False, xmin = None, ymin = None, xmax = None, ymax = None):
+def plot_property_against_lp (df = None, R_col = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, lp_cos = False, lp_exp = False, xmin = None, ymin = None, xmax = None, ymax = None, saveas = None, show = False):
 
     # check that relevant parameters were passed to method
     if df is None:
@@ -657,7 +657,10 @@ def plot_property_against_lp (df = None, R_col = None, Title = None, Y_label = N
         plt.ylabel(Y_label)
     if Title is not None:
         plt.title(Title)
-    plt.show()
+    if saveas is not None:
+        plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
+    if show:
+        plt.show()
 
 
 
@@ -742,9 +745,9 @@ if forceExtension:
                     continue
                 save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}"
                 # plot force extension data for all bending constants, as well as log5 fit
-                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_data.png', plot_data = True, flip_axis = True)
+                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_data.png', plot_data = True, flip_axis = True)
                 # plot error in bond vector distribution against force for all bending constants
-                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force ($f_{x}$)", Y_label = "Bond Vector Distribution Mean Square Error", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True)
+                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", Title = f"Force Extension Data for {top_NAME} with {pot} potential (N = {N})", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25)
                 # create unique force extension plots for each unique bending constant
                 for k in FE_parms['K'].unique():
                     # establish file names
@@ -790,9 +793,9 @@ if bendingPARM:
             # plot the bending parameter scaling against k
             title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
-            plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = True, show = True)
+            plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = False, show = True)
             # TODO plot the chain length against the persistence length
-            plot_property_against_lp(df = plotdf, R_col = 'E2Etot_M1', lp_exp = True, logscale = True, Y_label = "End-to-End Distance", xmin = 1., xmax = 100., ymin = 10., ymax = 300.)
+            plot_property_against_lp(df = plotdf, R_col = 'E2Etot_M1', lp_exp = True, logscale = True, Y_label = "End-to-End Distance", xmin = 1., xmax = 100., ymin = 10., ymax = 300., Title = f"End-to-End Scaling for {chain}s with {pot} Potential (N = {N_string})", saveas = "02_processed_data/bendingPARM/" + "Rvlp_" + pot + "_" + chain + ".png", show = True)
             # TODO plot the BVD MSE against the persistence length
-            plot_property_against_lp(df = plotdf, R_col = 'BVDMSE_M2', lp_exp = True, logscale = True, Y_label = "Bond Vector Distribution Mean Square Difference", xmin = 1., xmax = 100., ymin = 0.001, ymax = .5)
+            plot_property_against_lp(df = plotdf, R_col = 'BVDMSE_M2', lp_exp = True, logscale = True, Y_label = "Bond Vector Distribution Mean Square Difference", xmin = 1., xmax = 100., ymin = 0.001, ymax = .5, Title = f"Bond Vector Difference Scaling for {chain}s with {pot} Potential (N = {N_string})", show = True, saveas = "02_processed_data/bendingPARM/" + "BVDMSEvlp_" + pot + "_" + chain + ".png")
 

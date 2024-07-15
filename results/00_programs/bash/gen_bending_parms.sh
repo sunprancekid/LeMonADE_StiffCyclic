@@ -7,6 +7,8 @@ set -e
 
 
 ## PARAMETERS
+## PARAMETERS -- CONSTANTS
+PI_CON=$(echo "scale=10; 4*a(1)" | bc -l)
 ## PARAMETERS -- BOOLEAN
 # boolean determining if the script should be executed verbosely
 declare -i BOOL_VERB=0
@@ -25,8 +27,8 @@ PARM_N=( 100 )
 PARM_RING=( "TRUE" "FALSE" )
 # array containing which potential to test
 PARM_CSA=( "FALSE" "TRUE" )
-# array containing bending potential strings to test
-PARM_BEND=( 1 3 5 7 10 13 16 20 25 )
+# array containing bending potential strengths to test for the CA potential
+PARM_BEND=( 1 3 5 7 10 13 16 20 25 30 35 40)
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name
@@ -114,6 +116,15 @@ gen_simparm() {
 						SIMID="${C}_CHAIN_N${n}K${k}"
 						SIMDIR="${C}/CHAIN/N${n}/K${k}/"
 					fi
+					if [ "${c}" == "TRUE" ]; then
+						C="CSA"
+						C_FLAG=""
+						K_STRING=$( echo "(${k} ^ 2) / ${PI_CON}" | bc -l )
+					else
+						C="CA"
+						C_FLAG="-c "
+						K_STRING="${k}"
+					fi
 					mkdir -p ${PATH_SIMPARM}${SIMDIR}
 					# write files directory, generate simulation executables
 					echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -126,14 +137,14 @@ gen_simparm() {
 					echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					if [ "${r}" == "TRUE" ]; then
-						echo "\${PATH}generatePolymerBFM ${C_FLAG}-r -n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "\${PATH}generatePolymerBFM ${C_FLAG}-r -n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					else
-						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${k}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					fi
 					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					# add parameters to parm file
-					echo "${SIMID},${SIMDIR},${C},${n},${r},${k}" >> $FILE_SIMPARM
+					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING}" >> $FILE_SIMPARM
 				done
 			done
 		done
