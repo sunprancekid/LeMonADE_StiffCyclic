@@ -127,7 +127,7 @@ public:
     //! get oscillation period
     double getForceOscillationPeriod () { return OscillationPeriod; }
 
-    //! set force oscilation amplitude
+    //! set force oscillation amplitude
     void setForceOscillationAmplitude (double a) { OscillationAmplitude = a; }
 
     //! get force oscillation amplitude
@@ -140,24 +140,20 @@ public:
     //! Export the relevant functionality for writing bfm-files to the responsible writer object
     template <class IngredientsType>
     void exportWrite(AnalyzerWriteBfmFile <IngredientsType>& fileWriter) const;
-private:
 
+private:
     //! vector representing force orientation
     VectorDouble3 forceVec;
     //! Force is On (True) or Off (False)
     bool ConstantForceOn;
-    //! magnitude of base force (without oscilation / amplitude)
+    //! magnitude of base force (without oscillation / amplitude)
     double Base_Force;
-    //! boolean determining if force oscilation is on or off
-    // TODO add oscilatory force (force base, amplitude and period are specified)
+    //! boolean determining if force oscillation is on or off
     bool OscillatoryForceOn;
-    //! double representing oscilatory force period (MCS)
+    //! double representing oscillatory force period (MCS)
     double OscillationPeriod;
     //! double represnting force amplitude
     double OscillationAmplitude;
-    // TODO add method for turning on osciallatory force, setting period and amplitude
-    // TODO add method for returning osciallatory force period
-    // TODO add method for returning osciallatory force amplitude
     //!probability
     //! normalization factor for calculating acceptance probability in each dimension
     double normfact;
@@ -339,6 +335,122 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         }
     }
     return true;
+}
+
+/*****************************************************************/
+/**
+ * @class ReadForceOscillationAmplitude
+ *
+ * @brief Handles BFM-File-Reads \b #!force_oscillation_amplitude
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceOscillationAmplitude: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceOscillationAmplitude(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceOscillationAmplitude(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceOscillationAmplitude<IngredientsType>::execute()
+{
+    std::cout<<"reading oscillationAmplitude...";
+
+    double a = 0.0;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line;
+    getline(source,line);
+    a = atof(line.c_str());
+    std::cout << "#!force_oscillation_amplitude=" << (a) << std::endl;
+
+    ingredients.setForceOscillationAmplitude(a);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceOscillationAmplitude
+ *
+ * @brief Handles BFM-File-Write \b #!force_oscillation_amplitude
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceOscillationAmplitude:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceOscillationAmplitude(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceOscillationAmplitude(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceOscillationAmplitude<IngredientsType>::writeStream(std::ostream& stream)
+{
+    stream<<"#!force_oscillation_amplitude=" << (this->getSource().getForceOscillationAmplitude()) << std::endl<< std::endl;
+}
+
+/*****************************************************************/
+/**
+ * @class ReadForceOscillationPeriod
+ *
+ * @brief Handles BFM-File-Reads \b #!force_oscilllation_period
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceOscillationPeriod: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceOscillationPeriod(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceOscillationPeriod(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceOscillationPeriod<IngredientsType>::execute()
+{
+    std::cout<<"reading oscillationPeriod...";
+
+    double p = 0.0;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line;
+    getline(source,line);
+    p = atof(line.c_str());
+    std::cout << "#!force_oscillation_period=" << (p) << std::endl;
+
+    ingredients.setForceOscillationPeriod(p);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceOscillationPeriod
+ *
+ * @brief Handles BFM-File-Write \b #!force_oscillation_period
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceOscillationPeriod:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceOscillationPeriod(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceOscillationPeriod(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceOscillationPeriod<IngredientsType>::writeStream(std::ostream& stream)
+{
+    stream<<"#!force_oscillation_period=" << (this->getSource().getForceOscillationPeriod()) << std::endl<< std::endl;
 }
 
 /*****************************************************************/
@@ -531,61 +643,61 @@ void WriteForceFieldOn<IngredientsType>::writeStream(std::ostream& stream)
 
 /*****************************************************************/
 /**
- * @class ReadAmplitudeForce
+ * @class ReadBaseForce
  *
- * @brief Handles BFM-File-Reads \b #!force_amplitude
+ * @brief Handles BFM-File-Reads \b #!force_base
  * @tparam IngredientsType Ingredients class storing all system information.
  **/
 template < class IngredientsType>
-class ReadAmplitudeForce: public ReadToDestination<IngredientsType>
+class ReadBaseForce: public ReadToDestination<IngredientsType>
 {
 public:
-    ReadAmplitudeForce(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
-    virtual ~ReadAmplitudeForce(){}
+    ReadBaseForce(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadBaseForce(){}
     virtual void execute();
 };
 
 template<class IngredientsType>
-void ReadAmplitudeForce<IngredientsType>::execute()
+void ReadBaseForce<IngredientsType>::execute()
 {
-    std::cout<<"reading AmplitudeForce...";
+    std::cout<<"reading baseForce...";
 
-    double amplitudeForce = 0.0;
+    double baseForce = 0.0;
     IngredientsType& ingredients=this->getDestination();
     std::istream& source=this->getInputStream();
 
     std::string line;
     getline(source,line);
-    amplitudeForce = atof(line.c_str());
-    std::cout << "#!force_amplitude=" << (amplitudeForce) << std::endl;
+    baseForce = atof(line.c_str());
+    std::cout << "#!force_base=" << (baseForce) << std::endl;
 
-    ingredients.setBaseForce(amplitudeForce);
+    ingredients.setBaseForce(baseForce);
 }
 
 
 /*****************************************************************/
 /**
- * @class WriteAmplitudeForce
+ * @class WriteBaseForce
  *
- * @brief Handles BFM-File-Write \b #!force_amplitude
+ * @brief Handles BFM-File-Write \b #!force_base
  * @tparam IngredientsType Ingredients class storing all system information.
  **/
 template <class IngredientsType>
-class WriteAmplitudeForce:public AbstractWrite<IngredientsType>
+class WriteBaseForce:public AbstractWrite<IngredientsType>
 {
 public:
-    WriteAmplitudeForce(const IngredientsType& i)
+    WriteBaseForce(const IngredientsType& i)
     :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
 
-    virtual ~WriteAmplitudeForce(){}
+    virtual ~WriteBaseForce(){}
 
     virtual void writeStream(std::ostream& strm);
 };
 
 template<class IngredientsType>
-void WriteAmplitudeForce<IngredientsType>::writeStream(std::ostream& stream)
+void WriteBaseForce<IngredientsType>::writeStream(std::ostream& stream)
 {
-    stream<<"#!force_amplitude=" << (this->getSource().getBaseForce()) << std::endl<< std::endl;
+    stream<<"#!force_base=" << (this->getSource().getBaseForce()) << std::endl<< std::endl;
 }
 
 
@@ -606,10 +718,11 @@ template<class IngredientsType>
 void FeatureOscillatoryForce::exportRead(FileImport< IngredientsType >& fileReader)
 {
     fileReader.registerRead("#!force_field_on", new ReadForceFieldOn<FeatureOscillatoryForce>(*this));
-    fileReader.registerRead("#!force_amplitude", new ReadAmplitudeForce<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_base", new ReadBaseForce<FeatureOscillatoryForce>(*this));
     fileReader.registerRead("#!force_vector", new ReadForceFieldVector<FeatureOscillatoryForce>(*this));
     fileReader.registerRead("#!force_oscillation_on", new ReadForceOscillationOn<FeatureOscillatoryForce>(*this));
-
+    fileReader.registerRead("#!force_oscillation_period", new ReadForceOscillationPeriod<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_oscillation_amplitude", new ReadForceOscillationAmplitude<FeatureOscillatoryForce>(*this));
 }
 
 /**
@@ -626,9 +739,11 @@ template<class IngredientsType>
 void FeatureOscillatoryForce::exportWrite(AnalyzerWriteBfmFile< IngredientsType >& fileWriter) const
 {
     fileWriter.registerWrite("#!force_field_on",new WriteForceFieldOn<FeatureOscillatoryForce>(*this));
-    fileWriter.registerWrite("#!force_amplitude", new WriteAmplitudeForce<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_base", new WriteBaseForce<FeatureOscillatoryForce>(*this));
     fileWriter.registerWrite("#!force_vector", new WriteForceFieldVector<FeatureOscillatoryForce>(*this));
     fileWriter.registerWrite("#!force_oscillation_on", new WriteForceOscillationOn<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_oscillation_period", new WriteForceOscillationPeriod<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_oscillation_amplitude", new WriteForceOscillationAmplitude<FeatureOscillatoryForce>(*this));
 }
 
 
