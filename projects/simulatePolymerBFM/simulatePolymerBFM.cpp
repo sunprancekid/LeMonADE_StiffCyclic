@@ -39,8 +39,7 @@ int main(int argc, char* argv[])
         double max_MCs = 100000000; // total number of Monte Carlo steps
         std::string infile = "config_init.bfm"; // file that contains initial configuraiton for bfm simulation
         std::string outfile = "config.bfm"; // file that contains system configuratun at each save interval
-        double t_equil = 10000000; // simulation time before which properties are not calculated
-        // double t_equil = 0;
+        double t_equil = 0; // simulation time before which properties are not calculated
 
         // determine if any options were passed to the executable
         // read in options by getopt

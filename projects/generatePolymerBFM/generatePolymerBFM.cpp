@@ -43,11 +43,14 @@ int main(int argc, char* argv[])
         double k_theta = 0.; // parameterized bending potential strength
         bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
         std::string forceVecString = "111";
+        bool forceOscillation = false;
+        double forceOscPeriod = 1.;
+        double forceOscAmplitude = 1.;
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:v:ch"))  != EOF){
+        while ((option_char = getopt (argc, argv, "n:m:o:rb:k:f:v:cp:a:h"))  != EOF){
             switch (option_char)
             {
                 // TODO add force oscilation and amplitude
@@ -80,9 +83,16 @@ int main(int argc, char* argv[])
                 case 'c':
                     bendingPot_CA = true;
                     break;
+                case 'a':
+                    forceOscAmplitude = stod(optarg);
+                    forceOscillation = true;
+                    break;
+                case 'p':
+                    forceOscPeriod = stod(optarg);
+                    forceOscillation = true;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n[ -p force oscillation period (default is " << forceOscPeriod << ")]\n[ -a force oscillation amplitude (" << forceOscAmplitude << ")]\n\n";
                     return 0;
             }
         }
@@ -208,7 +218,7 @@ int main(int argc, char* argv[])
         }
 
         // add force
-        if (force) {
+        if (force or forceOscillation) {
             // add constant linear force
             ingredients.setForceOn(true);
             ingredients.setBaseForce(conForce);
@@ -229,6 +239,11 @@ int main(int argc, char* argv[])
                 }
             }
             ingredients.setForceVector(fv);
+            if (forceOscillation) {
+                ingredients.setForceOscillation(true);
+                ingredients.setForceOscillationAmplitude(forceOscAmplitude);
+                ingredients.setForceOscillationPeriod(forceOscPeriod);
+            }
             // synchronize
             ingredients.synchronize(ingredients);
         }
