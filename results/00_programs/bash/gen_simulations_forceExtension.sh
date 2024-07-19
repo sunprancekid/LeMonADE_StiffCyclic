@@ -19,21 +19,25 @@ declare -i BOOL_SUB=0
 declare -i BOOL_UPP=0
 # boolean determining if the script should download a directory from the could
 declare -i BOOL_DWN=0
+# boolean determining if the script should generate force values along a log scale
+declare -i BOOL_LOGSCALE=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
 declare -i N_FORCE_VAL=50
 # maxmium force to test
-MAX_FORCE_VAL="100"
+MAX_FORCE_VAL="2"
 # minimum force to test
 MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 ) # TODO add bonded rings
+PARM_RING=( 0 1 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing bending potential strings to test
-PARM_BEND=( 0 7 13 30 )
+PARM_BEND=( 0 1 10 30 50 100 )
+# array containing different force vectors to test
+PARM_FORCEVEC=( "111" ) # "100"
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
@@ -50,7 +54,7 @@ declare -i N_MCS=1000000000
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=100000000
+declare -i t_equilibrium=500000000
 
 
 ## FUNCTIONS
@@ -59,18 +63,10 @@ help () {
 	echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>\n"
 	echo -e "\n"
 	echo -e " ## SCRIPT PROTOCOL ##"
-	echo -e " -h           | display script options, exit 0."
-	echo -e " -v           | execute script verbosely."
 	echo -e " -g           | generate simulation parameters / directories ."
-	echo -e " -s           | submit job to SLURM."
-	echo -e " -u           | upload local default directory to linux cluster."
-	echo -e " -d           | sync local default directory with linux cluster."
-	echo -e "\n"
-	echo -e " ## SCRIPT PARAMETERS ##"
-	echo -e " -j << ARG >> | specify job title (default is ${JOB})."
-	echo -e " -l << ARG >> | specify linux cluster (default is ${LINUXSERV})."
-	echo -e " -p << ARG >> | specify the local directory (default is ${MAINDIR})."
-	echo -e " -e << ARG >> | specify path to LeMonADE executables (default is ${EXECDIR})."
+	echo -e " -l           | generate simulation parameters according to logscale (no negatives) ."
+	echo -e " -n           | number of simulation parameters to test (default is ${N_FORCE_VAL})."
+	echo -e " -m           | maximum force to test (default is ${MAX_FORCE_VAL})."
 	echo -e "\n"
 }
 
@@ -127,55 +123,23 @@ logscale () {
      echo $(printf "%8.5f\n" "${scale}")
 }
 
-# generate slurm submission script for simulation
-gen_slurm () {
-
+# used to generate parameters along a log scale
+linscale() {
     ## PARAMETERS
-    # name of file contains slurm submission instructions
-    local FILENAME="${SIMID}.slurm.sub"
-    # directory that the file is stored in
-    local FILEPATH="${PATH_SIMPARM}${SIMDIR}"
+    # minimum number on a linear scale
+    MIN_VAL_LIN="-${MAX_FORCE_VAL}"
+    # maximum value along a linear scale
+    MAX_VAL_LIN=${MAX_FORCE_VAL}
 
     ## ARGUMENTS
-    # none
+    # integer ranging from 1 to N_FORCE_VAL
+    declare -i NUM=$1
 
     ## SCRIPT
-    # none
-
-    echo "#!/bin/bash" > $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    echo "#SBATCH -J ${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
-    echo "#SBATCH --nodes=1" >> $FILEPATH$FILENAME  # number of nodes
-    echo "#SBATCH --ntasks=1" >> $FILEPATH$FILENAME   # number of processor cores (i.e. tasks)
-    echo "#SBATCH --error=${SIMID}.%j.err" >> $FILEPATH$FILENAME
-    echo "#SBATCH --output=OneLinearChainIdeal_N100_PerX512_PerYZ128_ConstantForce_f0_0.01.%j.out" >> $FILEPATH$FILENAME
-    # echo "#SBATCH --mail-type=FAIL" >> $FILEPATH$FILENAME
-    # echo "#SBATCH --mail-user=dorsey@ipfdd.de" >> $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    echo "### PARAMETERS ###" >> $FILEPATH$FILENAME
-    echo "SUBDIR=\$(pwd) # location of slurm submission" >> $FILEPATH$FILENAME
-    echo "EXECDIR=/beetmp/dorsey/tmp/ # location of slurm execution" >> $FILEPATH$FILENAME
-    echo "hostname" >> $FILEPATH$FILENAME
-    echo "cd \${EXECDIR}" >> $FILEPATH$FILENAME
-    echo "mkdir ${SIMID} " >> $FILEPATH$FILENAME
-    echo "cd ${SIMID}" >> $FILEPATH$FILENAME
-    echo "echo Running on host \$(hostname)" >> $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    echo "### load modules" >> $FILEPATH$FILENAME
-    echo "# module load slurm/15.08.8" >> $FILEPATH$FILENAME
-    echo "# module load gcc/6.1.0" >> $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    echo "### copy everything from the submit directory to the execute directory ###" >> $FILEPATH$FILENAME
-    echo "cp \${SUBDIR}/* ." >> $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    echo "### run job ####" >> $FILEPATH$FILENAME
-    echo "srun ./${SIMID}.sh > ${SIMID}.wrap.out 2>&1" >> $FILEPATH$FILENAME
-    echo "" >> $FILEPATH$FILENAME
-    ## TODO :: add instructions for copying results back
-    echo "### copy back results, delete everthing ###" >> $FILEPATH$FILENAME
-    echo "cp * \${SUBDIR}/" >> $FILEPATH$FILENAME
-    echo "cd ../" >> $FILEPATH$FILENAME
-    echo "rm -rf ${SIMID}" >> $FILEPATH$FILENAME
+    # generate the parameter along the linear scale
+    scale=$( echo "($NUM / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
+    scale=$( echo "(${scale} * (${MAX_VAL_LIN} - ${MIN_VAL_LIN}) + ${MIN_VAL_LIN})" | bc -l )
+    echo $(printf "%8.5f\n" "${scale}")
 }
 
 # generate simulation parameters
@@ -187,7 +151,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,pot,R,N,K,F"
+	HEADER_SIMPARM="id,path,pot,R,N,K,F,FV"
 
 	## ARGUMENTS
 	# none
@@ -211,6 +175,7 @@ gen_simparm() {
         fi
 
         for r in "${PARM_RING[@]}"; do
+
             if [ $r -eq 0 ]; then
                 # chain
                 R="CHAIN"
@@ -220,6 +185,7 @@ gen_simparm() {
             elif [ $r -eq 2 ]; then
                 R="RINGx2"
             fi
+
             for n in "${PARM_N[@]}"; do
 
                 if [ $r != 0 ]; then
@@ -228,41 +194,52 @@ gen_simparm() {
 
                 for k in "${PARM_BEND[@]}"; do
                     for f in $(seq 0 $(($N_FORCE_VAL-1))); do
-                        # generate the simulation directory
-                        SIMID="${R}_${C}_N${n}K${k}F${f}"
-                        SIMDIR="${R}/${C}/N${n}/K${k}/F${f}/"
-                        mkdir -p ${PATH_SIMPARM}${SIMDIR}
-                        # use the force integer to calculate the real force value passed to the simulation executable
-                        FORCE_VAL=$( logscale $f )
-                        # generate flags for simulation executables
-                        GENFLAGS="-n ${n} -f ${FORCE_VAL} -b 512"
-                        SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}"
-                        if [ $k != 0 ]; then
-                            GENFLAGS="${GENFLAGS} -k ${k}"
-                            if [ "${C}" == "CA" ]; then
-                                GENFLAGS="${GENFLAGS} -c"
+                        for fv in "${PARM_FORCEVEC[@]}"; do
+
+                            # generate the simulation directory
+                            SIMID="${R}_${C}_N${n}K${k}FV${fv}F${f}"
+                            SIMDIR="${R}/${C}/N${n}/K${k}/FV${fv}/F${f}/"
+                            mkdir -p ${PATH_SIMPARM}${SIMDIR}
+
+                            # use the force integer to calculate the real force value passed to the simulation executable
+                            if [[ $LOGSCALE -eq 1 ]]; then
+                                FORCE_VAL=$( logscale $f )
+                            else
+                                FORCE_VAL=$( linscale $f )
                             fi
-                        fi
-                        if [ $r -eq 1 ]; then
-                            GENFLAGS="${GENFLAGS} -r"
-                        elif [ $r -eq 2 ]; then
-                            GENFLAGS="${GENFLAGS} -r -m 1"
-                        fi
-                        # write files directory, generate simulation executables
-                        echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        # add parameters to parm file
-                        echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL}" >> $FILE_SIMPARM
+
+                            # generate flags for simulation executables
+                            GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}"
+                            if [ $k != 0 ]; then
+                                GENFLAGS="${GENFLAGS} -k ${k}"
+                                if [ "${C}" == "CA" ]; then
+                                    GENFLAGS="${GENFLAGS} -c"
+                                fi
+                            fi
+
+                            if [ $r -eq 1 ]; then
+                                GENFLAGS="${GENFLAGS} -r"
+                            elif [ $r -eq 2 ]; then
+                                GENFLAGS="${GENFLAGS} -r -m 2"
+                            fi
+
+                            # write files directory, generate simulation executables
+                            echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            # add parameters to parm file
+                            echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL},${fv}" >> $FILE_SIMPARM
+                        done
                     done
                 done
             done
@@ -271,27 +248,19 @@ gen_simparm() {
 }
 
 ## OPTIONS
-while getopts "hvgsudj:l:p:" option; do
+while getopts "hgln:m:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help
 			exit 0 ;;
-        v) # exectue script verbosely
-            declare -i BOOL_VERB=1 ;;
         g) # generate simulation parameters
             declare -i BOOL_GEN=1 ;;
-		s) # submit simulations to SLURM
-			declare -i BOOL_SUB=1 ;;
-		u) # upload local directory to linux cluster
-			declare -i BOOL_UPP=1 ;;
-		d) # sync local directory with linux cluster
-			declare -i BOOL_DWN=1 ;;
-		j) # update job name
-			JOB="${OPTARG}" ;;
-		l) # update linux cluster
-			LINUXSERV="${OPTARG}" ;;
-		p) # update local directory path
-			MAINDIR="${OPTARG}" ;;
+		l) # generate parameters along logscale
+			declare -i BOOL_LOGSCALE=1 ;;
+        n) # number of force extension values to test
+            declare -i N_FORCE_VAL=${OPTARG};;
+        m) # maxmimum force value to test
+            MAX_FORCE_VAL="${OPTARG}";;
         \?) # sonstiges
             help
             exit $NONZERO_EXITCODE
@@ -308,30 +277,3 @@ done
 if [ $BOOL_GEN -eq 1 ]; then
 	gen_simparm
 fi
-
-# parse simulation parameters from file, perform protocol as instructed
-SIMPARAM_FILE="${MAINDIR}/${JOB}/${JOB}.csv"
-if [ ! -f $SIMPARAM_FILE ]; then
-	# if the file does not exist, inform user and abort
-	echo "Must generate simulation parameters for ${JOB} in ${MAINDIR} before submitting simulations."
-	exit $NONZERO_EXITCODE
-fi
-declare -i N_LINES=$(wc -l < $SIMPARAM_FILE)
-for i in $(seq 2 $N_LINES); do
-	# get the simulation directory
-	SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 2)
-	# get the simulation id
-	SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
-	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
-		# move to the simulation directory
-		CURRDIR=$(echo $PWD)
-        cd "${MAINDIR}/${JOB}/${SIMDIR}"
-		echo $PWD
-		# exectue the simulation
-		if [ $BOOL_SUB -eq 1 ]; then
-			./${SIMID}.sh
-		fi
-		# return to the main directory
-		cd $CURRDIR
-	fi
-done
