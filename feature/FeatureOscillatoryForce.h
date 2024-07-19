@@ -186,76 +186,76 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
 
-        double f = Base_Force;
-        if (OscillatoryForceOn) {
-            // if the force is oscillating, update the force and calculate the new acceptance probabilities
-            double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359/OscillationPeriod)* ingredients.getMolecules().getAge() );
-            // updateProb(f);
-        }
+        // double f = Base_Force;
+        // if (OscillatoryForceOn) {
+        //     // if the force is oscillating, update the force and calculate the new acceptance probabilities
+        //     double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359/OscillationPeriod)* ingredients.getMolecules().getAge() );
+        //     // updateProb(f);
+        // }
 
         if ( dx == 1 ) {
             // positive x-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(exp(-(f / normfact) * forceVec.getX()));
+                move.multiplyProbability(prob.getX());
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./exp(-(f / normfact) * forceVec.getX()));
+                move.multiplyProbability(1./prob.getX());
                 return true;
             }
         } else if ( dx == -1 ) { // negative x-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./exp(-(f / normfact) * forceVec.getX()));
+                move.multiplyProbability(1./prob.getX());
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(exp(-(f / normfact) * forceVec.getX()));
+                move.multiplyProbability(prob.getX());
                 return true;
             }
         } else if ( dy == 1 ) {
             // positive y-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(exp(-(f / normfact) * forceVec.getY()));
+                move.multiplyProbability(prob.getY());
                 return true;
             } else if (tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./exp(-(f / normfact) * forceVec.getY()));
+                move.multiplyProbability(1./prob.getY());
                 return true;
             }
         } else if ( dy == -1 ) {
             // negative y-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./exp(-(f / normfact) * forceVec.getY()));
+                move.multiplyProbability(1./prob.getY());
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(exp(-(f / normfact) * forceVec.getY()));
+                move.multiplyProbability(prob.getY());
                 return true;
             }
         } else if ( dz == 1 ) {
             // positive z-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(-(f / normfact) * forceVec.getZ());
+                move.multiplyProbability(prob.getZ());
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./-(f / normfact) * forceVec.getZ());
+                move.multiplyProbability(1./prob.getZ());
                 return true;
             }
         } else if ( dz == -1 ) {
             // negative z-direction
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./-(f / normfact) * forceVec.getZ());
+                move.multiplyProbability(1./prob.getZ());
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(-(f / normfact) * forceVec.getZ());
+                move.multiplyProbability(prob.getZ());
                 return true;
             }
         }
@@ -495,7 +495,7 @@ void ReadForceOscillationOn<IngredientsType>::execute()
     fieldOscillationIsOn = atoi(line.c_str());
     std::cout << "#!force_oscillation_on=" << (fieldOscillationIsOn? "True" : " False" ) << std::endl;
 
-    ingredients.setForceOn(fieldOscillationIsOn);
+    ingredients.setForceOscillation(fieldOscillationIsOn);
 }
 
 /*****************************************************************/
@@ -622,7 +622,7 @@ void ReadForceFieldOn<IngredientsType>::execute()
     std::string line;
     getline(source,line);
     fieldIsOn = atoi(line.c_str());
-    std::cout << "#!force_field_on=" << (fieldIsOn? "True" : " False" ) << std::endl;
+    std::cout << "#!force_field_on=" << (fieldIsOn? "True" : "False" ) << std::endl;
 
     ingredients.setForceOn(fieldIsOn);
 }

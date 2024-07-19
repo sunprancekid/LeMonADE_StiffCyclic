@@ -23,7 +23,7 @@ declare -i BOOL_DWN=0
 declare -i BOOL_LOGSCALE=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
-declare -i N_FORCE_VAL=50
+declare -i N_FORCE_VAL=40
 # maxmium force to test
 MAX_FORCE_VAL="2"
 # minimum force to test
@@ -31,13 +31,13 @@ MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 ) # 2
+PARM_RING=( 0 1 2 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing bending potential strings to test
-PARM_BEND=( 0 1 10 30 50 100 )
+PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
-PARM_FORCEVEC=( "111" ) # "100"
+PARM_FORCEVEC=( "100" ) # "100"
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
