@@ -25,6 +25,8 @@ TOL=.0001
 equildict = {'vec' : [0, 1, 2, 3, 4, 5], 'height': [0.0632855, 0.206359, 0.215854, 0.0550903, 0.231382, 0.228029]}
 # list of random markers
 marks = itertools.cycle(("v", "<", "o", "s", "p", "*", "D"))
+# minimum cut off for logscale
+min_logscale = 0.00001
 
 
 ## METHODS
@@ -227,8 +229,8 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False)
         df.to_csv(dir + r['path'] + "BVD.csv", header = False)
         if plot:
             fig, ax = plt.subplots()
-            ax.bar(sim_bar_xloc, df['height'], label = "Simulation", color = "tab:orange", edgecolor = "black", width = bar_width)
-            ax.bar(equil_bar_xloc, equildf['height'], label = "Real Polymer Chain", color = "c", edgecolor = "black", width = bar_width)
+            ax.bar(sim_bar_xloc, df['height'], label = "Excluded Volume + Bending BVD", color = "tab:orange", edgecolor = "black", width = bar_width)
+            ax.bar(equil_bar_xloc, equildf['height'], label = "Excluded Volume BVD", color = "c", edgecolor = "black", width = bar_width)
             ax.set_xticks(np.linspace(0., 5., 6))
             ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
             ax.set_xlabel("Bond Vector")
@@ -358,7 +360,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specift columns from data frame to plot!")
@@ -372,13 +374,23 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     if isovals is None:
         isovals = parms[iso_col].unique()
     for iso in isovals:
+        y_col_m = ""
+        if M2:
+            y_col_m = Y_col + '_M2'
+        else:
+            y_col_m = Y_col + '_M1'
         # for each unique isolated value
         iso_df = parms[parms[iso_col] == iso]
+        # remove any data points that are negative, if log scale is being used
+        rmv_row = [] # list of rows to remove from data frame
+        for i, row in iso_df.iterrows():
+            if ((logscale_x and (row[X_col] < min_logscale)) or (logscale_y and (row[y_col_m] < min_logscale))):
+                rmv_row.append(i)
+        if (len(rmv_row) > 0):
+            iso_df.drop(rmv_row)
+
         x = iso_df[X_col].tolist()
-        if M2:
-            y = iso_df[Y_col + '_M2'].tolist()
-        else:
-            y = iso_df[Y_col + '_M1'].tolist()
+        y = iso_df[y_col_m].tolist()
         if error:
             v = iso_df[Y_col + '_var'].tolist()
         if logscale_y is True:
@@ -480,7 +492,8 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             plt.xlabel(X_label)
     if saveas is not None:
         plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
     plt.close()
 
 # method for plotting the bond bond correlation for bending potential simulation data against s, the bond distance
@@ -559,7 +572,7 @@ def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, save
         fig.show()
     plt.close()
 
-# method for plotting presitance length from bending potential simulations
+# method for plotting persitance length from bending potential simulations
 def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_CA = False, saveas = None, Title = None, Y_label = None, X_label = None, dpi = None, logscale = False, fit_bbc = True, BVDMSE = False, show = False, xmax  = 100, ymax = 100):
 
     if df is None:
@@ -567,7 +580,7 @@ def plot_bending_lp (df = None, plot_expectation_CSA = False, plot_expectation_C
     if X_label is None:
         X_label = "Bending Potential Strength ($k$)"
     if Y_label is None:
-        Y_label = "Presistance Length ($l_{p} / \\langle l \\rangle$)"
+        Y_label = "Persistence Length ($l_{p} / \\langle l \\rangle$)"
     if dpi is None:
         dpi = 200
 
@@ -704,7 +717,7 @@ def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = F
     if X_label is None:
         X_label = "Bending Constant ($k_{{\\theta}}$)"
     if Y_label is None:
-        Y_label = "Presistance Length (${{\\ell_{p}}}$)"
+        Y_label = "Persistence Length (${{\\ell_{p}}}$)"
     if dpi is None:
         dpi = default_dpi
 
@@ -773,7 +786,7 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale = Fals
 
     # default options
     if X_label is None:
-        X_label = "Presistance Length (${{\\ell_{p}}}$)"
+        X_label = "Persistence Length (${{\\ell_{p}}}$)"
     if Y_label is None:
         Y_label = "Polymer Property ($R$)"
     if dpi is None:
@@ -903,6 +916,8 @@ if forceExtension:
             # continue
         elif top == 1:
             top_NAME = "RING"
+        # elif top == 2:
+        #     top_Name = "RINGx2"
         else:
             print(f"forceExtension :: unknown TOP code {top}")
             exit()
@@ -914,25 +929,30 @@ if forceExtension:
                     continue
                 save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}"
                 # plot force extension data for all bending constants, as well as log5 fit
-                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isovals = [0, 1, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2.)
+                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isovals = [0, 1, 5, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
                 # plot error in bond vector distribution against force for all bending constants
-                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isovals = [0, 1, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25)
+                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isovals = [0, 1, 5, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25, show = True)
+                # plot positive data on semi-log
+                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 10., x_min = 0.1, x_max = 2., show = True, logscale_x = True, logscale_y = True)
+                exit()
                 # create unique force extension plots for each unique bending constant
-                # for k in FE_parms['K'].unique():
-                #     # establish file names
-                #     save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}_k{k}"
-                #     # isolate the parameters corresponding to the set
-                #     isoK_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N) & (FE_parms['K'] == k)]
-                #     if isoK_df.empty:
-                #         print(save_name + " does not exist!")
-                #         continue
-                #     plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
+                for k in FE_parms['K'].unique():
+                    # establish file names
+                    save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}_k{k}"
+                    # isolate the parameters corresponding to the set
+                    isoK_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N) & (FE_parms['K'] == k)]
+                    if isoK_df.empty:
+                        print(save_name + " does not exist!")
+                        continue
+                    # plot positive data on semi-log
+                    # plot_force_extension(isoK_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 0.01, x_min = 0.01, x_max = 2., show = True, logscale_x = True, logscale_y = True)
+                    # plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
 
 if bendingPARM:
     if update or (not os.path.exists("02_processed_data/bendingPARM/bendingPARM.csv")):
         # load parameters, add property calculations from simulations
         bendingparms = pd.read_csv(bendingPARM_parmcsv)
-        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/')
+        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = True)
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
@@ -967,7 +987,7 @@ if bendingPARM:
             # plot_bendingpot_bbc(df = plotdf, k = [1, 3, 5, 7, 10, 13, 20], max_s = 29, plot_fit = True, saveas = "02_processed_data/bendingPARM/" + saveas_bbc)
             # plot_bendingpot_bbc(df = plotdf, k = [1, 3, 5, 7, 10, 13, 20], max_s = 29, plot_fit = False, saveas = "02_processed_data/bendingPARM/" + "BBCnf_" + pot + "_" + chain + ".png")
             # plot the bending parameter scaling against k
-            title_lp = f"Presitance Length for {chain}s with {pot} Potential (N = {N_string})"
+            title_lp = f"Persistence Length for {chain}s with {pot} Potential (N = {N_string})"
             saveas_lp = "lp_" + pot + "_" + chain + ".png"
             plot_bending_lp(df = plotdf, plot_expectation_CSA = (pot == "CSA"), plot_expectation_CA = (pot == "CA"), Title = title_lp, saveas = "02_processed_data/bendingPARM/" + saveas_lp, logscale = True, BVDMSE = False, show = True, ymax = 200)
             # TODO plot the chain length against the persistence length

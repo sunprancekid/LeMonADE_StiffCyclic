@@ -74,7 +74,6 @@ int main(int argc, char* argv[])
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
-                                // FeatureLinearForce) Features;
                                 FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
@@ -90,9 +89,9 @@ int main(int argc, char* argv[])
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
         taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
-        taskmanager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
+        // taskmanager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
         taskmanager.addAnalyzer(new AnalyzerBondVectorDistribution<IngredientsType>(ingredients, "BVD.dat", t_equil));
-        taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
+        // taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
 
         // if the outfile exists, delete it
         char* outfile_char_array = new char[outfile.length() + 1];

@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
             taskManager.run();
             taskManager.cleanup();
         }
-
+        ingredients.synchronize();
         // assign bending potential to polymers, if specified
         if (bendingPot) {
             // add the bending information for ring chain (middle monomers affect 3 angles)
@@ -250,16 +250,39 @@ int main(int argc, char* argv[])
 
         // assign the molecules that experience forces
         if (ring) {
-            for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
-                if ((i % chainLength) == 0){
-                    // the first molecule in the ring experiences a positive force
-                    ingredients.modifyMolecules()[i].setAttributeTag(4);
-                } else if ((i % chainLength) == floor(ingredients.getMolecules().size() / 2.)) {
-                    // the middle molecule in the ring experiences a negative force
-                    ingredients.modifyMolecules()[i].setAttributeTag(5);
-                } else {
-                    // otherwise, set the attribute tag to 0
-                    ingredients.modifyMolecules()[i].setAttributeTag(0);
+            if (chainLength > 1) {
+                // if there are more than one ring
+                // the first monomer in the first ring and the middle monomer in the last ring experience forces
+                for (uint32_t i = 0; i < numChains; i++) {
+                    for (uint32_t j = 0; j < chainLength; j++) {
+                        // use the current chain and monomer integer to determine the index
+                        uint32_t a = (i * chainLength) + j;
+                        if ((( j % chainLength) == 0 ) && ( i == 0 )) {
+                            // first monomer in first ring experiences a positive force
+                            ingredients.modifyMolecules()[a].setAttributeTag(4);
+                        } else if (((j % chainLength) == floor(chainLength / 2.)) && (i == (numChains - 1))) {
+                            // middle monomer in the last ring experiences a negtive force
+                            ingredients.modifyMolecules()[a].setAttributeTag(5);
+                        } else {
+                            // all other monomers do not experiences any forces
+                            ingredients.modifyMolecules()[a].setAttributeTag(0);
+                        }
+                    }
+                }
+            } else {
+                // if there is just one ring
+                // the first monomer and the middle monomrt in the same ring experience forces
+                for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
+                    if ((i % chainLength) == 0){
+                        // the first molecule in the ring experiences a positive force
+                        ingredients.modifyMolecules()[i].setAttributeTag(4);
+                    } else if ((i % chainLength) == floor(ingredients.getMolecules().size() / 2.)) {
+                        // the middle molecule in the ring experiences a negative force
+                        ingredients.modifyMolecules()[i].setAttributeTag(5);
+                    } else {
+                        // otherwise, set the attribute tag to 0
+                        ingredients.modifyMolecules()[i].setAttributeTag(0);
+                    }
                 }
             }
         } else {

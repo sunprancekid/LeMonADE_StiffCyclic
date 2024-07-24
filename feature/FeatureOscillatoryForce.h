@@ -758,7 +758,4 @@ void FeatureOscillatoryForce::exportWrite(AnalyzerWriteBfmFile< IngredientsType 
     fileWriter.registerWrite("#!force_oscillation_amplitude", new WriteForceOscillationAmplitude<FeatureOscillatoryForce>(*this));
 }
 
-
-
-
 #endif /*LEMONADE_OSCILLATORYFORCE_H*/
