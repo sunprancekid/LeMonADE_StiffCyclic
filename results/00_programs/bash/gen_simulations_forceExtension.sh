@@ -210,7 +210,7 @@ gen_simparm() {
 
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
-                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -d"
                             if [ $k != 0 ]; then
                                 GENFLAGS="${GENFLAGS} -k ${k}"
                                 if [ "${C}" == "CA" ]; then
