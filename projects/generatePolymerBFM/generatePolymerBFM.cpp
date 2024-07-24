@@ -90,6 +90,7 @@ int main(int argc, char* argv[])
                 case 'p':
                     forceOscPeriod = stod(optarg);
                     forceOscillation = true;
+                    break;
                 case 'h':
                 default:
                     std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n[ -p force oscillation period (default is " << forceOscPeriod << ")]\n[ -a force oscillation amplitude (" << forceOscAmplitude << ")]\n\n";
