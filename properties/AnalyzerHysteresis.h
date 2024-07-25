@@ -87,18 +87,22 @@ private:
     bool initialized;
     //! Time in MCS, which need to pass to calculate the observables
     uint64_t equilibriation_time;
-    //! intermediate array that collects the average end to end distance over one period
-    std::vector<std::double> single_hys_loop;
-    //! array of histogram statistics for each point sampled along hysteresis curve
-    std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
-    //! collects statistics for hysteresis integral, averaged for each loop
-    std::vector<std::double> avg_hys_integral;
     //! default number of points that are sampled along hysteresis curve
     int default_numPeriodPoints = 100;
     //! number of points that are sampled along the hysteresis loop
     int numPeriodPoints;
     //! Time in MCS within one period, there the observables is collected
     uint64_t step_interval;
+    //! period of hysteresis loop, in MCSs
+    int hys_period;
+    //! vector that total distance is projected onto, cooresponds to orientation of force
+    VectorDouble3 projVec;
+    //! intermediate array that collects the average end to end distance over one period
+    std::vector<std::double> single_hys_loop;
+    //! array of histogram statistics for each point sampled along hysteresis curve
+    std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
+    //! collects statistics for hysteresis integral, averaged for each loop
+    std::vector<std::double> avg_hys_integral;
 
 
 
@@ -176,8 +180,29 @@ AnalyzerHysteresis<IngredientsType>::AnalyzerHysteresis(const IngredientsType& i
 template<class IngredientsType>
 void AnalyzerHysteresis<IngredientsType>::initialize() {
 
+    // check that the force oscillation is on
+    if (! ingredients.isForceOscillationOn()){
+        // if the force oscillation is not on, throw an error
+        // the hysteresis analyzer cannot run if the force oscillation is not on
+        std::stringstream errormessage;
+        errormessage << "AnalyzerHysteresis::initialize()...Force Oscillation is off. Hysteresis analyzer cannot work." << std::endl;
+        throw std::runtime_error(errormessage.str());
+    }
     // check the ingredients, get the force vector, make sure that oscillation is on
-    
+    hys_period = ingredients.getForceOscillationPeriod();
+    projVec = ingredients.getForceVector();
+    if (hys_period % step_interval != 0) {
+        // if the period of the save interval does not evenly go into the hysteresis period
+        // throw an error because that will cause some issues in the fututre
+        std::stringstream errormessage;
+        errormessage << "AnalyzerHysteresis::initialize()...Force Oscillation Period (" << hys_period << "MCS) and save interval period (" << step_interval << "MCS) not evenly divisable. Integer representing number of save points along hysteresis loop needs to be an even number." << std::endl;
+        throw std::runtime_error(errormessage.str());
+    } else {
+        // the numbers are evenly divisable
+        numPeriodPoints = hys_period / step_interval;
+        std::cout << numPeriodPoints << std::endl;
+        exit(0);
+    }
     //get the monomers with attributes subjected to force
 	uint32_t n = 0;
 	for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
@@ -197,7 +222,7 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
     // initialize the histograms / arrays that collect hysteresis statistics
     averaged_hys_loop.resize(numPeriodPoints);
     for (int n; n < averaged_hys_loop.size(); n++) {
-        // initialize the
+        // initialize each of the histograms for each of the points that will be sampled
     }
 
     initialized=true;
