@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
         bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
         std::string forceVecString = "111";
         bool forceOscillation = false;
-        double forceOscPeriod = 1.;
+        int forceOscPeriod = 1.;
         double forceOscAmplitude = 1.;
 
         // determine if any options were passed to the executable
@@ -88,12 +88,12 @@ int main(int argc, char* argv[])
                     forceOscillation = true;
                     break;
                 case 'p':
-                    forceOscPeriod = stod(optarg);
+                    forceOscPeriod = atoi(optarg);
                     forceOscillation = true;
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n[ -p force oscillation period (default is " << forceOscPeriod << ")]\n[ -a force oscillation amplitude (" << forceOscAmplitude << ")]\n\n";
+                    std::cerr << "\n\nUsage: ./generatePolymerBFM << OPTIONS >> \n[-o filenameOutput] \n[-n number of monomers in ring / chain] \n[-m number of rings / chains] \n[-r generate ring (otherwise generate chain)] \n[-k bending potential strength (otherwise no bending potential)] \n[-f constant force that molecules experience (otherwise no force is applied)] \n[-v string with three integers xyz denoting the force orientation in each dimension (default is " << forceVecString << ")] \n[-b box size]\n[-c use cosine angle potential for bending potential (default is cosine square angle potential)]\n[-p force oscillation period (default is " << forceOscPeriod << ")]\n[-a force oscillation amplitude (" << forceOscAmplitude << ")]\n\n";
                     return 0;
             }
         }

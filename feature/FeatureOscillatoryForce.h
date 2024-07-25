@@ -125,7 +125,7 @@ public:
     void setForceOscillationPeriod(double p) { OscillationPeriod = p; }
 
     //! get oscillation period
-    double getForceOscillationPeriod () const { return OscillationPeriod; }
+    int getForceOscillationPeriod () const { return OscillationPeriod; }
 
     //! set force oscillation amplitude
     void setForceOscillationAmplitude (double a) { OscillationAmplitude = a; }
@@ -151,7 +151,7 @@ private:
     //! boolean determining if force oscillation is on or off
     bool OscillatoryForceOn;
     //! double representing oscillatory force period (MCS)
-    double OscillationPeriod;
+    int OscillationPeriod;
     //! double represnting force amplitude
     double OscillationAmplitude;
     //!probability
@@ -441,7 +441,7 @@ void ReadForceOscillationPeriod<IngredientsType>::execute()
 
     std::string line;
     getline(source,line);
-    p = atof(line.c_str());
+    p = atoi(line.c_str());
     std::cout << "#!force_oscillation_period=" << (p) << std::endl;
 
     ingredients.setForceOscillationPeriod(p);
