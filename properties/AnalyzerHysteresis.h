@@ -43,18 +43,13 @@ along with LeMonADE and ELMA-OscillatoryForce extension. If not, see <http://www
 #include <sstream> // stringstream
 #include <iomanip> // << setprecision (2) << fixed
 
-//#include <Eigen/Dense>
-//#include <Eigen/Eigenvalues>
-//using namespace Eigen;
-
-
+// from LeoMonADE
 #include <LeMonADE/utility/Vector3D.h>
 #include <LeMonADE/analyzer/AbstractAnalyzer.h>
 #include <LeMonADE/utility/ResultFormattingTools.h>
 
-
-
-#include "StatisticMoment.h"
+// not in LeMonADE package
+#include <HistogramGeneralStatistik1D.h>
 
 /* **************************************************************
  * A simple analyzer example for static properties 
@@ -66,31 +61,46 @@ along with LeMonADE and ELMA-OscillatoryForce extension. If not, see <http://www
 template<class IngredientsType>
 class AnalyzerHysteresis : public AbstractAnalyzer {
 public:
+    // default constructor
     AnalyzerHysteresis(const IngredientsType& ing, std::string dstDir_, uint64_t evalulation_time_, uint64_t save_interval_);
-
-    virtual ~AnalyzerHysteresis() {
-
-    };
-
+    // deconstructor
+    virtual ~AnalyzerHysteresis() {};
     //typedef typename IngredientsType::molecules_type molecules_type;
     const typename IngredientsType::molecules_type& molecules;
-
-    const IngredientsType& getIngredients() const {
-        return ingredients;
-    }
-
+    //! number of bins in each histogram
+    //! upper range of histogram (from expected average)
+    //! lower range of histogram (from expected average)
+    //! initialize analyzer
     virtual void initialize();
+    //! execute analyzer
     virtual bool execute();
+    //! finish analysis, write to file
     virtual void cleanup();
-    
+    // check if file exists
+    // TODO :: can likely remove
     bool isFileExisting(std::string);
 
 private:
-
+    // points to LeMonADE ingredients
     const IngredientsType& ingredients;
-
     //only used to make sure you initialize your groups before you do things
     bool initialized;
+    //! Time in MCS, which need to pass to calculate the observables
+    uint64_t equilibriation_time;
+    //! intermediate array that collects the average end to end distance over one period
+    std::vector<std::double> single_hys_loop;
+    //! array of histogram statistics for each point sampled along hysteresis curve
+    std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
+    //! collects statistics for hysteresis integral, averaged for each loop
+    std::vector<std::double> avg_hys_integral;
+    //! default number of points that are sampled along hysteresis curve
+    int default_numPeriodPoints = 100;
+    //! number of points that are sampled along the hysteresis loop
+    int numPeriodPoints;
+    //! Time in MCS within one period, there the observables is collected
+    uint64_t step_interval;
+
+
 
     uint32_t counterFrames;
 
@@ -111,11 +121,6 @@ private:
     StatisticMoment Statistic_Hysteresis; // average hysteresis area w/o absolute value
     StatisticMoment Statistic_HysteresisAbsolute; // average hysteresis area with absolute value
     
-    //! Time in MCS, which need to pass to calculate the observables
-    uint64_t evalulation_time;
-    
-    //! Time in MCS within one period, there the observables is collected
-    uint64_t step_interval;
     
     uint32_t indexMonomersForce[2];
     
@@ -147,7 +152,7 @@ private:
 
 template<class IngredientsType>
 AnalyzerHysteresis<IngredientsType>::AnalyzerHysteresis(const IngredientsType& ing, std::string dstDir_, uint64_t evalulation_time_, uint64_t save_interval_)
-: ingredients(ing), molecules(ing.getMolecules()), dstdir(dstDir_), evalulation_time(evalulation_time_), step_interval(save_interval_) {
+: ingredients(ing), molecules(ing.getMolecules()), dstdir(dstDir_), equilibriation_time(evalulation_time_), step_interval(save_interval_) {
     counterFrames = 1;
     
     Statistic_Rg2.clear();
@@ -170,6 +175,8 @@ AnalyzerHysteresis<IngredientsType>::AnalyzerHysteresis(const IngredientsType& i
 
 template<class IngredientsType>
 void AnalyzerHysteresis<IngredientsType>::initialize() {
+
+    // check the ingredients, get the force vector, make sure that oscillation is on
     
     //get the monomers with attributes subjected to force
 	uint32_t n = 0;
@@ -179,13 +186,19 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
 			n += 1;
 		}
     }
-		if((n > 2) || (n==0))
-        {
-            std::stringstream errormessage;
-            errormessage<<"AnalyzerHysteresis::initialize()...ambigious number of monomers subjected to force" << std::endl; 
-                    
-            throw std::runtime_error(errormessage.str());
-        }
+    // only two monomers can be subjected to a force
+    if((n > 2) || (n==0))
+    {
+        std::stringstream errormessage;
+        errormessage<<"AnalyzerHysteresis::initialize()...ambigious number of monomers subjected to force" << std::endl;
+
+        throw std::runtime_error(errormessage.str());
+    }
+    // initialize the histograms / arrays that collect hysteresis statistics
+    averaged_hys_loop.resize(numPeriodPoints);
+    for (int n; n < averaged_hys_loop.size(); n++) {
+        // initialize the
+    }
 
     initialized=true;
 }
@@ -203,7 +216,7 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 		throw std::runtime_error(errormessage.str());
 	}
 	
-    if(ingredients.getMolecules().getAge() >= evalulation_time)
+    if(ingredients.getMolecules().getAge() >= equilibriation_time)
 	{
         
         //Length of connection vector between the two charged Monomers = EndtoEnd
