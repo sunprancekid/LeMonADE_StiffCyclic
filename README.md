@@ -30,7 +30,6 @@ Usage: ./generatePolymerBFM << OPTIONS >>
 ```
 ./build/bin/simulatePolymerBFM -h
 
-
 Usage: ./simulatePolymerBFM << OPTIONS >> 
 [-i load file] 
 [-o output file] 
@@ -44,3 +43,10 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 [-g add radius of gyration analyzer]
 
 ```
+## Submit batch jobs
+>[!NOTE]
+>These programs were designed to execute on the IPFDD remote computing cluster system.
+1. Navtigate to `./results`
+2. Generate simulation parameters.
+3. Run batch simulations.
+4. Analyze simulation results.
