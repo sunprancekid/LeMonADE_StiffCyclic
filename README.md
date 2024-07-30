@@ -48,5 +48,9 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 >These programs were designed to execute on the IPFDD remote computing cluster system.
 1. Navtigate to `./results`
 2. Generate simulation parameters.
+	a. Generate simulations in which the bending potential strength is parameterized. 
+	b. Generate force extension simulations in which stiff polymers are exposed to a constant force. 
 3. Run batch simulations.
+	a. Run locally.
+	b. Submit to computing cluster.
 4. Analyze simulation results.
