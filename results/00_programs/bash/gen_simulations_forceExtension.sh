@@ -31,6 +31,7 @@ MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
+<<<<<<< HEAD
 PARM_RING=( 0 1 2 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
@@ -38,6 +39,15 @@ PARM_CSA=( "TRUE" )
 PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
 PARM_FORCEVEC=( "100" ) # "100"
+=======
+PARM_RING=( 0 1 ) # 2
+# array containing which potential to test
+PARM_CSA=( "TRUE" )
+# array containing bending potential strings to test
+PARM_BEND=( 0 1 10 30 50 100 )
+# array containing different force vectors to test
+PARM_FORCEVEC=( "111" ) # "100"
+>>>>>>> scaling
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
