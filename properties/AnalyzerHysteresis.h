@@ -97,12 +97,14 @@ private:
     int hys_period;
     //! vector that total distance is projected onto, cooresponds to orientation of force
     VectorDouble3 projVec;
+    //! amplitude of oscillatory force
+    double hys_amplitude;
     //! intermediate array that collects the average end to end distance over one period
-    std::vector<std::double> single_hys_loop;
+    std::vector<double> single_hys_loop;
     //! array of histogram statistics for each point sampled along hysteresis curve
     std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
     //! collects statistics for hysteresis integral, averaged for each loop
-    std::vector<std::double> avg_hys_integral;
+    std::vector<double> avg_hys_integral;
 
 
 
@@ -190,12 +192,13 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
     }
     // check the ingredients, get the force vector, make sure that oscillation is on
     hys_period = ingredients.getForceOscillationPeriod();
+    hys_amplitude = ingredients.getForceOscillationAmplitude();
     projVec = ingredients.getForceVector();
     if (hys_period % step_interval != 0) {
         // if the period of the save interval does not evenly go into the hysteresis period
         // throw an error because that will cause some issues in the fututre
         std::stringstream errormessage;
-        errormessage << "AnalyzerHysteresis::initialize()...Force Oscillation Period (" << hys_period << "MCS) and save interval period (" << step_interval << "MCS) not evenly divisable. Integer representing number of save points along hysteresis loop needs to be an even number." << std::endl;
+        errormessage << "AnalyzerHysteresis::initialize()...Force Oscillation Period (" << hys_period << " MCS) and save interval period (" << step_interval << " MCS) not evenly divisable. Integer representing number of save points along hysteresis loop needs to be an even number." << std::endl;
         throw std::runtime_error(errormessage.str());
     } else {
         // the numbers are evenly divisable
@@ -261,7 +264,7 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
         
         // calculate hysteresis int R(f) df for one period
         // check for beginning of new period and non-empty vector (first period) and delete all end-to-end vector information
-        if ( ((ingredients.getMolecules().getAge()) % ingredients.getPeriodOscillatoryForce() == 0) && !AllRxxWithinPeriod.empty() ) {
+        if ( ((ingredients.getMolecules().getAge()) % hys_period == 0) && !AllRxxWithinPeriod.empty() ) {
             
             double hysteresis_integral = calculateHysteresisInOnePeriodWithTrapezoidalMethod();
             Statistic_Hysteresis.AddValue(hysteresis_integral);
@@ -278,7 +281,7 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
         // add recent projected end-to-end distance in x-direction
         AllRxxWithinPeriod.push_back(R_X);
         
-        uint64_t modTime = (ingredients.getMolecules().getAge()) % ingredients.getPeriodOscillatoryForce();
+        uint64_t modTime = (ingredients.getMolecules().getAge()) % hys_period;
         it = timeToRx.find(modTime);
         
         // already exist add the value
@@ -305,8 +308,8 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
 {
  double stepSize = step_interval;
 
- double omega = 2.0 * 3.14159265358979323846 / double(ingredients.getPeriodOscillatoryForce());
- double fA = ingredients.getAmplitudeOscillatoryForce();
+ double omega = 2.0 * 3.14159265358979323846 / hys_period;
+ // double fA = ingredients.getAmplitudeOscillatoryForce();
  /* Finding Integration Value */
  
  // f = f0+fA*sin(omega*t) in eX-direction
@@ -321,12 +324,12 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
  
  for(size_t i = 1; i < AllRxxWithinPeriod.size(); i++)
  {
-  hysteresis_integral += AllRxxWithinPeriod.at(i) * omega * fA *std::cos(omega * i*stepSize) * stepSize;
+  hysteresis_integral += AllRxxWithinPeriod.at(i) * omega * hys_amplitude *std::cos(omega * i*stepSize) * stepSize;
  }
  
  // The first value counts twice (2*0.5=1)at this is Rxx at t%T=0 in the cycle 
  // cos(omega * 0 * stepSize) = cos(omega * T * stepSize) != 1
- hysteresis_integral += AllRxxWithinPeriod.at(0) * omega * fA * stepSize;
+ hysteresis_integral += AllRxxWithinPeriod.at(0) * omega * hys_amplitude * stepSize;
  
  return hysteresis_integral;
  
@@ -382,7 +385,7 @@ void AnalyzerHysteresis<IngredientsType>::cleanup() {
     // get the filename and path
     // find the filename without path and extensions
     std::string filenameGeneral = std::string(std::find_if(ingredients.getName().rbegin(), ingredients.getName().rend(), PathSeparator()).base(), ingredients.getName().end());
-
+/*
     std::string::size_type const p(filenameGeneral.find_last_of('.'));
     filenameGeneral = filenameGeneral.substr(0, p);
 
@@ -584,7 +587,7 @@ void AnalyzerHysteresis<IngredientsType>::cleanup() {
     if(!isFileExisting(dstdir+"/"+filename_HysteresisIntegral))
         ResultFormattingTools::writeResultFile(dstdir+"/"+filename_HysteresisIntegral, this->ingredients, tmpResults_HysteresisIntegralList, comment_HysteresisIntegral.str());
     else
-        ResultFormattingTools::appendToResultFile(dstdir + "/" + filename_HysteresisIntegral, tmpResults_HysteresisIntegralList);
+        ResultFormattingTools::appendToResultFile(dstdir + "/" + filename_HysteresisIntegral, tmpResults_HysteresisIntegralList);*/
     
     
 

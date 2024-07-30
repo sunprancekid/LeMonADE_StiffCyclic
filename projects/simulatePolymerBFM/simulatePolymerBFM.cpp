@@ -23,10 +23,11 @@ using namespace std;
 // modules not found in LeMonADE Library
 // #include <clara>
 #include <FeaturePotentialBending.h>
+#include <FeatureOscillatoryForce.h>
 #include <AnalyzerEndToEndDistance.h>
 #include <AnalyzerBondBondCorrelation.h>
 #include <AnalyzerBondVectorDistribution.h>
-#include <FeatureOscillatoryForce.h>
+#include <AnalyzerHysteresis.h>
 
 int main(int argc, char* argv[])
 {
@@ -119,6 +120,9 @@ int main(int argc, char* argv[])
         }
         if (add_bondvecdist_analyzer) {
             taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
+        }
+        if (add_hysteresis_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
         }
         // TODO :: add hysteresis analyzer
 
