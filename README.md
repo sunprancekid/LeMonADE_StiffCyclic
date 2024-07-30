@@ -26,3 +26,21 @@ Usage: ./generatePolymerBFM << OPTIONS >>
 [-a force oscillation amplitude (1)]
 
 ```
+5. Simulate Polymer system.
+```
+./build/bin/simulatePolymerBFM -h
+
+
+Usage: ./simulatePolymerBFM << OPTIONS >> 
+[-i load file] 
+[-o output file] 
+[-n number of total Monte Carlo steps] 
+[-s save frequency (in Monte Carlo steps)]
+[-e equilibriation time]
+[-a add end-to-end analyzer]
+[-b add hysteresis analyzer]
+[-c add bond-bond correlation analyzer]
+[-d add bond vector distribution analyzer]
+[-g add radius of gyration analyzer]
+
+```
