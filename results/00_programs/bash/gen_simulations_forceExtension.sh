@@ -23,19 +23,21 @@ declare -i BOOL_DWN=0
 declare -i BOOL_LOGSCALE=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
-declare -i N_FORCE_VAL=50
+declare -i N_FORCE_VAL=40
 # maxmium force to test
-MAX_FORCE_VAL="100"
+MAX_FORCE_VAL="2"
 # minimum force to test
 MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 ) # TODO add bonded rings
+PARM_RING=( 0 1 2 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing bending potential strings to test
-PARM_BEND=( 0 7 30 50 100 )
+PARM_BEND=( 0 1 5 10 30 )
+# array containing different force vectors to test
+PARM_FORCEVEC=( "100" ) # "100"
 # number of times to replicate each unique set of simualation conditions
 declare -i PARM_R=1
 # default directory for upload / download, generating parameters
@@ -149,7 +151,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,pot,R,N,K,F"
+	HEADER_SIMPARM="id,path,pot,R,N,K,F,FV"
 
 	## ARGUMENTS
 	# none
@@ -173,6 +175,7 @@ gen_simparm() {
         fi
 
         for r in "${PARM_RING[@]}"; do
+
             if [ $r -eq 0 ]; then
                 # chain
                 R="CHAIN"
@@ -182,6 +185,7 @@ gen_simparm() {
             elif [ $r -eq 2 ]; then
                 R="RINGx2"
             fi
+
             for n in "${PARM_N[@]}"; do
 
                 if [ $r != 0 ]; then
@@ -190,45 +194,52 @@ gen_simparm() {
 
                 for k in "${PARM_BEND[@]}"; do
                     for f in $(seq 0 $(($N_FORCE_VAL-1))); do
-                        # generate the simulation directory
-                        SIMID="${R}_${C}_N${n}K${k}F${f}"
-                        SIMDIR="${R}/${C}/N${n}/K${k}/F${f}/"
-                        mkdir -p ${PATH_SIMPARM}${SIMDIR}
-                        # use the force integer to calculate the real force value passed to the simulation executable
-                        if [[ $LOGSCALE -eq 1 ]]; then
-                            FORCE_VAL=$( logscale $f )
-                        else
-                            FORCE_VAL=$(linscale $f )
-                        fi
-                        # generate flags for simulation executables
-                        GENFLAGS="-n ${n} -f ${FORCE_VAL} -b 512"
-                        SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}"
-                        if [ $k != 0 ]; then
-                            GENFLAGS="${GENFLAGS} -k ${k}"
-                            if [ "${C}" == "CA" ]; then
-                                GENFLAGS="${GENFLAGS} -c"
+                        for fv in "${PARM_FORCEVEC[@]}"; do
+
+                            # generate the simulation directory
+                            SIMID="${R}_${C}_N${n}K${k}FV${fv}F${f}"
+                            SIMDIR="${R}/${C}/N${n}/K${k}/FV${fv}/F${f}/"
+                            mkdir -p ${PATH_SIMPARM}${SIMDIR}
+
+                            # use the force integer to calculate the real force value passed to the simulation executable
+                            if [[ $LOGSCALE -eq 1 ]]; then
+                                FORCE_VAL=$( logscale $f )
+                            else
+                                FORCE_VAL=$( linscale $f )
                             fi
-                        fi
-                        if [ $r -eq 1 ]; then
-                            GENFLAGS="${GENFLAGS} -r"
-                        elif [ $r -eq 2 ]; then
-                            GENFLAGS="${GENFLAGS} -r -m 1"
-                        fi
-                        # write files directory, generate simulation executables
-                        echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                        # add parameters to parm file
-                        echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL}" >> $FILE_SIMPARM
+
+                            # generate flags for simulation executables
+                            GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -d"
+                            if [ $k != 0 ]; then
+                                GENFLAGS="${GENFLAGS} -k ${k}"
+                                if [ "${C}" == "CA" ]; then
+                                    GENFLAGS="${GENFLAGS} -c"
+                                fi
+                            fi
+
+                            if [ $r -eq 1 ]; then
+                                GENFLAGS="${GENFLAGS} -r"
+                            elif [ $r -eq 2 ]; then
+                                GENFLAGS="${GENFLAGS} -r -m 2"
+                            fi
+
+                            # write files directory, generate simulation executables
+                            echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            # add parameters to parm file
+                            echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL},${fv}" >> $FILE_SIMPARM
+                        done
                     done
                 done
             done

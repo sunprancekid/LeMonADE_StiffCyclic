@@ -23,10 +23,11 @@ using namespace std;
 // modules not found in LeMonADE Library
 // #include <clara>
 #include <FeaturePotentialBending.h>
+#include <FeatureOscillatoryForce.h>
 #include <AnalyzerEndToEndDistance.h>
 #include <AnalyzerBondBondCorrelation.h>
 #include <AnalyzerBondVectorDistribution.h>
-#include <FeatureOscillatoryForce.h>
+#include <AnalyzerHysteresis.h>
 
 int main(int argc, char* argv[])
 {
@@ -39,15 +40,34 @@ int main(int argc, char* argv[])
         double max_MCs = 100000000; // total number of Monte Carlo steps
         std::string infile = "config_init.bfm"; // file that contains initial configuraiton for bfm simulation
         std::string outfile = "config.bfm"; // file that contains system configuratun at each save interval
-        double t_equil = 10000000; // simulation time before which properties are not calculated
-        // double t_equil = 0;
+        double t_equil = 0; // simulation time before which properties are not calculated
+        bool add_end2end_analyzer = false;
+        bool add_hysteresis_analyzer = false;
+        bool add_bondbondcorr_analyzer = false;
+        bool add_bondvecdist_analyzer = false;
+        bool add_radiusgyr_analyzer = false;
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "i:o:s:n:e:h"))  != EOF){
+        while ((option_char = getopt (argc, argv, "a:b:c:d:g:i:o:s:n:e:h"))  != EOF){
             switch (option_char)
             {
+                case 'a':
+                    add_end2end_analyzer = true;
+                    break;
+                case 'b':
+                    add_hysteresis_analyzer = true;
+                    break;
+                case 'c':
+                    add_bondbondcorr_analyzer = true;
+                    break;
+                case 'd':
+                    add_bondvecdist_analyzer = true;
+                    break;
+                case 'g':
+                    add_radiusgyr_analyzer = true;
+                    break;
                 case 'i':
                     infile = optarg;
                     break;
@@ -65,7 +85,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n\n";
+                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n\n";
                     return 0;
             }
         }
@@ -75,7 +95,6 @@ int main(int argc, char* argv[])
                                 FeatureAttributes< >,
                                 FeatureExcludedVolumeSc<>,
                                 FeaturePotentialBending,
-                                // FeatureLinearForce) Features;
                                 FeatureOscillatoryForce) Features;
         typedef ConfigureSystem<VectorInt3,Features,max_bonds> Config;
         typedef Ingredients<Config> IngredientsType;
@@ -90,10 +109,22 @@ int main(int argc, char* argv[])
         taskmanager.addUpdater(new UpdaterReadBfmFile<IngredientsType>(infile,ingredients,UpdaterReadBfmFile<IngredientsType>::READ_LAST_CONFIG_SAVE),0);
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
-        taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
-        taskmanager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
-        taskmanager.addAnalyzer(new AnalyzerBondVectorDistribution<IngredientsType>(ingredients, "BVD.dat", t_equil));
-        taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
+        if (add_end2end_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
+        }
+        if (add_radiusgyr_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerRadiusOfGyration<IngredientsType>(ingredients, "ROG.dat"));
+        }
+        if (add_bondbondcorr_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerBondVectorDistribution<IngredientsType>(ingredients, "BVD.dat", t_equil));
+        }
+        if (add_bondvecdist_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
+        }
+        if (add_hysteresis_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
+        }
+        // TODO :: add hysteresis analyzer
 
         // if the outfile exists, delete it
         char* outfile_char_array = new char[outfile.length() + 1];

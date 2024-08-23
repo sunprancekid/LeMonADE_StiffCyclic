@@ -58,7 +58,7 @@ class FeatureOscillatoryForce:public Feature
 public:
 
     // constructor: assign default force vector and base force
-    FeatureOscillatoryForce(): ConstantForceOn(false){setForceVector(1., 0., 0.); setBaseForce(0.);};
+    FeatureOscillatoryForce(): ConstantForceOn(false){setForceVector(1., 0., 0.); setBaseForce(0.); setForceOscillation(false);};
     virtual ~FeatureOscillatoryForce(){};
 
     //the FeatureBoltzmann: adds a probability for the move
@@ -97,8 +97,11 @@ public:
     //! set the strength of the force
     void setBaseForce(double baseForce){
         Base_Force = baseForce;
-        prob.setAllCoordinates(exp(-(Base_Force / normfact) * forceVec.getX()), exp(-(Base_Force / normfact) * forceVec.getY()), exp(-(Base_Force / normfact) * forceVec.getZ()));
+        updateProb(Base_Force);
     }
+
+    //! get strength of the force
+    double getBaseForce() const {return Base_Force;}
 
     //! set force on or off
     void setForceOn(bool forceOn){
@@ -106,11 +109,29 @@ public:
         ConstantForceOn = forceOn;
     }
 
-    //! get strength of the force
-    double getBaseForce() const {return Base_Force;}
-
     //! applies a force on the monomers or not
     bool isConstantForceOn() const {return ConstantForceOn;}
+
+    //! set oscillatory force to on
+    void setForceOscillation(bool oscillationOn) {
+        // set boolean
+        OscillatoryForceOn = oscillationOn;
+    }
+
+    //! get boolean determining whether the force oscillation is on
+    bool isForceOscillationOn() const { return OscillatoryForceOn;}
+
+    //! double used to set the period that the oscillatory force changes
+    void setForceOscillationPeriod(double p) { OscillationPeriod = p; }
+
+    //! get oscillation period
+    int getForceOscillationPeriod () const { return OscillationPeriod; }
+
+    //! set force oscillation amplitude
+    void setForceOscillationAmplitude (double a) { OscillationAmplitude = a; }
+
+    //! get force oscillation amplitude
+    double getForceOscillationAmplitude () const { return OscillationAmplitude;}
 
     //! Export the relevant functionality for reading bfm-files to the responsible reader object
     template <class IngredientsType>
@@ -119,27 +140,29 @@ public:
     //! Export the relevant functionality for writing bfm-files to the responsible writer object
     template <class IngredientsType>
     void exportWrite(AnalyzerWriteBfmFile <IngredientsType>& fileWriter) const;
-private:
 
+private:
     //! vector representing force orientation
     VectorDouble3 forceVec;
     //! Force is On (True) or Off (False)
     bool ConstantForceOn;
-    //! magnitude of base force (without oscilation / amplitude)
+    //! magnitude of base force (without oscillation / amplitude)
     double Base_Force;
-    //! boolean determining if force oscilation is on or off
-    // TODO add oscilatory force (force base, amplitude and period are specified)
-    //! double representing oscilatory force period (MCS)
+    //! boolean determining if force oscillation is on or off
+    bool OscillatoryForceOn;
+    //! double representing oscillatory force period (MCS)
+    int OscillationPeriod;
     //! double represnting force amplitude
-    // TODO add method for turning on osciallatory force, setting period and amplitude
-    // TODO add method for returning osciallatory force period
-    // TODO add method for returning osciallatory force amplitude
-    // TODO add method for checking if osciallatory force is on or off
+    double OscillationAmplitude;
     //!probability
     //! normalization factor for calculating acceptance probability in each dimension
     double normfact;
     //! move probability in each simulation dimension according to force magnitude and vector
     VectorDouble3 prob;
+    //! update the probability vector accoring to the force value passed to the method
+    void updateProb (double f) {
+        prob.setAllCoordinates(exp(-(f / normfact) * forceVec.getX()), exp(-(f / normfact) * forceVec.getY()), exp(-(f / normfact) * forceVec.getZ()));
+    }
 
 };
 
@@ -162,69 +185,84 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         // negative force applied on attribute 5 in negative forceVec direction
         // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
+
+        double f = Base_Force;
+        if (OscillatoryForceOn) {
+            // if the force is oscillating, update the force and calculate the new acceptance probabilities
+            double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359/OscillationPeriod)* ingredients.getMolecules().getAge() );
+            // updateProb(f);
+        }
+
         if ( dx == 1 ) {
             // positive x-direction
+            double px = exp(-(f / normfact) * forceVec.getX());
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(prob.getX());
+                move.multiplyProbability(px);
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./prob.getX());
+                move.multiplyProbability(1./px);
                 return true;
             }
-        } else if ( dx == -1 ) { // negative x-direction
+        } else if ( dx == -1 ) {
+            // negative x-direction
+            double px = exp(-(f / normfact) * forceVec.getX());
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./prob.getX());
+                move.multiplyProbability(1./px);
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(prob.getX());
+                move.multiplyProbability(px);
                 return true;
             }
         } else if ( dy == 1 ) {
             // positive y-direction
+            double py = exp(-(f / normfact) * forceVec.getY());
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(prob.getY());
+                move.multiplyProbability(py);
                 return true;
             } else if (tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./prob.getY());
+                move.multiplyProbability(1./py);
                 return true;
             }
         } else if ( dy == -1 ) {
             // negative y-direction
+            double py = exp(-(f / normfact) * forceVec.getY());
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./prob.getY());
+                move.multiplyProbability(1./py);
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(prob.getY());
+                move.multiplyProbability(py);
                 return true;
             }
         } else if ( dz == 1 ) {
             // positive z-direction
+            double pz = exp(-(f / normfact) * forceVec.getZ());
             if ( tag == 4 ) {
                 // POSITIVE charge is MORE likely to move in the SAME direction as the force vector
-                move.multiplyProbability(prob.getZ());
+                move.multiplyProbability(pz);
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is LESS likely to move in the SAME direction as the force vector
-                move.multiplyProbability(1./prob.getZ());
+                move.multiplyProbability(1./pz);
                 return true;
             }
         } else if ( dz == -1 ) {
             // negative z-direction
+            double pz = exp(-(f / normfact) * forceVec.getZ());
             if ( tag == 4 ) {
                 // POSITIVE charge is LESS likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(1./prob.getZ());
+                move.multiplyProbability(1./pz);
                 return true;
             } else if ( tag == 5 ) {
                 // NEGATIVE charge is MORE likely to move in the OPPOSITE direction of the force vector
-                move.multiplyProbability(prob.getZ());
+                move.multiplyProbability(pz);
                 return true;
             }
         }
@@ -316,6 +354,180 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         }
     }
     return true;
+}
+
+/*****************************************************************/
+/**
+ * @class ReadForceOscillationAmplitude
+ *
+ * @brief Handles BFM-File-Reads \b #!force_oscillation_amplitude
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceOscillationAmplitude: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceOscillationAmplitude(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceOscillationAmplitude(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceOscillationAmplitude<IngredientsType>::execute()
+{
+    std::cout<<"reading oscillationAmplitude...";
+
+    double a = 0.0;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line;
+    getline(source,line);
+    a = atof(line.c_str());
+    std::cout << "#!force_oscillation_amplitude=" << (a) << std::endl;
+
+    ingredients.setForceOscillationAmplitude(a);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceOscillationAmplitude
+ *
+ * @brief Handles BFM-File-Write \b #!force_oscillation_amplitude
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceOscillationAmplitude:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceOscillationAmplitude(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceOscillationAmplitude(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceOscillationAmplitude<IngredientsType>::writeStream(std::ostream& stream)
+{
+    stream<<"#!force_oscillation_amplitude=" << (this->getSource().getForceOscillationAmplitude()) << std::endl << std::endl;
+}
+
+/*****************************************************************/
+/**
+ * @class ReadForceOscillationPeriod
+ *
+ * @brief Handles BFM-File-Reads \b #!force_oscilllation_period
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceOscillationPeriod: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceOscillationPeriod(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceOscillationPeriod(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceOscillationPeriod<IngredientsType>::execute()
+{
+    std::cout<<"reading oscillationPeriod...";
+
+    double p = 0.0;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line;
+    getline(source,line);
+    p = atoi(line.c_str());
+    std::cout << "#!force_oscillation_period=" << (p) << std::endl;
+
+    ingredients.setForceOscillationPeriod(p);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceOscillationPeriod
+ *
+ * @brief Handles BFM-File-Write \b #!force_oscillation_period
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceOscillationPeriod:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceOscillationPeriod(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceOscillationPeriod(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceOscillationPeriod<IngredientsType>::writeStream(std::ostream& stream)
+{
+    stream<<"#!force_oscillation_period=" << (this->getSource().getForceOscillationPeriod()) << std::endl<< std::endl;
+}
+
+/*****************************************************************/
+/**
+ * @class ReadForceOscillationOn
+ *
+ * @brief Handles BFM-File-Reads \b #!force_oscilllation_on
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template < class IngredientsType>
+class ReadForceOscillationOn: public ReadToDestination<IngredientsType>
+{
+public:
+    ReadForceOscillationOn(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadForceOscillationOn(){}
+    virtual void execute();
+};
+
+template<class IngredientsType>
+void ReadForceOscillationOn<IngredientsType>::execute()
+{
+    std::cout<<"reading FieldOscillationIsOn...";
+
+    bool fieldOscillationIsOn = false;
+    IngredientsType& ingredients=this->getDestination();
+    std::istream& source=this->getInputStream();
+
+    std::string line;
+    getline(source,line);
+    fieldOscillationIsOn = atoi(line.c_str());
+    std::cout << "#!force_oscillation_on=" << (fieldOscillationIsOn? "True" : " False" ) << std::endl;
+
+    ingredients.setForceOscillation(fieldOscillationIsOn);
+}
+
+/*****************************************************************/
+/**
+ * @class WriteForceOscillationOn
+ *
+ * @brief Handles BFM-File-Write \b #!force_oscillation_on
+ * @tparam IngredientsType Ingredients class storing all system information.
+ **/
+template <class IngredientsType>
+class WriteForceOscillationOn:public AbstractWrite<IngredientsType>
+{
+public:
+    WriteForceOscillationOn(const IngredientsType& i)
+    :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
+
+    virtual ~WriteForceOscillationOn(){}
+
+    virtual void writeStream(std::ostream& strm);
+};
+
+template<class IngredientsType>
+void WriteForceOscillationOn<IngredientsType>::writeStream(std::ostream& stream)
+{
+    stream<<"#!force_oscillation_on=" << (this->getSource().isForceOscillationOn() ? "1" : "0") << std::endl<< std::endl;
 }
 
 
@@ -417,7 +629,7 @@ void ReadForceFieldOn<IngredientsType>::execute()
     std::string line;
     getline(source,line);
     fieldIsOn = atoi(line.c_str());
-    std::cout << "#!force_field_on=" << (fieldIsOn? "True" : " False" ) << std::endl;
+    std::cout << "#!force_field_on=" << (fieldIsOn? "True" : "False" ) << std::endl;
 
     ingredients.setForceOn(fieldIsOn);
 }
@@ -450,61 +662,61 @@ void WriteForceFieldOn<IngredientsType>::writeStream(std::ostream& stream)
 
 /*****************************************************************/
 /**
- * @class ReadAmplitudeForce
+ * @class ReadBaseForce
  *
- * @brief Handles BFM-File-Reads \b #!force_amplitude
+ * @brief Handles BFM-File-Reads \b #!force_base
  * @tparam IngredientsType Ingredients class storing all system information.
  **/
 template < class IngredientsType>
-class ReadAmplitudeForce: public ReadToDestination<IngredientsType>
+class ReadBaseForce: public ReadToDestination<IngredientsType>
 {
 public:
-    ReadAmplitudeForce(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
-    virtual ~ReadAmplitudeForce(){}
+    ReadBaseForce(IngredientsType& i):ReadToDestination<IngredientsType>(i){}
+    virtual ~ReadBaseForce(){}
     virtual void execute();
 };
 
 template<class IngredientsType>
-void ReadAmplitudeForce<IngredientsType>::execute()
+void ReadBaseForce<IngredientsType>::execute()
 {
-    std::cout<<"reading AmplitudeForce...";
+    std::cout<<"reading baseForce...";
 
-    double amplitudeForce = 0.0;
+    double baseForce = 0.0;
     IngredientsType& ingredients=this->getDestination();
     std::istream& source=this->getInputStream();
 
     std::string line;
     getline(source,line);
-    amplitudeForce = atof(line.c_str());
-    std::cout << "#!force_amplitude=" << (amplitudeForce) << std::endl;
+    baseForce = atof(line.c_str());
+    std::cout << "#!force_base=" << (baseForce) << std::endl;
 
-    ingredients.setBaseForce(amplitudeForce);
+    ingredients.setBaseForce(baseForce);
 }
 
 
 /*****************************************************************/
 /**
- * @class WriteAmplitudeForce
+ * @class WriteBaseForce
  *
- * @brief Handles BFM-File-Write \b #!force_amplitude
+ * @brief Handles BFM-File-Write \b #!force_base
  * @tparam IngredientsType Ingredients class storing all system information.
  **/
 template <class IngredientsType>
-class WriteAmplitudeForce:public AbstractWrite<IngredientsType>
+class WriteBaseForce:public AbstractWrite<IngredientsType>
 {
 public:
-    WriteAmplitudeForce(const IngredientsType& i)
+    WriteBaseForce(const IngredientsType& i)
     :AbstractWrite<IngredientsType>(i){this->setHeaderOnly(false);}
 
-    virtual ~WriteAmplitudeForce(){}
+    virtual ~WriteBaseForce(){}
 
     virtual void writeStream(std::ostream& strm);
 };
 
 template<class IngredientsType>
-void WriteAmplitudeForce<IngredientsType>::writeStream(std::ostream& stream)
+void WriteBaseForce<IngredientsType>::writeStream(std::ostream& stream)
 {
-    stream<<"#!force_amplitude=" << (this->getSource().getBaseForce()) << std::endl<< std::endl;
+    stream<<"#!force_base=" << (this->getSource().getBaseForce()) << std::endl<< std::endl;
 }
 
 
@@ -525,9 +737,11 @@ template<class IngredientsType>
 void FeatureOscillatoryForce::exportRead(FileImport< IngredientsType >& fileReader)
 {
     fileReader.registerRead("#!force_field_on", new ReadForceFieldOn<FeatureOscillatoryForce>(*this));
-    fileReader.registerRead("#!force_amplitude", new ReadAmplitudeForce<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_base", new ReadBaseForce<FeatureOscillatoryForce>(*this));
     fileReader.registerRead("#!force_vector", new ReadForceFieldVector<FeatureOscillatoryForce>(*this));
-
+    fileReader.registerRead("#!force_oscillation_on", new ReadForceOscillationOn<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_oscillation_period", new ReadForceOscillationPeriod<FeatureOscillatoryForce>(*this));
+    fileReader.registerRead("#!force_oscillation_amplitude", new ReadForceOscillationAmplitude<FeatureOscillatoryForce>(*this));
 }
 
 /**
@@ -544,11 +758,11 @@ template<class IngredientsType>
 void FeatureOscillatoryForce::exportWrite(AnalyzerWriteBfmFile< IngredientsType >& fileWriter) const
 {
     fileWriter.registerWrite("#!force_field_on",new WriteForceFieldOn<FeatureOscillatoryForce>(*this));
-    fileWriter.registerWrite("#!force_amplitude", new WriteAmplitudeForce<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_base", new WriteBaseForce<FeatureOscillatoryForce>(*this));
     fileWriter.registerWrite("#!force_vector", new WriteForceFieldVector<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_oscillation_on", new WriteForceOscillationOn<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_oscillation_period", new WriteForceOscillationPeriod<FeatureOscillatoryForce>(*this));
+    fileWriter.registerWrite("#!force_oscillation_amplitude", new WriteForceOscillationAmplitude<FeatureOscillatoryForce>(*this));
 }
-
-
-
 
 #endif /*LEMONADE_OSCILLATORYFORCE_H*/

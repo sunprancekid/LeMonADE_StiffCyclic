@@ -10,3 +10,5 @@ add_library(HistogramGeneralStatistik1D MODULE HistogramGeneralStatistik1D.h)
 add_library(AnalyzerBondVectorDistribution MODULE AnalyzerBondVectorDistribution.h)
 # Analyzer for calculating bond bond correlation during simulations
 add_library(AnalyzerBondBondCorrelation MODULE AnalyzerBondBondCorrelation.h)
+# analyzer for hysteresis
+add_library(AnalyzerHysteresis MODULE AnalyzerHysteresis.h)

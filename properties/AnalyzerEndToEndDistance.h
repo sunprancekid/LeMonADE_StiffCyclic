@@ -293,4 +293,5 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
         }
         return diff_vec;
     }
-    #endif
+
+#endif
