@@ -2,8 +2,8 @@
 Extension of LeMonADE package for the simulaton of stiff, cyclic polymers.
 
 ## Instructions for Generating Simulation Executables
-1. Install CMake.
-2. Install [LeMonADE Package](https://github.com/LeMonADE-project/LeMonADE).
+1. Install cmake (minimum version 3.1).
+2. Clone and Install LeMonADE v2.2.2, see [LeMonADE v2.2.2](https://github.com/LeMonADE-project/LeMonADE/tree/v2.2.2).
 3. Compile LeMonADE_StiffCyclic programs.
 ```
 ./results/00_programs/bash/build_LeMonADE.sh -p <path/to/lemonade>
@@ -54,3 +54,12 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 	-  Run locally.
 	-  Submit to computing cluster.
 4. Analyze simulation results.
+
+
+## projects/AnalyzerScatteringSingleObject/
+
+Calculates the scattering intensity S(q) with respect to the absolute magnitute of the scattering wave vector q.  
+
+```
+    ./AnalyzerScatteringSingleObject [-f filename(=test.bfm)] [-e evaluation_time(=0)] [-s skipframe(=0)]
+```

@@ -4,3 +4,5 @@ add_subdirectory(generatePolymerBFM)
 add_subdirectory(simulatePolymerBFM)
 # create two concatenated rings with excluded volume 
 # add_subdirectory(createTwoConcatenatedRings)
+# analyzes the bfm file and calulates the Scattering Intensity
+add_subdirectory(AnalyzerScatteringSingleObject)
