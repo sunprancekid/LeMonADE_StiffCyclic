@@ -28,6 +28,7 @@ using namespace std;
 #include <AnalyzerBondBondCorrelation.h>
 #include <AnalyzerBondVectorDistribution.h>
 #include <AnalyzerHysteresis.h>
+#include <AnalyzerScatteringSingleObject.h>
 
 int main(int argc, char* argv[])
 {

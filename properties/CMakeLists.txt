@@ -12,3 +12,5 @@ add_library(AnalyzerBondVectorDistribution MODULE AnalyzerBondVectorDistribution
 add_library(AnalyzerBondBondCorrelation MODULE AnalyzerBondBondCorrelation.h)
 # analyzer for hysteresis
 add_library(AnalyzerHysteresis MODULE AnalyzerHysteresis.h)
+# analyzer for static structure factor
+add_library(AnalyzerScatteringSingleObject MODULE AnalyzerScatteringSingleObject.h)
