@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
             taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
         }
         if (add_scatter_analyzer) {
-            taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, t_equil), (1));
+            taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, "SKQ.dat", t_equil), (1));
         }
         // TODO :: add hysteresis analyzer
 

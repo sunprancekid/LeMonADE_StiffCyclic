@@ -59,7 +59,7 @@ template<class IngredientsType>
 class AnalyzerScatteringSingleObject: public AbstractAnalyzer {
 public:
   //constructor
-  AnalyzerScatteringSingleObject(const IngredientsType&, long evalulation_time_, int32_t relaxtime_=0, double binWidth_=1);
+  AnalyzerScatteringSingleObject(const IngredientsType&, std::string filename = "ScatteringFactor.dat", long evalulation_time_=0, int32_t relaxtime_=0, double binWidth_=1);
   
   //destructor
   ~AnalyzerScatteringSingleObject(){}
@@ -81,6 +81,11 @@ private:
 
   // typedef for complex numbers
   typedef std::complex<double> double_complex;
+
+  //! name of output file containing scattering factor results
+  std::string outputFile;
+  //! default file name if none is assigned during initialization
+  // const std::string default_outfilename = "ScatterFactor.dat";
   
   // Random Number Generator (RNG)
   RandomNumberGenerators rng;
@@ -116,7 +121,7 @@ private:
  */
 template<class IngredientsType>
 AnalyzerScatteringSingleObject<IngredientsType>::AnalyzerScatteringSingleObject(
-  const IngredientsType& ingredients_, long evalulation_time_,  int32_t relaxtime_, double binWidth_):
+  const IngredientsType& ingredients_, std::string filename, long evalulation_time_,  int32_t relaxtime_, double binWidth_):
   ingredients(ingredients_), 
   currentTimestep(0),
   relaxtime(relaxtime_),
@@ -125,7 +130,8 @@ AnalyzerScatteringSingleObject<IngredientsType>::AnalyzerScatteringSingleObject(
   q_factor(),
   averagedSquaredAbsC_q(num_of_q,0.0),
   averagedSquaredAbsC_q_elements(num_of_q,0.0),
-  evalulation_time(evalulation_time_)
+  evalulation_time(evalulation_time_),
+  outputFile(filename)
 {}
   
 /******************************************************************************/
@@ -180,12 +186,12 @@ void AnalyzerScatteringSingleObject<IngredientsType>::cleanup(){
   if(currentTimestep > relaxtime){
 
 	// get the filename and path
-	std::string filenameGeneral=ingredients.getName();
-	// delete the .bfm in the name
-	filenameGeneral.erase (ingredients.getName().length()-4, ingredients.getName().length());
-
-	//new filename
-	std::string filename_ScatteringFct = filenameGeneral + "_ScatteringFct.dat";
+	// std::string filenameGeneral=ingredients.getName();
+	// // delete the .bfm in the name
+	// filenameGeneral.erase (ingredients.getName().length()-4, ingredients.getName().length());
+ //
+	// //new filename
+	// std::string filename_ScatteringFct = filenameGeneral + "_ScatteringFct.dat";
 
   u_int32_t numScatteringObj=0;
 
@@ -194,7 +200,7 @@ void AnalyzerScatteringSingleObject<IngredientsType>::cleanup(){
      numScatteringObj++;
   }
 
-    FormFactorFile.open (filename_ScatteringFct.c_str(),std::ios::out);
+    FormFactorFile.open (outputFile.c_str(),std::ios::out);
     FormFactorFile << "# Molecular Scattering Function\n"
     << "# q    S(q)   samples"<< std::endl;
     for (uint32_t i=0;i<q_factor.size();i++){
