@@ -47,11 +47,12 @@ int main(int argc, char* argv[])
         bool add_bondbondcorr_analyzer = false;
         bool add_bondvecdist_analyzer = false;
         bool add_radiusgyr_analyzer = false;
+        bool add_scatter_analyzer = false;
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "a:b:c:d:g:i:o:s:n:e:h"))  != EOF){
+        while ((option_char = getopt (argc, argv, "abcdgqi:o:s:n:e:h"))  != EOF){
             switch (option_char)
             {
                 case 'a':
@@ -68,6 +69,9 @@ int main(int argc, char* argv[])
                     break;
                 case 'g':
                     add_radiusgyr_analyzer = true;
+                    break;
+                case 'q':
+                    add_scatter_analyzer = true;
                     break;
                 case 'i':
                     infile = optarg;
@@ -86,7 +90,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n\n";
+                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n[-q add static scattering factor analyzer]\n\n";
                     return 0;
             }
         }
@@ -124,6 +128,9 @@ int main(int argc, char* argv[])
         }
         if (add_hysteresis_analyzer) {
             taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
+        }
+        if (add_scatter_analyzer) {
+            taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, t_equil), (1));
         }
         // TODO :: add hysteresis analyzer
 
