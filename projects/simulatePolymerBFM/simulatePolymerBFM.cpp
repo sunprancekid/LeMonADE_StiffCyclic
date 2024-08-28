@@ -127,12 +127,18 @@ int main(int argc, char* argv[])
             taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
         }
         if (add_hysteresis_analyzer) {
+            // TODO :: here is the problem. the save interval is fixed with the UpdaterSimpleSimulator. The save_interval is only passed here
+            // to the AnalyzerHysteresis in order to calculate hysteresis (as A). Futher, the period is unspecified in ingredients until the
+            // initialize function is called. This means that right now, in order for the save_interval and the period to synchronize to a divisable value,
+            // the program calling generate and simulate PolymerBFM need to be speaking to each other.
+            // At the very least, it would be nice if the simulatePolymerBFM could add a hysteresis analyzer and then work without collapsing, even if it
+            // isnt optimal. Can I initialize the taskmanager / ingredients, and then re-analyze? Can I provide suggestions for save interval
+            // if it does not work?
             taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
         }
         if (add_scatter_analyzer) {
             taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, "SKQ.dat", t_equil), (1));
         }
-        // TODO :: add hysteresis analyzer
 
         // if the outfile exists, delete it
         char* outfile_char_array = new char[outfile.length() + 1];

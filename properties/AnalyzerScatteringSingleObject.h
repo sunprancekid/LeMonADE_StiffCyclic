@@ -59,7 +59,7 @@ template<class IngredientsType>
 class AnalyzerScatteringSingleObject: public AbstractAnalyzer {
 public:
   //constructor
-  AnalyzerScatteringSingleObject(const IngredientsType&, std::string filename = "ScatteringFactor.dat", long evalulation_time_=0, int32_t relaxtime_=0, double binWidth_=1);
+  AnalyzerScatteringSingleObject(const IngredientsType&, std::string filename = "ScatterFactor.dat", long evalulation_time_=0, int32_t relaxtime_=0, double binWidth_=1);
   
   //destructor
   ~AnalyzerScatteringSingleObject(){}
