@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     try{
         // constants
         const uint max_bonds=4;
-        int type1(1);
+        int type1(1); // type assigned to all "monomers"
         // establish default parameters
         double save_interval = 1000000; // frequency of property calculations, position save
         double max_MCs = 100000000; // total number of Monte Carlo steps
@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
         double t_equil = 0; // simulation time before which properties are not calculated
         bool add_end2end_analyzer = false;
         bool add_hysteresis_analyzer = false;
+        int num_hysanal_points = 100;
         bool add_bondbondcorr_analyzer = false;
         bool add_bondvecdist_analyzer = false;
         bool add_radiusgyr_analyzer = false;
@@ -109,9 +110,34 @@ int main(int argc, char* argv[])
         RandomNumberGenerators rng;
         rng.seedAll();
 
-        // add updaters and analyzers to task manager
+        // initialize task manager, load initial config file
         TaskManager taskmanager;
         taskmanager.addUpdater(new UpdaterReadBfmFile<IngredientsType>(infile,ingredients,UpdaterReadBfmFile<IngredientsType>::READ_LAST_CONFIG_SAVE),0);
+        taskmanager.initialize();
+
+        // if hysteresis analyzer is being called, check for force oscillation and tinker with the save interval
+        if (add_hysteresis_analyzer) {
+            // first, check that the force is on, and that it is oscillating
+            if (ingredients.isForceOscillationOn()) {
+                // if force is on, adjust save interval to a value relative to oscillation period
+                int p = ingredients.getForceOscillationPeriod(); // period assigned to oscillatory force
+                // check if the period and the number of points are divisable by one another
+                if (p % num_hysanal_points == 0) {
+                    // if they are evenly divisable by one another, assign the save interval as the period over the number of save points
+                    save_interval = p / num_hysanal_points;
+                }
+                // TODO :: Add routine for if the two numbers are not evenly divisable by one another
+                // (if the two numbers are not evenly divisable, the hysteresis analyzer will throw an error)
+            } else {
+                // force oscillation is not on, but hysteresis analyzer is being called
+                // report error and quit
+                std::cout << "Hysteresis Analyzer cannot be used when the constant force is not on, or is not oscillating." << std::endl;
+                std::cout << "Reinitialize config file with oscillating force or turn off Hysteresis Analyzer." << std::endl;
+                exit(0);
+            }
+        }
+
+        // add updaters and analyzers to task manager
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
         if (add_end2end_analyzer) {
@@ -127,13 +153,8 @@ int main(int argc, char* argv[])
             taskmanager.addAnalyzer(new AnalyzerBondBondCorrelation<IngredientsType>(ingredients, "BBC.dat", t_equil));
         }
         if (add_hysteresis_analyzer) {
-            // TODO :: here is the problem. the save interval is fixed with the UpdaterSimpleSimulator. The save_interval is only passed here
-            // to the AnalyzerHysteresis in order to calculate hysteresis (as A). Futher, the period is unspecified in ingredients until the
-            // initialize function is called. This means that right now, in order for the save_interval and the period to synchronize to a divisable value,
-            // the program calling generate and simulate PolymerBFM need to be speaking to each other.
-            // At the very least, it would be nice if the simulatePolymerBFM could add a hysteresis analyzer and then work without collapsing, even if it
-            // isnt optimal. Can I initialize the taskmanager / ingredients, and then re-analyze? Can I provide suggestions for save interval
-            // if it does not work?
+            // the save_interval is not added to the analyzer to control the frequency that the hysteresis analyzer samples
+            // but rather just used when calculating hysteresis (as A)
             taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
         }
         if (add_scatter_analyzer) {

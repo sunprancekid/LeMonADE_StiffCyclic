@@ -61,6 +61,8 @@ along with LeMonADE and ELMA-OscillatoryForce extension. If not, see <http://www
 template<class IngredientsType>
 class AnalyzerHysteresis : public AbstractAnalyzer {
 public:
+    // TODO :: construct hysteresis analyzer as number of points which are sampled
+    // TODO :: clean up extra variables
     // default constructor
     AnalyzerHysteresis(const IngredientsType& ing, std::string dstDir_, uint64_t evalulation_time_, uint64_t save_interval_);
     // deconstructor
@@ -81,6 +83,16 @@ public:
     bool isFileExisting(std::string);
 
 private:
+    // constant, maximum possible value from hysteresis end-to-end distance
+    const double hys_hist_max_value = 1.;
+    // constant, minimum possible value from hysteresis end-to-end distance
+    const double hys_hist_min_value = -1.;
+    // constant, number of bins in hysteresis histogram (between min and max values)
+    const int hys_hist_bins = 200.;
+    // length used to normalize end-to-end distance, which is the total chain length
+    double norm_length;
+    // counts the number of times that execution has iterated
+    int hys_counter;
     // points to LeMonADE ingredients
     const IngredientsType& ingredients;
     //only used to make sure you initialize your groups before you do things
@@ -103,9 +115,10 @@ private:
     std::vector<double> single_hys_loop;
     //! array of histogram statistics for each point sampled along hysteresis curve
     std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
+    //! histogram that collects the averaged hysteresis from each single loop
+    HistogramGeneralStatistik1D avg_single_hys_loop; // initialize in clean up
     //! collects statistics for hysteresis integral, averaged for each loop
     std::vector<double> avg_hys_integral;
-
 
 
     uint32_t counterFrames;
@@ -190,7 +203,8 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
         errormessage << "AnalyzerHysteresis::initialize()...Force Oscillation is off. Hysteresis analyzer cannot work." << std::endl;
         throw std::runtime_error(errormessage.str());
     }
-    // check the ingredients, get the force vector, make sure that oscillation is on
+
+    // check that the period is alligned with the sampling frequency
     hys_period = ingredients.getForceOscillationPeriod();
     hys_amplitude = ingredients.getForceOscillationAmplitude();
     projVec = ingredients.getForceVector();
@@ -203,9 +217,8 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
     } else {
         // the numbers are evenly divisable
         numPeriodPoints = hys_period / step_interval;
-        std::cout << numPeriodPoints << std::endl;
-        exit(0);
     }
+
     //get the monomers with attributes subjected to force
 	uint32_t n = 0;
 	for (uint32_t i=0; i < ingredients.getMolecules().size();i++){
@@ -222,12 +235,32 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
 
         throw std::runtime_error(errormessage.str());
     }
-    // initialize the histograms / arrays that collect hysteresis statistics
-    averaged_hys_loop.resize(numPeriodPoints);
-    for (int n; n < averaged_hys_loop.size(); n++) {
-        // initialize each of the histograms for each of the points that will be sampled
+
+    // determine if the polymer is a ring or a chain .. (or a chain of rings .. ?)
+    int num_monomers = ingredients.getMolecules().size();
+    if (indexMonomersForce[0] == 0) {
+        // if the first momonmer experiencing force is the first in the chain, check the second
+        // NOTE :: this should always be the case
+        if (indexMonomersForce[1] == num_monomers - 1) {
+            // the polymer is a linear chain, the maximum length is the total number of momonmers
+            norm_length = (double) num_monomers;
+        } else {
+            // the polymer is a ring, the maximum length is half the total number of monomers
+            norm_length = (double) num_monomers / 2.;
+        }
     }
 
+    // initialize the histograms / arrays that collect hysteresis statistics
+    single_hys_loop.resize(numPeriodPoints);
+    averaged_hys_loop.resize(numPeriodPoints);
+    hys_counter = 0;
+    for (int n; n < averaged_hys_loop.size(); n++) {
+        // initialize each of the arrays for each of the points along the period that will be sampled
+        // one histogram array represents the averaged end-to-end distance at each time point along the hystersis (oscillation) loop
+        averaged_hys_loop[n] = HistogramGeneralStatistik1D(hys_hist_min_value, hys_hist_max_value, hys_hist_bins);
+        // one more histogram represents hysteresis which is calculated after the completion of each loop
+        single_hys_loop[n] = 0.;
+    }
     initialized=true;
 }
 
@@ -246,57 +279,76 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 	
     if(ingredients.getMolecules().getAge() >= equilibriation_time)
 	{
+        // iterate hysteresis counter
+        hys_counter++;
+        int period_idx = hys_counter % numPeriodPoints; // index corresponding to the current phase in period
         
-        //Length of connection vector between the two charged Monomers = EndtoEnd
-        double R_X = (ingredients.getMolecules()[indexMonomersForce[1]]).getX() - (ingredients.getMolecules()[indexMonomersForce[0]]).getX();
-        double R_Y = (ingredients.getMolecules()[indexMonomersForce[1]]).getY() - (ingredients.getMolecules()[indexMonomersForce[0]]).getY();
-        double R_Z = (ingredients.getMolecules()[indexMonomersForce[1]]).getZ() - (ingredients.getMolecules()[indexMonomersForce[0]]).getZ();
+        // calculate the end-to-end distance of the polymer chain / ring projected onto the force vector
+        VectorDouble3 diff_vec;
+        diff_vec.setX((ingredients.getMolecules()[indexMonomersForce[1]]).getX() - (ingredients.getMolecules()[indexMonomersForce[0]]).getX());
+        diff_vec.setY((ingredients.getMolecules()[indexMonomersForce[1]]).getY() - (ingredients.getMolecules()[indexMonomersForce[0]]).getY());
+        diff_vec.setZ((ingredients.getMolecules()[indexMonomersForce[1]]).getZ() - (ingredients.getMolecules()[indexMonomersForce[0]]).getZ());
+        double mag = (diff_vec * projVec) / (projVec * projVec);
+        diff_vec = mag * projVec;
+
+        // calculate the normalized the length
+        double len = std::sqrt(std::pow(diff_vec.getX(), 2)+std::pow(diff_vec.getY(),2)+std::pow(diff_vec.getZ(),2)) / norm_length;
+        mag = diff_vec * projVec;
+        if (mag < 0) {
+            // if the difference vector is negative relative to the force vector, the length is negative
+            len = - len;
+        }
+
+        // accumulate the length according to the current phase of oscillation
+        single_hys_loop[period_idx] = len;
         
-        VectorInt3 v3Ree = ingredients.getMolecules()[indexMonomersForce[1]] - ingredients.getMolecules()[indexMonomersForce[0]];
-        
-        Statistic_Rx.AddValue(R_X); // projected end-to-end distance only in x-direction (applied force)
-        Statistic_Ry.AddValue(R_Y); // projected end-to-end distance only in y-direction (not in force-direction)
-        Statistic_Rz.AddValue(R_Z); // projected end-to-end distance only in z-direction (not in force-direction)
-    
+        // // // VectorInt3 v3Ree = ingredients.getMolecules()[indexMonomersForce[1]] - ingredients.getMolecules()[indexMonomersForce[0]];
+
+        // Statistic_Rx.AddValue(R_X); // projected end-to-end distance only in x-direction (applied force)
+        // Statistic_Ry.AddValue(R_Y); // projected end-to-end distance only in y-direction (not in force-direction)
+        // Statistic_Rz.AddValue(R_Z); // projected end-to-end distance only in z-direction (not in force-direction)
+
         Statistic_Ree.AddValue(v3Ree.getLength()); // end-to-end distance (Ree*Ree)^(1/2) only in  all direction
-    
+
         // order of instruction matters here!
-        
+        // accumulate the end-to-end distance according to the current time period
+        // if the period is completed, calculate hystresis for one loop and restart
+
         // calculate hysteresis int R(f) df for one period
         // check for beginning of new period and non-empty vector (first period) and delete all end-to-end vector information
         if ( ((ingredients.getMolecules().getAge()) % hys_period == 0) && !AllRxxWithinPeriod.empty() ) {
-            
+
             double hysteresis_integral = calculateHysteresisInOnePeriodWithTrapezoidalMethod();
             Statistic_Hysteresis.AddValue(hysteresis_integral);
             Statistic_HysteresisAbsolute.AddValue(std::abs(hysteresis_integral));
-            
+
             vectorHysteresisIntegral.push_back(hysteresis_integral);
-            
+
             AllRxxWithinPeriod.clear();
-            
+
             std::cout << "run period: " << counterFrames << std::endl;
             counterFrames++;
         }
-        
+
         // add recent projected end-to-end distance in x-direction
-        AllRxxWithinPeriod.push_back(R_X);
-        
-        uint64_t modTime = (ingredients.getMolecules().getAge()) % hys_period;
-        it = timeToRx.find(modTime);
-        
-        // already exist add the value
-        if (it != timeToRx.end())
-        {
-            (it->second).AddValue(R_X);
-        }
-        else // create new value
-        {
-            timeToRx.insert(std::make_pair(modTime,StatisticMoment()));
-            timeToRx[modTime].AddValue(R_X);
-        }
-        
+        // AllRxxWithinPeriod.push_back(R_X);
+
+        // uint64_t modTime = (ingredients.getMolecules().getAge()) % hys_period;
+        // it = timeToRx.find(modTime);
+        //
+        // // already exist add the value
+        // if (it != timeToRx.end())
+        // {
+        //     (it->second).AddValue(R_X);
+        // }
+        // else // create new value
+        // {
+        //     timeToRx.insert(std::make_pair(modTime,StatisticMoment()));
+        //     timeToRx[modTime].AddValue(R_X);
+        // }
+
     }
-    
+
     return true;
 }
 

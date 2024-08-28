@@ -109,7 +109,7 @@ void AnalyzerBondBondCorrelation<IngredientsType>::initialize()
     }
     //if no groups are set, use the complete system by default
     //groups can be set using the provided access function
-    if(groups.size()==0)
+    if(groups.size() == 0)
     {
         groups.push_back(MonomerGroup<molecules_type>(ingredients.getMolecules()));
         for(size_t n=0;n<ingredients.getMolecules().size();n++)
