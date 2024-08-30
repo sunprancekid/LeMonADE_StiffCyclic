@@ -133,6 +133,21 @@ public:
 		return avg / nValues;
 	}
 
+	// return variance of histogram
+	double getHistVariance() const
+	{
+		double avg = getHistAverage();
+		double var = 0.;
+		// loop through, take the square difference between the average and the bin value
+		for (int n = 0; n < nBins; n++) {
+			var += std::pow(((histogram[n] * (minVal + ((n) * binsize) + (binsize / 2.))) - avg), 2.);
+		}
+		return var / (nValues - 1);
+	}
+
+	// return standard deviation of histogram
+	double getHistSTD () const {return std::sqrt(getHistVariance());}
+
 	int getNBins() const
 	{
 		return nBins;
