@@ -196,18 +196,7 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         // negative force applied on attribute 5 in negative forceVec direction
         // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
-        int tnow = ingredients.getMolecules().getAge();
-        double f = getForceNow(tnow);
-        // if (OscillatoryForceOn) {
-        //     int tnow = ingredients.getMolecules().getAge();
-        //     // if the force is oscillating, update the force and calculate the new acceptance probabilities
-        //     double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359 /OscillationPeriod)* tnow ); // 2.0*3.14159265359
-        //     // updateProb(f);
-        //     // std::cout << tnow << ", " << f << std::endl;
-        //     if (tnow > (OscillationPeriod / 2.)) {
-        //         exit(0);
-        //     }
-        // }
+        double f = getForceNow(ingredients.getMolecules().getAge());
 
         if ( dx == 1 ) {
             // positive x-direction

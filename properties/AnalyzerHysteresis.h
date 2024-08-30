@@ -61,17 +61,12 @@ along with LeMonADE and ELMA-OscillatoryForce extension. If not, see <http://www
 template<class IngredientsType>
 class AnalyzerHysteresis : public AbstractAnalyzer {
 public:
-    // TODO :: construct hysteresis analyzer as number of points which are sampled
-    // TODO :: clean up extra variables
     // default constructor
-    AnalyzerHysteresis(const IngredientsType& ing, std::string dstDir_, uint64_t evalulation_time_, uint64_t save_interval_);
+    AnalyzerHysteresis(const IngredientsType& ing, std::string filename_, uint64_t evalulation_time_, uint64_t save_interval_);
     // deconstructor
     virtual ~AnalyzerHysteresis() {};
     //typedef typename IngredientsType::molecules_type molecules_type;
     const typename IngredientsType::molecules_type& molecules;
-    //! number of bins in each histogram
-    //! upper range of histogram (from expected average)
-    //! lower range of histogram (from expected average)
     //! initialize analyzer
     virtual void initialize();
     //! execute analyzer
@@ -79,10 +74,11 @@ public:
     //! finish analysis, write to file
     virtual void cleanup();
     // check if file exists
-    // TODO :: can likely remove
     bool isFileExisting(std::string);
 
 private:
+    // constant tolerance used for bounds
+    const double TOL = 0.001;
     // constant, maximum possible value from hysteresis end-to-end distance
     const double hys_hist_max_value = 1.;
     // constant, minimum possible value from hysteresis end-to-end distance
@@ -93,14 +89,16 @@ private:
     double norm_length;
     // counts the number of times that execution has iterated
     int hys_counter;
+    // counts the number of times that a hysteresis loop is completed
+    int loop_counter;
     // points to LeMonADE ingredients
     const IngredientsType& ingredients;
     //only used to make sure you initialize your groups before you do things
     bool initialized;
+    // used to determine if analyzer is ready to start collecting data
+    bool equilibriated;
     //! Time in MCS, which need to pass to calculate the observables
     uint64_t equilibriation_time;
-    //! default number of points that are sampled along hysteresis curve
-    int default_numPeriodPoints = 100;
     //! number of points that are sampled along the hysteresis loop
     int numPeriodPoints;
     //! Time in MCS within one period, there the observables is collected
@@ -113,52 +111,26 @@ private:
     double hys_amplitude;
     //! intermediate array that collects the average end to end distance over one period
     std::vector<double> single_hys_loop;
-    //! array of histogram statistics for each point sampled along hysteresis curve
+    //! array of histogram statistics for each point sampled along hysteresis curve over course of simulation
     std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
-    //! histogram that collects the averaged hysteresis from each single loop
-    HistogramGeneralStatistik1D avg_single_hys_loop; // initialize in clean up
     //! collects statistics for hysteresis integral, averaged for each loop
     std::vector<double> avg_hys_integral;
-    //! collects current force when getting end-to-end distance
-    std::vector<double> curr_force_val;
-
+    // monomers experience forcing
+    uint32_t indexMonomersForce[2];
+    // calculation of hysteresis within on period using the trapezoidal method
+    double calculateHysteresisInOnePeriodWithTrapezoidalMethod();
+    // outfile name
+    std::string outfile;
+    // maximum hysteresis value calculated over the course of the simulation loop
+    double max_hys_val;
+    // minimum hysteresis value calculated over the course of the simulation loop
+    double min_hys_val;
 
     uint32_t counterFrames;
-
     std::string filename;
     std::string dstdir;
 
-    // RNG
-    RandomNumberGenerators rng;
     
-    StatisticMoment Statistic_Rg2;
-
-    StatisticMoment Statistic_Rx; // projected end-to-end distance only in x-direction (applied force)
-    StatisticMoment Statistic_Ry; // projected end-to-end distance only in y-direction (not in force-direction)
-    StatisticMoment Statistic_Rz; // projected end-to-end distance only in z-direction (not in force-direction)
-    
-    StatisticMoment Statistic_Ree; // end-to-end distance (Ree*Ree)^(1/2) only in  all direction
-    
-    StatisticMoment Statistic_Hysteresis; // average hysteresis area w/o absolute value
-    StatisticMoment Statistic_HysteresisAbsolute; // average hysteresis area with absolute value
-    
-    
-    uint32_t indexMonomersForce[2];
-    
-    //stores the projected end-to-end distance only in x-direction every savetime for one period T
-    std::vector<double> AllRxxWithinPeriod;
-    
-    //stores the hysteresis integral after every period
-    std::vector<double> vectorHysteresisIntegral;
-    
-    
-    // calculation of hysteresis within on period using the trapezoidal method
-    double calculateHysteresisInOnePeriodWithTrapezoidalMethod();
-    
-    // mapping t%T to the average projected end-to-end distance only in x-direction (applied force)
-    std::map<uint64_t, StatisticMoment > timeToRx; 
-    
-    std::map<uint64_t, StatisticMoment >::iterator it;
 };
 
 
@@ -172,26 +144,15 @@ private:
 /////////////////////////////////////////////////////////////////////////////
 
 template<class IngredientsType>
-AnalyzerHysteresis<IngredientsType>::AnalyzerHysteresis(const IngredientsType& ing, std::string dstDir_, uint64_t evalulation_time_, uint64_t save_interval_)
-: ingredients(ing), molecules(ing.getMolecules()), dstdir(dstDir_), equilibriation_time(evalulation_time_), step_interval(save_interval_) {
+AnalyzerHysteresis<IngredientsType>::AnalyzerHysteresis(const IngredientsType& ing, std::string filename_, uint64_t evalulation_time_, uint64_t save_interval_)
+: ingredients(ing), molecules(ing.getMolecules()), outfile(filename_), equilibriation_time(evalulation_time_), step_interval(save_interval_) {
     counterFrames = 1;
-    
-    Statistic_Rg2.clear();
-    
-    Statistic_Rx.clear();
-    Statistic_Ry.clear();
-    Statistic_Rz.clear();
-    
-    Statistic_Ree.clear();
-    
-    Statistic_Hysteresis.clear();
-    Statistic_HysteresisAbsolute.clear();
-    
-    AllRxxWithinPeriod.clear();
-    
-    vectorHysteresisIntegral.clear();
-    
     initialized=false;
+    equilibriated = false;
+    hys_counter = 0;
+    loop_counter = 0;
+    min_hys_val = 0;
+    max_hys_val = 0;
 }
 
 template<class IngredientsType>
@@ -255,17 +216,13 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
 
     // initialize the histograms / arrays that collect hysteresis statistics
     single_hys_loop.resize(numPeriodPoints);
-    curr_force_val.resize(numPeriodPoints);
     averaged_hys_loop.resize(numPeriodPoints);
-    hys_counter = 0;
     for (int n; n < averaged_hys_loop.size(); n++) {
         // initialize each of the arrays for each of the points along the period that will be sampled
         // one histogram array represents the averaged end-to-end distance at each time point along the hystersis (oscillation) loop
         averaged_hys_loop[n] = HistogramGeneralStatistik1D(hys_hist_min_value, hys_hist_max_value, hys_hist_bins);
         // one more histogram represents hysteresis which is calculated after the completion of each loop
         single_hys_loop[n] = 0.;
-        // collects current force values
-        curr_force_val[n] = 0.;
     }
     initialized=true;
 }
@@ -282,14 +239,18 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 			    
 		throw std::runtime_error(errormessage.str());
 	}
-	
-    if(ingredients.getMolecules().getAge() >= equilibriation_time)
-	{
+
+    if (not equilibriated) {
+        // check if the system is ready to start tracking
+        int tnow = ingredients.getMolecules().getAge();
+        equilibriated = (tnow >= equilibriation_time) && ((tnow % hys_period) == 0);
+    } else {
+
         // iterate hysteresis counter
         hys_counter++;
         int period_idx = (hys_counter - 1) % numPeriodPoints; // index corresponding to the current phase in period
         
-        // calculate the end-to-end distance of the polymer chain / ring projected onto the force vector
+        // calculate the end-to-end vector of the polymer chain / ring projected onto the force vector
         VectorDouble3 diff_vec;
         diff_vec.setX((ingredients.getMolecules()[indexMonomersForce[1]]).getX() - (ingredients.getMolecules()[indexMonomersForce[0]]).getX());
         diff_vec.setY((ingredients.getMolecules()[indexMonomersForce[1]]).getY() - (ingredients.getMolecules()[indexMonomersForce[0]]).getY());
@@ -297,7 +258,7 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
         double mag = (diff_vec * projVec) / (projVec * projVec);
         diff_vec = mag * projVec;
 
-        // calculate the normalized the length
+        // calculate the normalized distance
         double len = std::sqrt(std::pow(diff_vec.getX(), 2)+std::pow(diff_vec.getY(),2)+std::pow(diff_vec.getZ(),2)) / norm_length;
         mag = diff_vec * projVec;
         if (mag < 0) {
@@ -307,73 +268,33 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 
         // accumulate the length according to the current phase of oscillation
         single_hys_loop[period_idx] = len;
-        // accumulate the current force assigned to the polymer
-        int tnow = ingredients.getMolecules().getAge();
-        double arg = (2.0*3.14159265359 / hys_period) * tnow;
-        double sf = std::sin(arg);
-        curr_force_val[period_idx] = ingredients.getForceNow(tnow);
-
-        // let the user know
-        std::cout << tnow << ", " << curr_force_val[period_idx] << ", " << single_hys_loop[period_idx] << ", " << arg << ", " << sf << std::endl;
 
         // if a complete period cycle has been reached
         if (period_idx == (numPeriodPoints - 1)) {
-            // CHECK :: print results
-            for (int n; n < numPeriodPoints; n++) {
-                std::cout << n << ", " << curr_force_val[n] << ", "<< single_hys_loop[n] <<  std::endl;
-            }
-            exit(0);
-            // pass the single loop RE data to the hysteresis calculator
-            // double hysteresis_integral = calculateHysteresisInOnePeriodWithTrapezoidalMethod(single_hys_loop);
-            // cummulate each point along the single loop to the histogram
-            // add the single hysteresis value to the list
-        }
-        
-        VectorInt3 v3Ree = ingredients.getMolecules()[indexMonomersForce[1]] - ingredients.getMolecules()[indexMonomersForce[0]];
-
-        // Statistic_Rx.AddValue(R_X); // projected end-to-end distance only in x-direction (applied force)
-        // Statistic_Ry.AddValue(R_Y); // projected end-to-end distance only in y-direction (not in force-direction)
-        // Statistic_Rz.AddValue(R_Z); // projected end-to-end distance only in z-direction (not in force-direction)
-
-        Statistic_Ree.AddValue(v3Ree.getLength()); // end-to-end distance (Ree*Ree)^(1/2) only in  all direction
-
-        // order of instruction matters here!
-        // accumulate the end-to-end distance according to the current time period
-        // if the period is completed, calculate hystresis for one loop and restart
-
-        // calculate hysteresis int R(f) df for one period
-        // check for beginning of new period and non-empty vector (first period) and delete all end-to-end vector information
-        if ( ((ingredients.getMolecules().getAge()) % hys_period == 0) && !AllRxxWithinPeriod.empty() ) {
-
+            // iterate the hysteresis loop counter
+            loop_counter++;
+            // calculate hystresis, accumulate
             double hysteresis_integral = calculateHysteresisInOnePeriodWithTrapezoidalMethod();
-            Statistic_Hysteresis.AddValue(hysteresis_integral);
-            Statistic_HysteresisAbsolute.AddValue(std::abs(hysteresis_integral));
+            avg_hys_integral.push_back(hysteresis_integral);
+            // avg_single_hys_loop.addValue(hysteresis_integral);
 
-            vectorHysteresisIntegral.push_back(hysteresis_integral);
+            // check min and max values
+            if (loop_counter == 1) {
+                // if first loop, initialize min and max values
+                min_hys_val = hysteresis_integral;
+                max_hys_val = hysteresis_integral;
+            } else {
+                // check for a new maximum or minimum
+                if (hysteresis_integral > max_hys_val) {max_hys_val = hysteresis_integral;}
+                if (hysteresis_integral < min_hys_val) {min_hys_val = hysteresis_integral;}
+            }
 
-            AllRxxWithinPeriod.clear();
-
-            std::cout << "run period: " << counterFrames << std::endl;
-            counterFrames++;
+            // accumulate the loop in the histogram for hysteresis, reset and repeat
+            for (int n; n < averaged_hys_loop.size(); n++) {
+                averaged_hys_loop[n].addValue(single_hys_loop[n], 1.); // add the value to the histogram tracking statistics around the hysteresis loop
+                single_hys_loop[n] = 0.; // reset for the next loop
+            }
         }
-
-        // add recent projected end-to-end distance in x-direction
-        // AllRxxWithinPeriod.push_back(R_X);
-
-        // uint64_t modTime = (ingredients.getMolecules().getAge()) % hys_period;
-        // it = timeToRx.find(modTime);
-        //
-        // // already exist add the value
-        // if (it != timeToRx.end())
-        // {
-        //     (it->second).AddValue(R_X);
-        // }
-        // else // create new value
-        // {
-        //     timeToRx.insert(std::make_pair(modTime,StatisticMoment()));
-        //     timeToRx[modTime].AddValue(R_X);
-        // }
-
     }
 
     return true;
@@ -385,66 +306,43 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 template<class IngredientsType>
 double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTrapezoidalMethod()
 {
- double stepSize = step_interval;
+    double stepSize = step_interval;
 
- double omega = 2.0 * 3.14159265358979323846 / hys_period;
- // double fA = ingredients.getAmplitudeOscillatoryForce();
- /* Finding Integration Value */
- 
- // f = f0+fA*sin(omega*t) in eX-direction
- 
- //         /         /T
- //        |          |
- // A(T) = o R * df = o R(f)*fA*omega*cos(omega*t) dt
- //        |          | 
- //        /         0/
- 
- double hysteresis_integral = 0.0;
- 
- for(size_t i = 1; i < AllRxxWithinPeriod.size(); i++)
- {
-  hysteresis_integral += AllRxxWithinPeriod.at(i) * omega * hys_amplitude *std::cos(omega * i*stepSize) * stepSize;
- }
- 
- // The first value counts twice (2*0.5=1)at this is Rxx at t%T=0 in the cycle 
- // cos(omega * 0 * stepSize) = cos(omega * T * stepSize) != 1
- hysteresis_integral += AllRxxWithinPeriod.at(0) * omega * hys_amplitude * stepSize;
- 
- return hysteresis_integral;
- 
-}
+    double omega = 2.0 * 3.14159265358979323846 / hys_period;
+    // double fA = ingredients.getAmplitudeOscillatoryForce();
+    /* Finding Integration Value */
 
-/*
-template<class IngredientsType>
-double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithSimpsonRule()
-{
-    
-    stepSize = (upper - lower)/subInterval;
-    
-    
-    integration = f(lower) + f(upper);
-    
-    for(i=1; i<= subInterval-1; i++)
-    {
-        k = lower + i*stepSize;
-        
-        if(i%2==0)
-        {
-            integration = integration + 2 * (f(k));
-        }
-        else
-        {
-            integration = integration + 4 * (f(k));
-        }
-        
+    // f = f0+fA*sin(omega*t) in eX-direction
+
+    //         /         /T
+    //        |          |
+    // A(T) = o R * df = o R(f)*fA*omega*cos(omega*t) dt
+    //        |          |
+    //        /         0/
+ 
+    double hysteresis_integral = 0.0;
+ 
+    for(size_t i = 0; i < single_hys_loop.size(); i++) {
+        int i_1 = i;
+        int i_2 = i + 1;
+        if (i_2 == numPeriodPoints) {i_2 = 0;}
+        // double t_1 = i_1 * stepSize;
+        // double t_2 = i_2 * stepSize;
+        double F_1 = ingredients.getForceNow(i_1 * stepSize);
+        double F_2 = ingredients.getForceNow(i_2 * stepSize);
+        // hysteresis_integral += single_hys_loop.at(i) * omega * hys_amplitude * std::cos(omega * i * stepSize) * stepSize;
+        hysteresis_integral += 0.5 * (single_hys_loop[i_2] - single_hys_loop[i_1]) * (F_2 - F_1);
     }
-    
-    integration = integration * stepSize/3;
-}
-*/
-    
-struct PathSeparator {
+ 
+    // The first value counts twice (2*0.5=1)at this is Rxx at t%T=0 in the cycle
+    // cos(omega * 0 * stepSize) = cos(omega * T * stepSize) != 1
+    // hysteresis_integral += AllRxxWithinPeriod.at(0) * omega * hys_amplitude * stepSize;
 
+    return hysteresis_integral;
+}
+    
+struct PathSeparator
+{
     bool operator()(char ch) const {
         return ch == '\\' || ch == '/';
     }
@@ -459,6 +357,33 @@ bool AnalyzerHysteresis<IngredientsType>::isFileExisting(std::string fileName)
 
 template<class IngredientsType>
 void AnalyzerHysteresis<IngredientsType>::cleanup() {
+
+    //  create histogram contining all hystresis loop values
+    HistogramGeneralStatistik1D avg_single_hys_loop = HistogramGeneralStatistik1D(min_hys_val, max_hys_val, hys_hist_bins);
+    for (int n = 0; n < avg_hys_integral.size(); n++) {
+        avg_single_hys_loop.addValue(avg_hys_integral[n], 1.);
+    }
+
+    // if the file exists, delete it
+    char* outfile_char_array = new char[outfile.length() + 1];
+    strcpy(outfile_char_array, outfile.c_str());
+    remove(outfile_char_array);
+
+    // open file stream
+    std::ofstream file;
+    file.open(outfile.c_str());
+
+    // write the header
+    file << "i,f,avg,std,n" << std::endl;
+
+    // print the average hysteresis value
+    file << (0) << ",NA," << avg_single_hys_loop.getHistAverage() << ",NA," << avg_single_hys_loop.getNCounts() << std::endl;
+
+    // print results into a file
+    for (int n = 0; n < averaged_hys_loop.size(); n++) {
+        file << (n+1) << "," << ingredients.getForceNow(n * step_interval) << "," << averaged_hys_loop[n].getHistAverage() << ",NA," << averaged_hys_loop[n].getNCounts() << std::endl;
+    }
+    file.close();
 
     // print results into a file
     // get the filename and path
