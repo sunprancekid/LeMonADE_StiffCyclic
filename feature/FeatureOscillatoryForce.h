@@ -133,6 +133,17 @@ public:
     //! get force oscillation amplitude
     double getForceOscillationAmplitude () const { return OscillationAmplitude;}
 
+    //! get the current force value according to the current simulation time
+    //! pass current time in MCS to the function
+    double getForceNow (int timeNow) const {
+        if (OscillatoryForceOn) {
+            double arg = (2.0*3.14159265359 / OscillationPeriod) * timeNow;
+            return Base_Force + (OscillationAmplitude * std::sin( arg ));
+        } else{
+            return Base_Force;
+        }
+    };
+
     //! Export the relevant functionality for reading bfm-files to the responsible reader object
     template <class IngredientsType>
     void exportRead(FileImport <IngredientsType>& fileReader);
@@ -185,13 +196,18 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         // negative force applied on attribute 5 in negative forceVec direction
         // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
-
-        double f = Base_Force;
-        if (OscillatoryForceOn) {
-            // if the force is oscillating, update the force and calculate the new acceptance probabilities
-            double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359/OscillationPeriod)* ingredients.getMolecules().getAge() );
-            // updateProb(f);
-        }
+        int tnow = ingredients.getMolecules().getAge();
+        double f = getForceNow(tnow);
+        // if (OscillatoryForceOn) {
+        //     int tnow = ingredients.getMolecules().getAge();
+        //     // if the force is oscillating, update the force and calculate the new acceptance probabilities
+        //     double f = Base_Force + OscillationAmplitude * std::sin( (2.0*3.14159265359 /OscillationPeriod)* tnow ); // 2.0*3.14159265359
+        //     // updateProb(f);
+        //     // std::cout << tnow << ", " << f << std::endl;
+        //     if (tnow > (OscillationPeriod / 2.)) {
+        //         exit(0);
+        //     }
+        // }
 
         if ( dx == 1 ) {
             // positive x-direction

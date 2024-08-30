@@ -119,6 +119,8 @@ private:
     HistogramGeneralStatistik1D avg_single_hys_loop; // initialize in clean up
     //! collects statistics for hysteresis integral, averaged for each loop
     std::vector<double> avg_hys_integral;
+    //! collects current force when getting end-to-end distance
+    std::vector<double> curr_force_val;
 
 
     uint32_t counterFrames;
@@ -249,9 +251,11 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
             norm_length = (double) num_monomers / 2.;
         }
     }
+    norm_length = 3. * norm_length;
 
     // initialize the histograms / arrays that collect hysteresis statistics
     single_hys_loop.resize(numPeriodPoints);
+    curr_force_val.resize(numPeriodPoints);
     averaged_hys_loop.resize(numPeriodPoints);
     hys_counter = 0;
     for (int n; n < averaged_hys_loop.size(); n++) {
@@ -260,6 +264,8 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
         averaged_hys_loop[n] = HistogramGeneralStatistik1D(hys_hist_min_value, hys_hist_max_value, hys_hist_bins);
         // one more histogram represents hysteresis which is calculated after the completion of each loop
         single_hys_loop[n] = 0.;
+        // collects current force values
+        curr_force_val[n] = 0.;
     }
     initialized=true;
 }
@@ -281,7 +287,7 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 	{
         // iterate hysteresis counter
         hys_counter++;
-        int period_idx = hys_counter % numPeriodPoints; // index corresponding to the current phase in period
+        int period_idx = (hys_counter - 1) % numPeriodPoints; // index corresponding to the current phase in period
         
         // calculate the end-to-end distance of the polymer chain / ring projected onto the force vector
         VectorDouble3 diff_vec;
@@ -301,8 +307,29 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 
         // accumulate the length according to the current phase of oscillation
         single_hys_loop[period_idx] = len;
+        // accumulate the current force assigned to the polymer
+        int tnow = ingredients.getMolecules().getAge();
+        double arg = (2.0*3.14159265359 / hys_period) * tnow;
+        double sf = std::sin(arg);
+        curr_force_val[period_idx] = ingredients.getForceNow(tnow);
+
+        // let the user know
+        std::cout << tnow << ", " << curr_force_val[period_idx] << ", " << single_hys_loop[period_idx] << ", " << arg << ", " << sf << std::endl;
+
+        // if a complete period cycle has been reached
+        if (period_idx == (numPeriodPoints - 1)) {
+            // CHECK :: print results
+            for (int n; n < numPeriodPoints; n++) {
+                std::cout << n << ", " << curr_force_val[n] << ", "<< single_hys_loop[n] <<  std::endl;
+            }
+            exit(0);
+            // pass the single loop RE data to the hysteresis calculator
+            // double hysteresis_integral = calculateHysteresisInOnePeriodWithTrapezoidalMethod(single_hys_loop);
+            // cummulate each point along the single loop to the histogram
+            // add the single hysteresis value to the list
+        }
         
-        // // // VectorInt3 v3Ree = ingredients.getMolecules()[indexMonomersForce[1]] - ingredients.getMolecules()[indexMonomersForce[0]];
+        VectorInt3 v3Ree = ingredients.getMolecules()[indexMonomersForce[1]] - ingredients.getMolecules()[indexMonomersForce[0]];
 
         // Statistic_Rx.AddValue(R_X); // projected end-to-end distance only in x-direction (applied force)
         // Statistic_Ry.AddValue(R_Y); // projected end-to-end distance only in y-direction (not in force-direction)
