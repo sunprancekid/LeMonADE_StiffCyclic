@@ -14,12 +14,6 @@ PI_CON=$(echo "scale=10; 4*a(1)" | bc -l)
 declare -i BOOL_VERB=0
 # boolean determining if the script should generate the simulation parameters
 declare -i BOOL_GEN=0
-# boolean determining if the script should submit simulations to SLURM
-declare -i BOOL_SUB=0
-# boolean determining if the script should upload a directory to the linux server
-declare -i BOOL_UPP=0
-# boolean determining if the script should download a directory from the could
-declare -i BOOL_DWN=0
 ## PARAMETERS -- JOB
 # array containing N to test
 PARM_N=( 100 )
@@ -33,8 +27,6 @@ PARM_BEND=( 1 3 5 7 10 13 16 20 25 30 35 40)
 MAINDIR="01_raw_data"
 # default job name
 JOB="bendingPARM"
-# linux server
-LINUXSERV="gandalf"
 # path to LeMonADE executables
 EXECDIR="00_programs/build/bin/"
 ## PARAMETERS -- SIMULATION
@@ -56,15 +48,10 @@ help () {
 	echo -e " -h           | display script options, exit 0."
 	echo -e " -v           | execute script verbosely."
 	echo -e " -g           | generate simulation parameters / directories ."
-	echo -e " -s           | submit job to SLURM."
-	echo -e " -u           | upload local default directory to linux cluster."
-	echo -e " -d           | sync local default directory with linux cluster."
 	echo -e "\n"
 	echo -e " ## SCRIPT PARAMETERS ##"
 	echo -e " -j << ARG >> | specify job title (default is ${JOB})."
-	echo -e " -l << ARG >> | specify linux cluster (default is ${LINUXSERV})."
 	echo -e " -p << ARG >> | specify the local directory (default is ${MAINDIR})."
-	echo -e " -e << ARG >> | specify path to LeMonADE executables (default is ${EXECDIR})."
 	echo -e "\n"
 }
 
@@ -141,7 +128,7 @@ gen_simparm() {
 					else
 						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					fi
-					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					# add parameters to parm file
 					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING}" >> $FILE_SIMPARM
@@ -162,16 +149,8 @@ while getopts "hvgsudj:l:p:" option; do
             declare -i BOOL_VERB=1 ;;
         g) # generate simulation parameters
             declare -i BOOL_GEN=1 ;;
-		s) # submit simulations to SLURM
-			declare -i BOOL_SUB=1 ;;
-		u) # upload local directory to linux cluster
-			declare -i BOOL_UPP=1 ;;
-		d) # sync local directory with linux cluster
-			declare -i BOOL_DWN=1 ;;
 		j) # update job name
 			JOB="${OPTARG}" ;;
-		l) # update linux cluster
-			LINUXSERV="${OPTARG}" ;;
 		p) # update local directory path
 			MAINDIR="${OPTARG}" ;;
         \?) # sonstiges
@@ -186,40 +165,7 @@ done
 
 
 ## SCRIPT
-## TODO add overwrite feature
-# upload directory to linux cluster
-
-# download directory from linux cluster
-
 # generate parameters save to file
 if [ $BOOL_GEN -eq 1 ]; then
 	gen_simparm
 fi
-
-# parse simulation parameters from file, perform protocol as instructed
-# SIMPARAM_FILE="${MAINDIR}/${JOB}/${JOB}.csv"
-# if [ ! -f $SIMPARAM_FILE ]; then
-# 	# if the file does not exist, inform user and abort
-# 	echo "Must generate simulation parameters for ${JOB} in ${MAINDIR} before submitting simulations."
-# 	exit $NONZERO_EXITCODE
-# fi
-# declare -i N_LINES=$(wc -l < $SIMPARAM_FILE)
-# for i in $(seq 2 $N_LINES); do
-# 	# get the simulation directory
-# 	SIMDIR=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 2)
-# 	# get the simulation id
-# 	SIMID=$(head -n ${i} ${SIMPARAM_FILE} | tail -n 1 | cut -d , -f 1)
-# 	if [ ! -f ${MAINDIR}/${JOB}/${SIMDIR}/RE2E.dat ]; then
-# 		# copy the simulation excutables to the execute directory
-# 		# move to the simulation directory
-# 		CURRDIR=$(echo $PWD)
-# 		cd "${MAINDIR}/${JOB}/${SIMDIR}"
-# 		echo $PWD
-# 		# exectue the simulation
-# 		if [ $BOOL_SUB -eq 1 ]; then
-# 			./${SIMID}.sh -p ~/Desktop/IPF/LeMonADE_StiffCyclic/build/bin/
-# 		fi
-# 		# return to the main directory
-# 		cd $CURRDIR
-# 	fi
-# done
