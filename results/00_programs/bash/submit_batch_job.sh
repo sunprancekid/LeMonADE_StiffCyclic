@@ -178,7 +178,7 @@ gen_slurm_script () {
     echo "srun ./${SIMID}.sh -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
     echo "echo \"Job end time is \$(date).\"" >> $FILEPATH$FILENAME
     echo "" >> $FILEPATH$FILENAME
-    ## TODO :: add instructions for copying results back
+    # add instructions for copying results back
     echo "### copy back results, delete everthing ###" >> $FILEPATH$FILENAME
     echo "cp * $(pwd)/${JOBDIR}${SIMDIR}" >> $FILEPATH$FILENAME
     echo "cd ../" >> $FILEPATH$FILENAME

@@ -21,8 +21,10 @@ PARM_N=( 100 )
 PARM_RING=( "TRUE" "FALSE" )
 # array containing which potential to test
 PARM_CSA=( "FALSE" "TRUE" )
-# array containing bending potential strengths to test for the CA potential
-PARM_BEND=( 1 3 5 7 10 13 16 20 25 30 35 40)
+# array containing persistance lengths to test for either potential
+# assigned persistance length is used to select bending potential strength
+# according to scaling equation unique to each potential'
+PARM_LP=( 1 3 5 7 9 11 13 15 )
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name
@@ -94,23 +96,23 @@ gen_simparm() {
 					C_FLAG="-c "
 				fi
 
-				for k in "${PARM_BEND[@]}"; do
+				for l in "${PARM_LP[@]}"; do
 					# generate the simulation directory
 					if [ "${r}" == "TRUE" ]; then
-						SIMID="${C}_RING_N${n}K${k}"
-						SIMDIR="${C}/RING/N${n}/K${k}/"
+						SIMID="${C}_RING_N${n}LP${l}"
+						SIMDIR="${C}/RING/N${n}/LP${l}/"
 					else
-						SIMID="${C}_CHAIN_N${n}K${k}"
-						SIMDIR="${C}/CHAIN/N${n}/K${k}/"
+						SIMID="${C}_CHAIN_N${n}LP${l}"
+						SIMDIR="${C}/CHAIN/N${n}/LP${l}/"
 					fi
 					if [ "${c}" == "TRUE" ]; then
 						C="CSA"
 						C_FLAG=""
-						K_STRING=$( echo "(${k} ^ 2) / ${PI_CON}" | bc -l )
+						K_STRING=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
 					else
 						C="CA"
 						C_FLAG="-c "
-						K_STRING="${k}"
+						K_STRING="${l}"
 					fi
 					mkdir -p ${PATH_SIMPARM}${SIMDIR}
 					# write files directory, generate simulation executables
