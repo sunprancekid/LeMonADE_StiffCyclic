@@ -125,11 +125,6 @@ check () {
     if [[ $BOOL_CHECKFILE -eq 1 ]]; then
         CHECKFILE="${OPTCHECKFILE}"
     fi
-
-    # report instruvtions to user, if verbose execution
-#     if [[ $VERBOSE -eq 1 ]]; then
-#         ## TODO add verbose execution
-#     fi
 }
 
 # method for generating a standardized slurm script
@@ -152,7 +147,6 @@ gen_slurm_script () {
     echo "#SBATCH -J ${SIMID}.%j.slurm" >> $FILEPATH$FILENAME
     echo "#SBATCH --nodes=1" >> $FILEPATH$FILENAME  # number of nodes
     echo "#SBATCH --ntasks=1" >> $FILEPATH$FILENAME   # number of processor cores (i.e. tasks)
-#     echo "#SBATCH --time=${MAX_SLURM_TIME}" >> $FILEPATH$FILENAME # max simulation length
     echo "#SBATCH --error=${SIMID}.%j.err" >> $FILEPATH$FILENAME
     echo "#SBATCH --output=${SIMID}.%j.out" >> $FILEPATH$FILENAME
     # echo "#SBATCH --mail-type=FAIL" >> $FILEPATH$FILENAME
