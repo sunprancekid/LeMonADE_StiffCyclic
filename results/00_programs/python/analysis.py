@@ -28,10 +28,15 @@ marks = itertools.cycle(("v", "<", "o", "s", "p", "*", "D"))
 # minimum cut off for logscale
 min_logscale = 0.00001
 
+#############
+## METHODS ##
+#############
 
-## METHODS
 
+############################
 ## USED FOR EQUATION FITTING
+############################
+
 # model equation for power law fitting
 def power_fit(x, A, B):
     return A * (x ** B)
@@ -48,7 +53,10 @@ def exp_decay_fit(x, A, B):
 def log5_fit (x, A, B, C, D, E, F):
     return A + ((B - A) / ((1. + (C / (x - F)) ** D) ** E))
 
+#################################################
 ## USED FOR PARSING SIMULATION RESULTS FROM FILES
+#################################################
+
 # clean file, remove any comments from file structure
 def clean_file(filepath, commentchar = '#'):
 
@@ -242,7 +250,10 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False)
                 plt.show()
             plt.close()
 
+#######################################
 ## USED FOR PLOTTING SIMULATION RESULTS
+#######################################
+
 # method for getting scaling simulation data (N vs. R)
 def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X_label = None, Y_label = None, data_label = None, dpi = None, logscale_x = False, logscale_y = False, x_min = None, y_min = None, x_max = None, y_max = None, saveas = None, error = False, color = None, plot_log5 = False, plot_slope = False, flip_axis = False):
     # make sure that the proper parameters were passed to the method
@@ -952,9 +963,19 @@ if bendingPARM:
     if update or (not os.path.exists("02_processed_data/bendingPARM/bendingPARM.csv")):
         # load parameters, add property calculations from simulations
         bendingparms = pd.read_csv(bendingPARM_parmcsv)
-        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = True)
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 1, title = 'E2Ex', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+
+        ## PROCESS DATA
+        # calculate the bvd error, plot difference if requested
+        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = False)
+        # TODO :: parse persistence length from BBC
+        # TODO :: parse scattering factor slop from SKQ
+
+        ## PARSE DATA, ADD TO RESULTS DATAFRAME
+        # get the end-to-end distance vector data
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+        # get radius of gyration data
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, bootstraping = False, tabsep = True) # don't bootsrap ROG data, does not fit normal distribution
+        # get the BVD error
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
         for i in range(30):
             bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
