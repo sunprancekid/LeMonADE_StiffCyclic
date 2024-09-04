@@ -8,6 +8,8 @@ set -e
 
 
 ## PARAMETERS
+## PARAMETERS -- CONSTANTS
+PI_CON=$(echo "scale=10; 4*a(1)" | bc -l)
 ## PARAMETERS -- BOOLEAN
 # boolean determining if the script should be executed verbosely
 declare -i BOOL_VERB=0
@@ -34,8 +36,10 @@ PARM_N=( 100 )
 PARM_RING=( 0 1 2 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
+# array containing persistence lengths to test
+PARM_LP=( 0 1 5 9 )
 # array containing bending potential strings to test
-PARM_BEND=( 0 1 5 10 30 )
+# PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
 PARM_FORCEVEC=( "100" ) # "100"
 # number of times to replicate each unique set of simualation conditions
@@ -60,13 +64,14 @@ declare -i t_equilibrium=500000000
 ## FUNCTIONS
 # display script options
 help () {
-	echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>\n"
+	echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>"
 	echo -e "\n"
 	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -g           | generate simulation parameters / directories ."
-	echo -e " -l           | generate simulation parameters according to logscale (no negatives) ."
-	echo -e " -n           | number of simulation parameters to test (default is ${N_FORCE_VAL})."
-	echo -e " -m           | maximum force to test (default is ${MAX_FORCE_VAL})."
+	echo -e " -j << ARG >> | rename job."
+	echo -e " -l << ARG >> | generate simulation parameters according to logscale (no negatives)."
+	echo -e " -n << ARG >> | number of simulation parameters to test (default is ${N_FORCE_VAL})."
+	echo -e " -m << ARG >> | maximum force to test (default is ${MAX_FORCE_VAL})."
 	echo -e "\n"
 }
 
@@ -192,13 +197,13 @@ gen_simparm() {
                     n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
                 fi
 
-                for k in "${PARM_BEND[@]}"; do
+                for l in "${PARM_LP[@]}"; do
                     for f in $(seq 0 $(($N_FORCE_VAL-1))); do
                         for fv in "${PARM_FORCEVEC[@]}"; do
 
                             # generate the simulation directory
-                            SIMID="${R}_${C}_N${n}K${k}FV${fv}F${f}"
-                            SIMDIR="${R}/${C}/N${n}/K${k}/FV${fv}/F${f}/"
+                            SIMID="${R}_${C}_N${n}LP${l}FV${fv}F${f}"
+                            SIMDIR="${R}/${C}/N${n}/LP${l}/FV${fv}/F${f}/"
                             mkdir -p ${PATH_SIMPARM}${SIMDIR}
 
                             # use the force integer to calculate the real force value passed to the simulation executable
@@ -211,11 +216,16 @@ gen_simparm() {
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
                             SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -d"
-                            if [ $k != 0 ]; then
-                                GENFLAGS="${GENFLAGS} -k ${k}"
+                            if [ $l != 0 ]; then
+                                # calculate the bending parameter constant from the assigned persistence length
+                                # according to the type of potential assigned to the simulation
                                 if [ "${C}" == "CA" ]; then
                                     GENFLAGS="${GENFLAGS} -c"
+                                    k="${l}"
+                                else
+                                    k=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
                                 fi
+                                GENFLAGS="${GENFLAGS} -k ${k}"
                             fi
 
                             if [ $r -eq 1 ]; then
@@ -248,11 +258,13 @@ gen_simparm() {
 }
 
 ## OPTIONS
-while getopts "hgln:m:" option; do
+while getopts "hglj:n:m:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help
 			exit 0 ;;
+        j) # change job name
+            JOB="${OPTARG}";;
         g) # generate simulation parameters
             declare -i BOOL_GEN=1 ;;
 		l) # generate parameters along logscale
@@ -270,7 +282,6 @@ done
 
 ## ARGUMENTS
 # none
-
 
 ## SCRIPT
 # generate parameters save to file

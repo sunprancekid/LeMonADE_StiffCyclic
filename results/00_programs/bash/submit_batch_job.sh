@@ -265,7 +265,7 @@ if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
         fi
     done
 else
-    ## TODO :: compile executables locally
+    ## TODO :: compile executables locally, copy to local directory and delete after job finishes
     # execute jobs locally
     # parse csv file, get simulation id and directory
     declare -i N_LINES=$(wc -l < $PARMFILE)
