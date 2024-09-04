@@ -10,7 +10,10 @@ from scipy.optimize import curve_fit
 from scipy.stats import norm
 import itertools # used for iterating over markers
 
-## PARAMETERS
+################
+## PARAMETERS ##
+################
+
 # file that contains parameters for scaling simulations
 scaling_parmcsv = '01_raw_data/scaling/scaling.csv'
 # file that contains parameter for forceExtension simulations
@@ -192,8 +195,9 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
     if var: parms[title + "_var"] = var_arr
     return parms
 
-# method that generates bond vector diagrams for simulations which have generated that file
+# method that calculates bond vector distribution error, generates diagram
 def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False):
+
     # check that mandatory information was passed to method
     if parms is None:
         print("ERROR :: check_bvd :: must provide dataframe to method.")
@@ -237,8 +241,8 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False)
         df.to_csv(dir + r['path'] + "BVD.csv", header = False)
         if plot:
             fig, ax = plt.subplots()
-            ax.bar(sim_bar_xloc, df['height'], label = "Excluded Volume + Bending BVD", color = "tab:orange", edgecolor = "black", width = bar_width)
-            ax.bar(equil_bar_xloc, equildf['height'], label = "Excluded Volume BVD", color = "c", edgecolor = "black", width = bar_width)
+            ax.bar(sim_bar_xloc, df['height'], label = "Excluded Volume + Bending Pot.", color = "tab:orange", edgecolor = "black", width = bar_width)
+            ax.bar(equil_bar_xloc, equildf['height'], label = "Excluded Volume", color = "c", edgecolor = "black", width = bar_width)
             ax.set_xticks(np.linspace(0., 5., 6))
             ax.set_xticklabels(("$|2 0 0|$", "$|1 2 0|$", "$|2 1 1|$", "$|3 0 0|$", "$|2 2 1|$", "$|3 1 0|$"))
             ax.set_xlabel("Bond Vector")
@@ -249,6 +253,92 @@ def check_bvd (parms = None, dir = None, dpi = None, show = False, plot = False)
             if show:
                 plt.show()
             plt.close()
+
+# method that calculates persistence length from bond-bond correlation
+def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False, lp_decay = False, lp_theta = False):
+
+    # check that mandatory information was passed to method
+    if parms is None:
+        print("ERROR :: check_bbc :: must provide dataframe to method.")
+        exit()
+    if dir is None:
+        print("ERROR :: check_bbc :: must provide path to main directory contain simulation files to method.")
+        exit()
+
+    if (not show) and (not plot) and (not lp_decay) and (not lp_theta):
+        # exit the routine, nothing to do here
+        return
+
+    # specify defaults if not provided by user
+    if dpi is None:
+        dpi = default_dpi
+    if lp_decay:
+        lpd = []
+    if lp_theta:
+        lpt = []
+
+    # loop through each simulation, check for bvd files
+    for i, r in parms.iterrows():
+        # if the file does not exist, skip to the next file
+        simfile = dir + r['path'] + 'BBC.dat'
+        if not os.path.exists(simfile):
+            continue
+
+        # parse results from local file
+        df = pd.read_csv(simfile, names = ['s', 'corr'])
+
+        # calculate the persistence length according to exponential decay
+        x = []
+        y = []
+        for j in range(1, 6):
+            val = df.iloc[j]['corr']
+            x.append(j)
+            y.append(val)
+        popt, pcov = curve_fit(exp_decay_fit, x, y)
+        d = popt[1]
+        if lp_decay:
+            lpd.append(d)
+
+        # calculate the persistance length according to local angle
+        t = - 1. / math.log(df.iloc[1]['corr'])
+        if lp_theta:
+            lpt.append(t)
+
+        # plot or show the bbc against the bond distance of seperation
+        if plot or show:
+            x = df['s'].tolist()
+            y = df['corr'].tolist()
+            x_fit = [ ((max(x) - x[1]) / (100 - 1)) * i + x[1] for i in range(100)]
+            y_fit = [ exp_decay_fit(i, *popt) for i in x_fit]
+            fig, ax = plt.subplots()
+            ax.scatter(x[1:], y[1:], label = "Bond-Bond Correlation $g(s)$", marker = next(marks), s = 20)
+            ax.plot(x_fit, y_fit, 'k--', label = "Expotential Decay Fit $e^{\\ell_{{p, decay}}}$")
+            ax.plot([], [], ' ', label = "$\\ell_{{p, decay}}$" + " = {:.2f}".format(d))
+            ax.plot([], [], ' ', label = "$\\ell_{p, \\theta}$" + " = {:.2f}".format(t))
+            ax.set_title("Bond-Bond Correlation and Persistence Length Calculations")
+            ax.set_ylabel("Bond-Bond Correlation ($\\langle cos \\theta \\rangle$)")
+            ax.set_xlabel("Bond-Bond Distance ($s$)")
+            # format axis
+            ax.legend()
+            # ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), fancybox=True, shadow=True, ncol=4)
+            ax.set_xlim(0, max(x))
+            ax.set_ylim(.01, 1.)
+            ax.set_yscale('log', base = math.e)
+            # adjust y-axis labels to expotential log scale
+            def ticks(y, pos):
+                n = "{:.0f}".format(np.log(y))
+                return r'$e^{:s}$'.format(n)
+            ax = plt.gca()
+            ax.yaxis.set_major_formatter(mtick.FuncFormatter(ticks))
+            if plot:
+                fig.savefig(dir + r['path'] + 'BBC.png', dpi = dpi, bbox_inches='tight')
+            if show:
+                plt.show()
+
+        # save persistance length calculations as dataframe to csv
+        dfsave = pd.DataFrame.from_dict({'lp_t': [t], 'lp_d': [d]})
+        dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
+
 
 #######################################
 ## USED FOR PLOTTING SIMULATION RESULTS
@@ -857,11 +947,18 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale = Fals
         plt.show()
     plt.close()
 
-## CLASSES
+
+#############
+## CLASSES ##
+#############
+
 # none
 
 
-## ARGUMENTS
+###################
+## CML ARGUMENTS ##
+###################
+
 # performing scaling analysis
 scaling = ("scaling" in sys.argv)
 # performe force extension analysis
@@ -871,14 +968,12 @@ bendingPARM = ("bendingPARM" in sys.argv)
 # update the simulation results, even if the simulation results file already exists
 update = ("update" in sys.argv)
 
-## SCRIPT
-# load defaults / settings from yaml
 
-# parse arguments from command line
+############
+## SCRIPT ##
+############
 
-# generate directories, as instructed
-
-# compile and analze results, as instructed
+# compile and analyze results, as instructed
 if scaling:
     # get simulation results and parameters
     scaling_parms = pd.read_csv(scaling_parmcsv)
@@ -964,19 +1059,27 @@ if bendingPARM:
         # load parameters, add property calculations from simulations
         bendingparms = pd.read_csv(bendingPARM_parmcsv)
 
+
         ## PROCESS DATA
         # calculate the bvd error, plot difference if requested
         check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = False)
-        # TODO :: parse persistence length from BBC
-        # TODO :: parse scattering factor slop from SKQ
+        # parse persistence length from BBC
+        check_bbc(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False, lp_decay = True, lp_theta = True)
+        # exit()
+        # TODO :: parse scattering factor slope from SKQ
 
         ## PARSE DATA, ADD TO RESULTS DATAFRAME
         # get the end-to-end distance vector data
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
         # get radius of gyration data
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, bootstraping = False, tabsep = True) # don't bootsrap ROG data, does not fit normal distribution
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, bootstrapping = False, tabsep = True) # don't bootsrap ROG data, does not fit normal distribution
         # get the BVD error
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
+        # get persistence length
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.csv', col = 2, title = 'lp_d', M1 = True)
+        print(bendingparms)
+        exit()
+
         for i in range(30):
             bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
         # save results
