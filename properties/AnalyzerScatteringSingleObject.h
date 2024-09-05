@@ -126,7 +126,7 @@ AnalyzerScatteringSingleObject<IngredientsType>::AnalyzerScatteringSingleObject(
   currentTimestep(0),
   relaxtime(relaxtime_),
   binWidth(binWidth_),
-  num_of_q(500),
+  num_of_q(100),
   q_factor(),
   averagedSquaredAbsC_q(num_of_q,0.0),
   averagedSquaredAbsC_q_elements(num_of_q,0.0),

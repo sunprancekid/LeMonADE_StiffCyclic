@@ -315,7 +315,8 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
             ax.plot(x_fit, y_fit, 'k--', label = "Expotential Decay Fit $e^{\\ell_{{p, decay}}}$")
             ax.plot([], [], ' ', label = "$\\ell_{{p, decay}}$" + " = {:.2f}".format(d))
             ax.plot([], [], ' ', label = "$\\ell_{p, \\theta}$" + " = {:.2f}".format(t))
-            ax.set_title("Bond-Bond Correlation and Persistence Length Calculations")
+            fig.suptitle("Bond-Bond Correlation and Persistence Length Calculations")
+            ax.set_title("({:s})".format(r['id']))
             ax.set_ylabel("Bond-Bond Correlation ($\\langle cos \\theta \\rangle$)")
             ax.set_xlabel("Bond-Bond Distance ($s$)")
             # format axis
@@ -338,6 +339,68 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
         # save persistance length calculations as dataframe to csv
         dfsave = pd.DataFrame.from_dict({'lp_t': [t], 'lp_d': [d]})
         dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
+
+def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False):
+
+    # check that mandatory information was passed to method
+    if parms is None:
+        print("ERROR :: check_sqk :: must provide dataframe to method.")
+        exit()
+    if dir is None:
+        print("ERROR :: check_sqk :: must provide path to main directory contain simulation files to method.")
+        exit()
+
+    # specify defaults if not provided by user
+    if dpi is None:
+        dpi = default_dpi
+
+    # loop through each simulation, check for sqk files
+    for i, r in parms.iterrows():
+        # if the file does not exist, skip to the next file
+        simfile = dir + r['path'] + 'SKQ.dat'
+        if not os.path.exists(simfile):
+            continue
+
+        # parse results from local file
+        clean_file(simfile)
+        df = pd.read_csv(simfile, sep = ' ', names = ['q', 'S', 'n'])
+
+        # determine slope
+        x = df['q'].tolist()
+        y = df['S'].tolist()
+        x_fit = []
+        y_fit = []
+        for i in range(len(x)):
+            if x[i] > 0.1 and x[i] < 1.:
+                x_fit.append(x[i])
+                y_fit.append(y[i])
+        # fit data with in range to linear slope
+        popt, pcov = curve_fit(power_fit, x_fit, y_fit)
+        m = popt[1]
+        y_fit = [ power_fit(i, *popt) for i in x_fit ]
+
+        # plot
+        if plot or show:
+            fig, ax = plt.subplots()
+            ax.plot(x, y, 'k', label = 'S(q)')
+            ax.plot(x_fit, y_fit, 'r--', label = 'Power Law Fit $A \cdot x^B$')
+            ax.plot([], [], ' ', label = "A = {:.2f}".format(popt[0]))
+            ax.plot([], [], ' ', label = "B = {:.2f}".format(m))
+            ax.set_yscale('log')
+            ax.set_xscale('log')
+            fig.suptitle("Scattering Function")
+            ax.set_title("({:s})".format(r['id']))
+            ax.set_ylabel("S(q)")
+            ax.set_xlabel("|q|")
+            ax.legend()
+            if plot:
+                fig.savefig(dir + r['path'] + 'SKQ.png', dpi = dpi, bbox_inches='tight')
+            if show:
+                plt.show()
+        # save fit as dataframe to csv
+        dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
+        dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
+
 
 
 #######################################
@@ -1059,14 +1122,13 @@ if bendingPARM:
         # load parameters, add property calculations from simulations
         bendingparms = pd.read_csv(bendingPARM_parmcsv)
 
-
         ## PROCESS DATA
         # calculate the bvd error, plot difference if requested
         check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = False)
         # parse persistence length from BBC
         check_bbc(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False, lp_decay = True, lp_theta = True)
-        # exit()
-        # TODO :: parse scattering factor slope from SKQ
+        # parse scattering factor slope from SKQ
+        check_skq(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False)
 
         ## PARSE DATA, ADD TO RESULTS DATAFRAME
         # get the end-to-end distance vector data
@@ -1077,8 +1139,8 @@ if bendingPARM:
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
         # get persistence length
         bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.csv', col = 2, title = 'lp_d', M1 = True)
-        print(bendingparms)
-        exit()
+        # get the scattering factor slope
+        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.csv', col = 2, titlee = 'm_sq', M1 = True)
 
         for i in range(30):
             bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
