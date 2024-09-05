@@ -33,20 +33,20 @@ declare -i N_SAMPLE=500
 # number of period sampling points
 declare -i N_PERIOD=30
 # maximum period value to test
-declare -i MAX_PERIOD=10000000
+declare -i MAX_PERIOD_VAL=10000000
 # minimum period value to test
-declare -i MIN_PERIOD=10000
-# default directory for upload / download, generating parameters
-MAINDIR="01_raw_data"
-# default job name
-JOB="bendingPARM"
-# path to LeMonADE executables
-EXECDIR="00_programs/build/bin/"
-## PARAMETERS -- SIMULATION
+declare -i MIN_PERIOD_VAL=10000
 # force base value
 VAL_FO="0."
 # force amplitude
 VAL_FA="0.5"
+## PARAMETERS -- SIMULATION
+# default directory for upload / download, generating parameters
+MAINDIR="01_raw_data"
+# default job name
+JOB="hysteresis"
+# path to LeMonADE executables
+EXECDIR="00_programs/build/bin/"
 PERIOD=( 10000000 5000000 1000000 500000 100000 50000 10000 )
 # number of MCSs between each property calculation
 declare -i N_MCS=2000000000
@@ -71,7 +71,67 @@ help () {
 	echo -e " ## SCRIPT PARAMETERS ##"
 	echo -e " -j << ARG >> | specify job title (default is ${JOB})."
 	echo -e " -p << ARG >> | specify the local directory (default is ${MAINDIR})."
+	## TODO :: add option for ring type
+	## TODO :: add option for bending potential
+	## TODO :: add option for base force
+	## TODO :: add option for force amplitude
+	## TODO :: add option for persistence length
+	## TODO :: add option for number of sampling points
+	## TODO :: add option for min period
+	## TODO :: add option for max period
 	echo -e "\n"
+}
+# log10 function, echos log10 of first argument passed to method
+log10 (){
+
+    ## PARAMETERS
+    # none
+
+    ## ARGUMENTS
+    # number to perform log10 operation on
+    local NUM_LOG=$1
+
+    ## SCRIPT
+    # perform log10 operation on number
+    echo "l(${NUM_LOG})/l(10)" | bc -l
+}
+
+# pow10 function, echos 10 to the power of the first argument passed to method
+pow10 () {
+
+    ## PARAMETERS
+    # none
+
+    ## ARGUMENTS
+    # number to perform pow10 operation on
+    local NUM_POW=$1
+
+    ## SCRIPT
+    # perform pow10 operation
+    VAL=$( echo "l(10)" | bc -l )
+    VAL=$( echo "(${VAL})*(${NUM_POW})" | bc -l )
+    echo "e(${VAL})" | bc -l
+}
+
+# used to generate parameters along a logscale
+logscale () {
+
+     ## PARAMETERS
+     # minimum number on a log10 scale
+     MIN_VAL_LOG10=$( log10 ${MIN_PERIOD_VAL} )
+     # maximum number on a log10 scale
+     MAX_VAL_LOG10=$( log10 ${MAX_PERIOD_VAL} )
+
+     ## ARGUMENTS
+     # integer, ranging from 1 to N_FORCE_VAL
+     declare -i NUM=$1
+
+     ## SCRIPT
+     # generate the parameter along scale
+     scale=$( echo "($NUM / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
+     scale=$( echo "(${scale} * (${MAX_VAL_LOG10} - ${MIN_VAL_LOG10}) + ${MIN_VAL_LOG10})" | bc -l )
+     scale=$( pow10 "$scale" )
+     echo $(printf "%8.0f\n" "${scale}")
 }
 
 # generate simulation parameters, write to file
@@ -114,6 +174,14 @@ gen_simparm() {
 				fi
 
 				for l in "${PARM_LP[@]}"; do
+
+                    for p in $(seq 0 $(($N_PERIOD-1))); do
+						# loop through points, generate on a log scale
+						PERIOD_VAL=$( logscale $f )
+						echo -e $PERIOD_VAL
+                    done
+					# exit after debugging
+					exit 0
 					# generate the simulation directory
 					if [ "${r}" == "TRUE" ]; then
 						SIMID="${C}_RING_N${n}LP${l}"
