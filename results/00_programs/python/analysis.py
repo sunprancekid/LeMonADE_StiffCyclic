@@ -1146,6 +1146,7 @@ if bendingPARM:
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
     compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png")
+    # compare the end-to-end distance scaling against the persistence length
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)")
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_fit.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True)
     exit()
