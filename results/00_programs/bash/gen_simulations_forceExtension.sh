@@ -3,7 +3,7 @@ set -e
 
 ## Matthew Dorsey
 ## 2024.06.11
-##  script for generating constant force extension simulations for real and ideal polymer chains
+## script for generating constant force extension simulations for real and ideal polymer chains
 
 
 
@@ -37,7 +37,7 @@ PARM_RING=( 0 1 2 ) # 2
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
-PARM_LP=( 0 1 5 9 )
+PARM_LP=( 0 2 5 9 )
 # array containing bending potential strings to test
 # PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
@@ -68,8 +68,8 @@ help () {
 	echo -e "\n"
 	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -g           | generate simulation parameters / directories ."
+	echo -e " -l           | generate simulation parameters according to logscale (no negatives)."
 	echo -e " -j << ARG >> | rename job."
-	echo -e " -l << ARG >> | generate simulation parameters according to logscale (no negatives)."
 	echo -e " -n << ARG >> | number of simulation parameters to test (default is ${N_FORCE_VAL})."
 	echo -e " -m << ARG >> | maximum force to test (default is ${MAX_FORCE_VAL})."
 	echo -e "\n"
@@ -207,7 +207,7 @@ gen_simparm() {
                             mkdir -p ${PATH_SIMPARM}${SIMDIR}
 
                             # use the force integer to calculate the real force value passed to the simulation executable
-                            if [[ $LOGSCALE -eq 1 ]]; then
+                            if [[ $BOOL_LOGSCALE -eq 1 ]]; then
                                 FORCE_VAL=$( logscale $f )
                             else
                                 FORCE_VAL=$( linscale $f )
@@ -226,6 +226,8 @@ gen_simparm() {
                                     k=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
                                 fi
                                 GENFLAGS="${GENFLAGS} -k ${k}"
+                            else
+                                k="0."
                             fi
 
                             if [ $r -eq 1 ]; then
