@@ -31,7 +31,7 @@ PARM_LP=( 1 3 5 7 9 11 13 15 )
 # NOTE :: this is a fixed value in the hysteresis analyzer
 declare -i N_SAMPLE=500
 # number of period sampling points
-declare -i N_PERIOD=30
+declare -i N_PERIOD_VAL=30
 # maximum period value to test
 declare -i MAX_PERIOD_VAL=10000000
 # minimum period value to test
@@ -128,10 +128,42 @@ logscale () {
 
      ## SCRIPT
      # generate the parameter along scale
-     scale=$( echo "($NUM / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
+     scale=$( echo "($NUM / ( ${N_PERIOD_VAL} - 1 ))" | bc -l )
      scale=$( echo "(${scale} * (${MAX_VAL_LOG10} - ${MIN_VAL_LOG10}) + ${MIN_VAL_LOG10})" | bc -l )
      scale=$( pow10 "$scale" )
      echo $(printf "%8.0f\n" "${scale}")
+}
+
+# method for rounding any whole number
+# to a number divisable by $N_SAMPLE
+round () {
+
+	## PARAMETERS
+	# none
+
+	## ARGUMENTS
+	# first argument: integer to round
+	declare -i rnd=$1
+	# second argument: whole number that the rounded number should be divisiable by
+	declare -i wn=$2
+
+
+	## SCRIPT
+	# use mod to determine the remainder
+	declare -i rnd_dn=$(bc -l <<< "oldscale=scale; scale=0; ${rnd}%${wn}; scale=oldscale") # remained to remove if rounding down
+	declare -i rnd_up=$( echo "(${wn} - ${rnd_dn})" | bc -l) # remainder to add if rounding up
+	# determing wether to round up or down
+	if (( rnd_dn > rnd_up )); then
+		# if rnd_dn is greater than rnd_up
+		# rnd is closer to the round up value so round up
+		declare -i wn=$( echo "(${rnd} + ${rnd_up})" | bc -l )
+	else
+		# otherwise, round down
+		declare -i wn=$( echo "(${rnd} - ${rnd_dn})" | bc -l )
+	fi
+	# return to user
+	echo $wn
+
 }
 
 # generate simulation parameters, write to file
@@ -175,10 +207,11 @@ gen_simparm() {
 
 				for l in "${PARM_LP[@]}"; do
 
-                    for p in $(seq 0 $(($N_PERIOD-1))); do
+                    for p in $(seq 0 $(($N_PERIOD_VAL-1))); do
 						# loop through points, generate on a log scale
-						PERIOD_VAL=$( logscale $f )
-						echo -e $PERIOD_VAL
+						PERIOD_VAL=$( logscale $p )
+						NEW_PERIOD_VAL=$( round $PERIOD_VAL $N_SAMPLE)
+						echo -e $PERIOD_VAL $NEW_PERIOD_VAL
                     done
 					# exit after debugging
 					exit 0
