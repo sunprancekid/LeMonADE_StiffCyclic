@@ -26,10 +26,14 @@ PARM_CSA=( "TRUE" )
 # array containing persistance lengths to test for either potential
 # assigned persistance length is used to select bending potential strength
 # according to scaling equation unique to each potential'
-PARM_LP=( 1 3 5 7 9 11 13 15 )
+PARM_LP=( 0 1 5 9 )
 # number of points sampled by hysteresis calculator
 # NOTE :: this is a fixed value in the hysteresis analyzer
-declare -i N_SAMPLE=500
+declare -i N_SAMPLE=100
+# number of times that the hysteresis loops through one period once equilibrated
+declare -i N_PERIOD_EQUILIBRIUM=5000
+# number of times that the hysteresis loops through one period to reach equilibrium
+declare -i N_PERIOD_EQUILIBRIATE=1000
 # number of period sampling points
 declare -i N_PERIOD_VAL=30
 # maximum period value to test
@@ -37,9 +41,11 @@ declare -i MAX_PERIOD_VAL=10000000
 # minimum period value to test
 declare -i MIN_PERIOD_VAL=10000
 # force base value
-VAL_FO="0."
+VAL_FO="0.0"
 # force amplitude
 VAL_FA="0.5"
+# force vector applied by oscillatory force
+FORCEVEC="100"
 ## PARAMETERS -- SIMULATION
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
@@ -47,13 +53,6 @@ MAINDIR="01_raw_data"
 JOB="hysteresis"
 # path to LeMonADE executables
 EXECDIR="00_programs/build/bin/"
-PERIOD=( 10000000 5000000 1000000 500000 100000 50000 10000 )
-# number of MCSs between each property calculation
-declare -i N_MCS=2000000000
-# number of time properties are calculation
-declare -i save_interval=1000000
-# number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=1000000000
 
 
 ## FUNCTIONS
@@ -175,7 +174,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,pot,N,R,k,fo,fA,T"
+	HEADER_SIMPARM="id,path,pot,N,R,k,fo,fA,T,fv"
 
 	## ARGUMENTS
 	# none
@@ -189,9 +188,23 @@ gen_simparm() {
 	# write head to file, write parameters to file
 	echo $HEADER_SIMPARM > $FILE_SIMPARM
 	for r in ${PARM_RING[@]}; do
+
+		if [ $r -eq 0 ]; then
+			# chain
+			R="CHAIN"
+			R_FLAG=""
+		elif [ $r -eq 1 ]; then
+			# single ring
+			R="RING"
+			R_FLAG="-r "
+		elif [ $r -eq 2 ]; then
+			R="RINGx2"
+			R_FLAG="-r -m 2 "
+		fi
+
 		for n in "${PARM_N[@]}"; do
 
-			if [ "${r}" == "TRUE" ]; then
+			if [ $r != 0 ]; then
 				n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
 			fi
 
@@ -207,51 +220,53 @@ gen_simparm() {
 
 				for l in "${PARM_LP[@]}"; do
 
-                    for p in $(seq 0 $(($N_PERIOD_VAL-1))); do
-						# loop through points, generate on a log scale
-						PERIOD_VAL=$( logscale $p )
-						NEW_PERIOD_VAL=$( round $PERIOD_VAL $N_SAMPLE)
-						echo -e $PERIOD_VAL $NEW_PERIOD_VAL
-                    done
-					# exit after debugging
-					exit 0
-					# generate the simulation directory
-					if [ "${r}" == "TRUE" ]; then
-						SIMID="${C}_RING_N${n}LP${l}"
-						SIMDIR="${C}/RING/N${n}/LP${l}/"
-					else
-						SIMID="${C}_CHAIN_N${n}LP${l}"
-						SIMDIR="${C}/CHAIN/N${n}/LP${l}/"
-					fi
+					# use the persistence length to determine the bending constant according to the potential
 					if [ "${c}" == "TRUE" ]; then
-						C="CSA"
-						C_FLAG=""
 						K_STRING=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
 					else
-						C="CA"
-						C_FLAG="-c "
 						K_STRING="${l}"
 					fi
-					mkdir -p ${PATH_SIMPARM}${SIMDIR}
-					# write files directory, generate simulation executables
-					echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					if [ "${r}" == "TRUE" ]; then
-						echo "\${PATH}generatePolymerBFM ${C_FLAG}-r -n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					else
-						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					fi
-					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-					# add parameters to parm file
-					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING}" >> $FILE_SIMPARM
+
+                    for p in $(seq 0 $(($N_PERIOD_VAL-1))); do
+
+						# loop through points, generate on a log scale
+						PERIOD_VAL=$( logscale $p )
+						# round the period value so that it integrates with the sampling frequency
+						PERIOD_VAL=$( round $PERIOD_VAL $N_SAMPLE )
+
+						# generate the simulation directory
+						SIMDIR="${R}/${C}/N${n}/LP${l}/FO${VAL_FO}/FA${VAL_FA}/T${PERIOD_VAL}/FV${FORCEVEC}/"
+						SIMID="${R}${C}_N${n}LP${l}_FV${FORCEVEC}FO${VAL_FO}FA${VAL_FA}T${PERIOD_VAL}"
+
+						# adjust the length of the simulation according the period
+						declare -i TOTAL=$( echo "(${PERIOD_VAL} * (${N_PERIOD_EQUILIBRIATE} + ${N_PERIOD_EQUILIBRIUM}))" | bc -l )
+						declare -i EQUILIBRIATE=$( echo "(${PERIOD_VAL} * ${N_PERIOD_EQUILIBRIATE})" | bc -l )
+
+						# generate flags for simulation executables
+						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAGS}"
+						SIMFLAGS="-e ${EQUILIBRIATE} -n ${TOTAL} -b"
+						# TODO :: add sample frequency to execute flag
+
+						# generate directory, write files with parameters
+						mkdir -p ${PATH_SIMPARM}${SIMDIR}
+						# write files directory, generate simulation executables
+						echo "#!/bin/bash" > ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						# add parameters to parm file
+						# "id,path,pot,N,R,k,fo,fA,T,fv"
+						echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING},${VAL_FO},${VAL_FA},${PERIOD_VAL},${FORCEVEC}" >> $FILE_SIMPARM
+
+                    done
 				done
 			done
 		done
@@ -287,7 +302,8 @@ done
 
 
 ## SCRIPT
-## TODO :: implement overwrite feature
+## TODO :: implement overwrite feature (this rewrite the commands for any directoraies that already exist)
+## TODO :: add restart feature (scorched earth, delete everything and restart)
 # generate parameters save to file
 if [ $BOOL_GEN -eq 1 ]; then
 	gen_simparm
