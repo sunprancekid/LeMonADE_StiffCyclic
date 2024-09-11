@@ -25,7 +25,7 @@ declare -i BOOL_DWN=0
 declare -i BOOL_LOGSCALE=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
-declare -i N_FORCE_VAL=40
+declare -i N_FORCE_VAL=25
 # maxmium force to test
 MAX_FORCE_VAL="2"
 # minimum force to test
@@ -215,7 +215,7 @@ gen_simparm() {
 
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
-                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -d"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a"
                             if [ $l != 0 ]; then
                                 # calculate the bending parameter constant from the assigned persistence length
                                 # according to the type of potential assigned to the simulation
