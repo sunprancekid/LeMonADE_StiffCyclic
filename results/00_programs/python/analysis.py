@@ -605,16 +605,16 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             if plot_data and plot_log5:
                 line = plt.plot(x_fit, y_fit, '--')
                 if flip_axis:
-                    plt.plot(y, x, 'o', label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(),marker = next(marks))
+                    plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(), marker = next(marks), ls = ' ')
                 else:
-                    plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(),marker = next(marks))
+                    plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(), marker = next(marks), ls = ' ')
             elif plot_log5:
                 line = plt.plot(x_fit, y_fit, '--', label = isolabel.format(iso))
             elif plot_data:
                 if flip_axis:
-                    plt.plot(y, x, 'o', label = isolabel.format(iso), fillstyle = 'full',marker = next(marks))
+                    plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
                 else:
-                    plt.plot(x, y, 'o', label = isolabel.format(iso), fillstyle = 'full',marker = next(marks))
+                    plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
     if vertbar is True:
         if flip_axis:
             plt.plot([0., 0.], [x_max, x_min], color = "k", ls = "dashed")
@@ -1053,62 +1053,71 @@ if scaling:
         plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale_x = True, logscale_y = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
 
 if forceExtension:
-    # force extension for linear data set
-    job = "forceExtension_lin"
-    data_dir = "01_raw_data/" + job + "/"
-    anal_dir = "02_processed_data/" + job + "/"
-    parm_file = job + ".csv"
-    if update or (not os.path.exists(anal_dir + parm_file)):
-        # get simulation parameters
-        FE_parms = pd.read_csv(data_dir + parm_file)
-        # average simulation properties
-        FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
-        # save results
-        if not os.path.exists(anal_dir):
-            os.mkdir(anal_dir)
-        FE_parms.to_csv(anal_dir + parm_file)
-    else:
-        FE_parms = pd.read_csv(anal_dir + parm_file)
-    # perform analysis for each unqiue set of 'modules'
-    # loop through each topology, bending potential, bending potential strength, and chain length
-    for top in FE_parms['R'].unique():
-        if top == 0:
-            top_NAME = "CHAIN"
-            # continue
-        elif top == 1:
-            top_NAME = "RING"
-        elif top == 2:
-            top_Name = "RINGx2"
+    lin = ['log', 'lin']
+    for l in lin:
+        # force extension for linear data set
+        job = 'forceExtension_' + l
+        data_dir = "01_raw_data/" + job + "/"
+        anal_dir = "02_processed_data/" + job + "/"
+        parm_file = job + ".csv"
+        if update or (not os.path.exists(anal_dir + parm_file)):
+            # get simulation parameters
+            FE_parms = pd.read_csv(data_dir + parm_file)
+            # average simulation properties
+            FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+            # save results
+            if not os.path.exists(anal_dir):
+                os.mkdir(anal_dir)
+            FE_parms.to_csv(anal_dir + parm_file)
         else:
-            print(f"forceExtension :: unknown TOP code {top}")
-            exit()
-        # TODO include force vector variance
-        for pot in FE_parms['pot'].unique():
-            for N in FE_parms['N'].unique():
-                # create plot with force extension of bending constants merged
-                top_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
-                if top_df.empty:
-                    continue
-                save_name = anal_dir + f"FE_{top_NAME}_{pot}_N{N}"
-                # plot force extension data for all bending constants, as well as log5 fit
-                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
-                continue
-                # plot error in bond vector distribution against force for all bending constants
-                plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isovals = [0, 1, 5, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25, show = True)
-                # plot positive data on semi-log
-                plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 10., x_min = 0.1, x_max = 2., show = True, logscale_x = True, logscale_y = True)
-                # create unique force extension plots for each unique bending constant
-                for k in FE_parms['K'].unique():
-                    # establish file names
-                    save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}_k{k}"
-                    # isolate the parameters corresponding to the set
-                    isoK_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N) & (FE_parms['K'] == k)]
-                    if isoK_df.empty:
-                        print(save_name + " does not exist!")
+            FE_parms = pd.read_csv(anal_dir + parm_file)
+
+        # perform analysis for each unqiue set of 'modules'
+        # loop through each topology, bending potential, bending potential strength, and chain length
+        for top in FE_parms['R'].unique():
+            if top == 0:
+                top_NAME = "CHAIN"
+                # continue
+            elif top == 1:
+                top_NAME = "RING"
+            elif top == 2:
+                top_NAME = "RINGx2"
+            else:
+                print(f"forceExtension :: unknown TOP code {top}")
+                exit()
+            # TODO include force vector variance
+            for pot in FE_parms['pot'].unique():
+                for N in FE_parms['N'].unique():
+
+                    # establish data and name
+                    top_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
+                    if top_df.empty:
                         continue
+                    save_name = anal_dir + f"FE_{top_NAME}_{pot}_N{N}"
+
+                    # plot force extension data
+                    if l == 'lin':
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
+                    elif l == 'log':
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, y_max = 300., y_min = 0.01, x_min = 0.0001, x_max = 1., show = True, logscale_x = True, logscale_y = True)
+
+                    continue
+                    # plot error in bond vector distribution against force for all bending constants
+                    plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isovals = [0, 1, 5, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25, show = True)
                     # plot positive data on semi-log
-                    # plot_force_extension(isoK_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 0.01, x_min = 0.01, x_max = 2., show = True, logscale_x = True, logscale_y = True)
-                    # plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
+                    plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 10., x_min = 0.1, x_max = 2., show = True, logscale_x = True, logscale_y = True)
+                    # create unique force extension plots for each unique bending constant
+                    for k in FE_parms['K'].unique():
+                        # establish file names
+                        save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}_k{k}"
+                        # isolate the parameters corresponding to the set
+                        isoK_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N) & (FE_parms['K'] == k)]
+                        if isoK_df.empty:
+                            print(save_name + " does not exist!")
+                            continue
+                        # plot positive data on semi-log
+                        # plot_force_extension(isoK_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 0.01, x_min = 0.01, x_max = 2., show = True, logscale_x = True, logscale_y = True)
+                        # plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
 
 if bendingPARM:
     if update or (not os.path.exists("02_processed_data/bendingPARM/bendingPARM.csv")):
