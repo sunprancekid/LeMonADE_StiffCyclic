@@ -177,8 +177,8 @@ gen_slurm_script () {
     echo "cp * $(pwd)/${JOBDIR}${SIMDIR}" >> $FILEPATH$FILENAME
     echo "cd ../" >> $FILEPATH$FILENAME
     echo "rm -rf ${SIMID}" >> $FILEPATH$FILENAME
-    echo "cp ../sub/${SIMID}.%j.err $(pwd)/${JOBDIR}${SIMDIR} " >> $FILEPATH$FILENAME
-    echo "cp ../sub/${SIMID}.%j.out $(pwd)/${JOBDIR}${SIMDIR} " >> $FILEPATH$FILENAME
+    echo "cp ../sub/${SIMID}.*.err $(pwd)/${JOBDIR}${SIMDIR} " >> $FILEPATH$FILENAME
+    echo "cp ../sub/${SIMID}.*.out $(pwd)/${JOBDIR}${SIMDIR} " >> $FILEPATH$FILENAME
 }
 
 ## OPTIONS

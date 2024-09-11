@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
         bool bendingPot = false; // determines whether a bending potential should be added
         double k_theta = 0.; // parameterized bending potential strength
         bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
-        std::string forceVecString = "111";
+        std::string forceVecString = "100";
         bool forceOscillation = false;
         int forceOscPeriod = 1.;
         double forceOscAmplitude = 1.;
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
                 UCRM.cleanup();
             } else if (numChains == 1) {
                 // build single ring molecule
-                UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength, boxSize, boxSize, boxSize);
+                UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength * 2., boxSize, boxSize, boxSize);
                 UCRM.initialize();
                 UCRM.execute();
                 UCRM.cleanup();

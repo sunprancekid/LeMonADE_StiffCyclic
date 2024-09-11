@@ -26,12 +26,12 @@ PARM_CSA=( "TRUE" )
 # array containing persistance lengths to test for either potential
 # assigned persistance length is used to select bending potential strength
 # according to scaling equation unique to each potential'
-PARM_LP=( 0 1 5 9 )
+PARM_LP=( 0 2 5 9 )
 # number of points sampled by hysteresis calculator
 # NOTE :: this is a fixed value in the hysteresis analyzer
 declare -i N_SAMPLE=100
 # number of times that the hysteresis loops through one period once equilibrated
-declare -i N_PERIOD_EQUILIBRIUM=5000
+declare -i N_PERIOD_EQUILIBRIUM=1000
 # number of times that the hysteresis loops through one period to reach equilibrium
 declare -i N_PERIOD_EQUILIBRIATE=1000
 # number of period sampling points
