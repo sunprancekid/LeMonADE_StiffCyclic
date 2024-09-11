@@ -243,7 +243,7 @@ gen_simparm() {
 						declare -i EQUILIBRIATE=$( echo "(${PERIOD_VAL} * ${N_PERIOD_EQUILIBRIATE})" | bc -l )
 
 						# generate flags for simulation executables
-						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAGS}"
+						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAG}"
 						SIMFLAGS="-e ${EQUILIBRIATE} -n ${TOTAL} -b"
 						# TODO :: add sample frequency to execute flag
 

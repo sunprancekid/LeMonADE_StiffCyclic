@@ -125,7 +125,8 @@ int main(int argc, char* argv[])
                 UCRM.cleanup();
             } else if (numChains == 1) {
                 // build single ring molecule
-                UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength * 2., boxSize, boxSize, boxSize);
+                chainLength = chainLength * 2.;
+                UpdaterCreateRingMelt<IngredientsType> UCRM(ingredients, numChains, chainLength, boxSize, boxSize, boxSize);
                 UCRM.initialize();
                 UCRM.execute();
                 UCRM.cleanup();
@@ -162,6 +163,7 @@ int main(int argc, char* argv[])
             if (ring) {
                 // for each ring
                 for (uint32_t a = 0; a < numChains; a++) {
+                    // if the molecular is two rings, the chain length is the specified value
                     // bond all neighboring monomers in ring
                     size_t mis = a * chainLength; // starting monomer index
                     size_t mie = (a + 1) * chainLength - 1; // ending monomer index
