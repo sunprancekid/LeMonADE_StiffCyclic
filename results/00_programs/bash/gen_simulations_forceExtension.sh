@@ -193,9 +193,9 @@ gen_simparm() {
 
             for n in "${PARM_N[@]}"; do
 
-                if [ $r != 0 ]; then
-                    n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
-                fi
+#                 if [ $r != 0 ]; then
+#                     n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
+#                 fi
 
                 for l in "${PARM_LP[@]}"; do
                     for f in $(seq 0 $(($N_FORCE_VAL-1))); do
