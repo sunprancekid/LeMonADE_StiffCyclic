@@ -340,6 +340,7 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
         dfsave = pd.DataFrame.from_dict({'lp_t': [t], 'lp_d': [d]})
         dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
 
+# method that calculates the slope of the scattering factor
 def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False):
 
     # check that mandatory information was passed to method
@@ -400,6 +401,52 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False)
         # save fit as dataframe to csv
         dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
         dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
+
+# method that collects the hysteresis area, plots hysteresis curve
+def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False):
+
+    # check that mandatory information was passed to method
+    if parms is None:
+        print("ERROR :: check_hys :: must provide dataframe to method.")
+        exit()
+    if dir is None:
+        print("ERROR :: check_hys :: must provide path to main directory contain simulation files to method.")
+        exit()
+
+    # specify defaults if not provided by user
+    if dpi is None:
+        dpi = default_dpi
+
+    # loop through each simulation, check for sqk files
+    for i, r in parms.iterrows():
+        # if the file does not exist, skip to the next file
+        simfile = dir + r['path'] + 'HYS.dat'
+        if not os.path.exists(simfile):
+            continue
+
+        # parse data, hysteresis curve
+        df = pd.read_csv(simfile)
+        # TODO :: parse the hysteresis area (if nan, delete the file so that it can be rerun)
+        n = len(df.index)
+        f = [ ] # collects the force values associated with the hysteresis
+        e = [ ] # collects the extension values associated with the hysteresis
+        s = [ ] # collects the standard deviation values associated with hysteresis
+        for j in range(1, n):
+            f.append(df.loc[j,'f'])
+            e.append(df.loc[j,'avg'])
+            s.append(df.loc[j,'std'])
+
+        # would be cool to circularly color code each data point
+        plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
+        plt.xlabel("Force ($f$)")
+        plt.ylabel("Extension ($R$)")
+        plt.ylim(-1., 1.)
+        plt.suptitle("Hysteresis Force Extension")
+        plt.title("({:s})".format(r['id']))
+        plt.show()
+        if i == 1:
+            exit()
+
 
 
 
@@ -1019,6 +1066,8 @@ scaling = ("scaling" in sys.argv)
 forceExtension = ("forceExtension" in sys.argv)
 # perform bending parameter analysis
 bendingPARM = ("bendingPARM" in sys.argv)
+# perform hysteresis analysis
+hysteresis = ("hysteresis" in sys.argv)
 # update the simulation results, even if the simulation results file already exists
 update = ("update" in sys.argv)
 
@@ -1190,3 +1239,20 @@ if bendingPARM:
             # TODO plot the BVD MSE against the persistence length
             plot_property_against_lp(df = plotdf, R_col = 'BVDMSE_M2', lp_exp = True, logscale = True, Y_label = "Bond Vector Distribution Mean Square Difference", xmin = 1., xmax = 100., ymin = 0.001, ymax = .5, Title = f"Bond Vector Difference Scaling for {chain}s with {pot} Potential (N = {N_string})", show = True, saveas = "02_processed_data/bendingPARM/" + "BVDMSEvlp_" + pot + "_" + chain + ".png")
 
+if hysteresis:
+
+    # establish the names of the simulation results files
+    job = "hysteresis"
+    data_dir = "01_raw_data/" + job + "/"
+    anal_dir = "02_processed_data/" + job + "/"
+    parm_file = job + ".csv"
+
+    # collect the simulaiton results
+    if update or (not os.path.exists(anal_dir + parm_file)):
+        # get simulation parameters
+        hys_parms = pd.read_csv(data_dir + parm_file)
+
+        # collect hysteresis results
+        check_hys(parms = hys_parms, dir = data_dir, show = True, plot = True)
+        print(hys_parms)
+        exit()
