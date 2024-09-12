@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
         int type1(1); // type assigned to all "monomers"
         // establish default parameters
         double save_interval = 1000000; // frequency of property calculations, position save
-        double max_MCs = 100000000; // total number of Monte Carlo steps
+        long int max_MCs = 100000000; // total number of Monte Carlo steps
         std::string infile = "config_init.bfm"; // file that contains initial configuraiton for bfm simulation
         std::string outfile = "config.bfm"; // file that contains system configuratun at each save interval
         double t_equil = 0; // simulation time before which properties are not calculated
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
                     save_interval=atoi(optarg);
                     break;
                 case 'n':
-                    max_MCs = atoi(optarg);
+                    max_MCs = atol(optarg);
                     break;
                 case 'e':
                     t_equil = stod(optarg);
@@ -137,6 +137,11 @@ int main(int argc, char* argv[])
             }
         }
 
+        // if the outfile exists, delete it
+        char* outfile_char_array = new char[outfile.length() + 1];
+        strcpy(outfile_char_array, outfile.c_str());
+        remove(outfile_char_array);
+
         // add updaters and analyzers to task manager
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
         taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
@@ -160,11 +165,6 @@ int main(int argc, char* argv[])
         if (add_scatter_analyzer) {
             taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, "SKQ.dat", t_equil), (1));
         }
-
-        // if the outfile exists, delete it
-        char* outfile_char_array = new char[outfile.length() + 1];
-        strcpy(outfile_char_array, outfile.c_str());
-        remove(outfile_char_array);
 
         // run
         taskmanager.initialize();
