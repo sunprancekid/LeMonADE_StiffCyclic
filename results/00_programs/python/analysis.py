@@ -30,6 +30,10 @@ equildict = {'vec' : [0, 1, 2, 3, 4, 5], 'height': [0.0632855, 0.206359, 0.21585
 marks = itertools.cycle(("v", "<", "o", "s", "p", "*", "D"))
 # minimum cut off for logscale
 min_logscale = 0.00001
+# minimum force for pincus regime
+min_pinus_force = 0.1
+# maxmimum force for pincus regime
+max_pincus_force = 1.
 
 #############
 ## METHODS ##
@@ -47,6 +51,10 @@ def power_fit(x, A, B):
 # model equation for power law fitting in the hookean regime
 def power_fit_hook(x, A):
     return A * (x ** 1.)
+
+# model equation for fitting data to a line
+def linear_fit (x, m, b):
+    return (x * m) + b
 
 # model equation for exponential decay fitting
 def exp_decay_fit(x, A, B):
@@ -431,10 +439,18 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
         f = [ ] # collects the force values associated with the hysteresis
         e = [ ] # collects the extension values associated with the hysteresis
         s = [ ] # collects the standard deviation values associated with hysteresis
+        hasnan = False
         for j in range(1, n):
             f.append(df.loc[j,'f'])
             e.append(df.loc[j,'avg'])
+            if math.isnan(e[-1]):
+                hasnan = True
+                break
             s.append(df.loc[j,'std'])
+        if hasnan:
+            print(simfile + " has NaN.")
+            os.remove(simfile)
+        continue
 
         # would be cool to circularly color code each data point
         plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
@@ -444,7 +460,8 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
         plt.suptitle("Hysteresis Force Extension")
         plt.title("({:s})".format(r['id']))
         plt.show()
-        if i == 1:
+        if i == 20:
+            print(df)
             exit()
 
 
@@ -606,62 +623,48 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             v = iso_df[Y_col + '_var'].tolist()
         if logscale_y is True:
             y = [abs(i) for i in y]
-        # fit the data to a log5 curve
-        if plot_log5 or plot_slope:
+        # fit the log data to slope
+        if plot_slope:
             # convert data to log scale
             x_log = []
             y_log = []
             v_log = []
+
+            # for data points with regime
             for i in range(len(x)):
                 if abs(y[i]) < TOL or math.isnan(y[i]):
                     continue
-                x_log.append(math.log(x[i]) / math.log(10.))
-                y_log.append(math.log(abs(y[i])) / math.log(10.))
-                if error:
-                    if v[i] > TOL:
-                        v_log.append(v[i])
-                    else:
-                        v_log.append(TOL)
-            # initialize paramaters for curve fitting
-            lb = [min(y_log), max(y_log) - (TOL / 100), -100, -100, -40, min(x_log) - 2 * TOL]
-            ub = [max(y_log), max(y_log), 200, 100, 40, min(x_log) - TOL]
-            parameterBounds = (lb, ub)
-            init = [min(y_log), max(y_log), 4., 50., 0.01, min(x_log) - (3. * TOL / 2.)]
-            # fit data to log5 equation
-            popt, pcov = curve_fit(f = log5_fit, xdata =  x_log, ydata = y_log, p0 = init, bounds = parameterBounds, maxfev = 100000000) # sigma = v_log,
-            x_fit = [ ((max(x_log) - min(x_log)) / (100 - 1)) * i + min(x_log) for i in range(100)]
-            y_fit = [ log5_fit(i, *popt) for i in x_fit]
-            # calculate the slope of the line
-            if plot_slope:
-                h = (max(x_fit) - min(x_fit)) / len(x_fit) # distance between points
-                x_d1 = []
-                y_d1 = []
-                for i in range(len(y_fit) - 1):
-                    x_d1.append(math.pow(10, (x_fit[i+1] + x_fit[i]) / 2.))
-                    y_d1.append((y_fit[i+1] - y_fit[i]) / h)
-            # convert the log5 curve back to linear scale
+                # if withing the pincus regime
+                if (x[i] > min_pinus_force) and (x[i] < max_pincus_force):
+                    x_log.append(math.log(x[i]) / math.log(10.))
+                    y_log.append(math.log(abs(y[i])) / math.log(10.))
+                    if error:
+                        if v[i] > TOL:
+                            v_log.append(v[i])
+                        else:
+                            v_log.append(TOL)
+
+            # fit to a line
+            popt, pcov = curve_fit(f = linear_fit, xdata =  x_log, ydata = y_log)
+
+            # fit data, convert back to logscale
+            x_fit = [ (((max(x_log) + 0.5) - (min(x_log) - 1.)) / (100 - 1)) * i + (min(x_log) - 1.) for i in range(100)]
+            y_fit = [ linear_fit(i, *popt) for i in x_fit]
             for i in range(len(x_fit)):
                 x_fit[i] = math.pow(10, x_fit[i])
                 y_fit[i] = math.pow(10, y_fit[i])
-        # plot either the slope or the simulation data
+
+        # plot the data
+        if flip_axis:
+            line = plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
+        else:
+            line = plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
+
+        # plot the slope if requested
         if plot_slope:
             # plot the slope of the line fit to the simulation data
-            plt.plot(x_d1, y_d1, '-', label = isolabel.format(iso))
-        else:
-            # plot the simulation data (and the log5 fit, if called)
-            if plot_data and plot_log5:
-                line = plt.plot(x_fit, y_fit, '--')
-                if flip_axis:
-                    plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(), marker = next(marks), ls = ' ')
-                else:
-                    plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'none', color = line[-1].get_color(), marker = next(marks), ls = ' ')
-            elif plot_log5:
-                line = plt.plot(x_fit, y_fit, '--', label = isolabel.format(iso))
-            elif plot_data:
-                if flip_axis:
-                    plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
-                else:
-                    plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
+            plt.plot(x_fit, y_fit, '--', label = "m = {:.03f}".format(popt[0]), color = line[-1].get_color())
+
     if vertbar is True:
         if flip_axis:
             plt.plot([0., 0.], [x_max, x_min], color = "k", ls = "dashed")
@@ -672,6 +675,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             plt.plot([y_min, y_max], [0., 0.], color = "k", ls = "dashed")
         else:
             plt.plot([x_min, x_max], [0., 0.], color = "k", ls = "dashed")
+
     # finish formatting the graph, once all of the plots have been added
     if flip_axis:
         plt.xlim(y_min, y_max)
@@ -683,10 +687,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         plt.xscale('log')
     if logscale_y:
         plt.yscale('log')
-    if plot_slope:
-        plt.legend(loc = 'upper left')
-    else:
-        plt.legend(loc = 'lower right')
+    plt.legend(loc = 'lower right')
     if Title is not None:
         plt.title(Title)
     if Y_label is not None:
@@ -1148,7 +1149,8 @@ if forceExtension:
                     if l == 'lin':
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
                     elif l == 'log':
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, y_max = 300., y_min = 0.01, x_min = 0.0001, x_max = 1., show = True, logscale_x = True, logscale_y = True)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data.png', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = True)
+                        # exit()
 
                     continue
                     # plot error in bond vector distribution against force for all bending constants
