@@ -193,16 +193,12 @@ gen_simparm() {
 
             for n in "${PARM_N[@]}"; do
 
-#                 if [ $r != 0 ]; then
-#                     n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
-#                 fi
-
                 for l in "${PARM_LP[@]}"; do
                     for f in $(seq 0 $(($N_FORCE_VAL-1))); do
                         for fv in "${PARM_FORCEVEC[@]}"; do
 
                             # generate the simulation directory
-                            SIMID="${R}_${C}_N${n}LP${l}FV${fv}F${f}"
+                            SIMID="${R}_${C}_N${n}LP${l}FV${fv}F${f}${log_tag}"
                             SIMDIR="${R}/${C}/N${n}/LP${l}/FV${fv}/F${f}/"
                             mkdir -p ${PATH_SIMPARM}${SIMDIR}
 
@@ -288,5 +284,14 @@ done
 ## SCRIPT
 # generate parameters save to file
 if [ $BOOL_GEN -eq 1 ]; then
+
+	# differentiate jobs with lin and log tags
+	if [[ $BOOL_LOGSCALE -eq 1 ]]; then
+        log_tag="log"
+    else
+        log_tag="lin"
+	fi
+	# tag job
+	JOB="${JOB}_${log_tag}"
 	gen_simparm
 fi
