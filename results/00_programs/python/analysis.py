@@ -446,29 +446,37 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
         e = [ ] # collects the extension values associated with the hysteresis
         s = [ ] # collects the standard deviation values associated with hysteresis
         hasnan = False
-        for j in range(1, n):
-            f.append(df.loc[j,'f'])
-            e.append(df.loc[j,'avg'])
-            if math.isnan(e[-1]):
-                hasnan = True
-                break
-            s.append(df.loc[j,'std'])
-        if hasnan:
-            print(simfile + " has NaN.")
-            os.remove(simfile)
+
+        # write the hysteresis value and variance to a csv file
+        dfsave = pd.DataFrame.from_dict({'A': [df.loc[0,'avg']], 'B': [df.loc[0,'std']]})
+        dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
         continue
 
-        # would be cool to circularly color code each data point
-        plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
-        plt.xlabel("Force ($f$)")
-        plt.ylabel("Extension ($R$)")
-        plt.ylim(-1., 1.)
-        plt.suptitle("Hysteresis Force Extension")
-        plt.title("({:s})".format(r['id']))
-        plt.show()
-        if i == 20:
-            print(df)
-            exit()
+        if plot or show:
+            # collect the hysteresis data, show
+            for j in range(1, n):
+                f.append(df.loc[j,'f'])
+                e.append(df.loc[j,'avg'])
+                # if math.isnan(e[-1]):
+                #     hasnan = True
+                #     break
+                s.append(df.loc[j,'std'])
+            # if hasnan:
+            #     print(simfile + " has NaN.")
+            #     os.remove(simfile)
+            continue
+
+            # would be cool to circularly color code each data point
+            plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
+            plt.xlabel("Force ($f$)")
+            plt.ylabel("Extension ($R$)")
+            plt.ylim(-1., 1.)
+            plt.suptitle("Hysteresis Force Extension")
+            plt.title("({:s})".format(r['id']))
+            plt.show()
+            if i == 20:
+                print(df)
+                exit()
 
 
 
@@ -1226,7 +1234,7 @@ if bendingPARM:
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
     compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png")
-    compare the end-to-end distance scaling against the persistence length
+    # compare the end-to-end distance scaling against the persistence length
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)")
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_fit.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True)
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True, Lo = 300., WLC = True)
@@ -1270,10 +1278,20 @@ if hysteresis:
 
     # collect the simulaiton results
     if update or (not os.path.exists(anal_dir + parm_file)):
+
         # get simulation parameters
         hys_parms = pd.read_csv(data_dir + parm_file)
 
         # collect hysteresis results
         check_hys(parms = hys_parms, dir = data_dir, show = True, plot = True)
-        print(hys_parms)
-        exit()
+
+        # add the hysteresis results to the bending parameter data frame
+        hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 1, title = 'A_avg', M1 = True)
+        hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 2, title = 'A_std', M1 = True)
+
+        # save results
+        if not os.path.exists(anal_dir):
+            os.mkdir(anal_dir)
+        hys_parms.to_csv(anal_dir + parm_file)
+    else:
+        hys_parms = pd.read_csv(anal_dir + parm_file)
