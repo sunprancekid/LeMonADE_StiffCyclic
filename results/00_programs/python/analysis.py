@@ -64,6 +64,12 @@ def exp_decay_fit(x, A, B):
 def log5_fit (x, A, B, C, D, E, F):
     return A + ((B - A) / ((1. + (C / (x - F)) ** D) ** E))
 
+# calculate normalized end to end distance according to the normalized persistence length
+# X :: persistence length normalized by total polymer length
+# Y :: end-to-end distance squared, divided by total polymer length squared
+def WLC_lp2R (x, Lo = 1.):
+    return Lo * math.sqrt((2 * (x / Lo)) - 2 * (math.pow((x / Lo), 2.)) * (1 - math.exp(-1. / (x / Lo))))
+
 #################################################
 ## USED FOR PARSING SIMULATION RESULTS FROM FILES
 #################################################
@@ -980,7 +986,7 @@ def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = F
         plt.show()
     plt.close()
 
-def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = False, logscale_y = False, show = False, xmax = None, ymax = None, ymin = None, xmin = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None, fit = False):
+def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = False, logscale_y = False, show = False, xmax = None, ymax = None, ymin = None, xmin = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None, fit = False, WLC = False, Lo = 1.):
 
     # check that the proper parameters have been passed to the method
     if df is None:
@@ -1008,8 +1014,17 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = Fa
     if dpi is None:
         dpi = default_dpi
 
+
+    # add Worm-like Chain model persistence length scaling, if called
+    if WLC:
+        x_log = [ ((2. - (-1.)) / (100 - 1)) * i + (-1.) for i in range(100) ] # calculate samples along log scale
+        x = [ math.pow(10., i) for i in x_log ] # convert to linear scale
+        y = [ WLC_lp2R(i, Lo = Lo) for i in x ]
+        plt.plot(x, y, label = "WLC Model", color = 'r')
+
     # create the data frame
     plotdf = df[df["R"] == top ]
+    # plot for each bending potential
     for p in df["pot"].unique():
         p_label = ""
         if p == "CSA":
@@ -1030,6 +1045,9 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = Fa
             y_fit = [ power_fit(i, *popt) for i in x_fit ]
             plt.plot(x_fit, y_fit, '--', label = "Power Law Fit", color = 'k')
             plt.plot([], [], ' ', label="Slope = {:.3f}".format(popt[1]))
+
+
+    # finish plot, show
     plt.legend(loc = "best")
     plt.xlim(xmin, xmax)
     plt.ylim(ymin, ymax)
@@ -1208,9 +1226,10 @@ if bendingPARM:
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
     compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png")
-    # compare the end-to-end distance scaling against the persistence length
+    compare the end-to-end distance scaling against the persistence length
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)")
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_fit.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True)
+    compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True, Lo = 300., WLC = True)
     exit()
     # compare the persistence length for CSA and CA potentials
     compare_bending_lp_pot(df = bendingparms,logscale = True, show = True, xmax = 100, ymax = 200, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_lp_BBC.png")
