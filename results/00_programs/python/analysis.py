@@ -349,6 +349,7 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
                 fig.savefig(dir + r['path'] + 'BBC.png', dpi = dpi, bbox_inches='tight')
             if show:
                 plt.show()
+            plt.close()
 
         # save persistance length calculations as dataframe to csv
         dfsave = pd.DataFrame.from_dict({'lp_t': [t], 'lp_d': [d]})
@@ -412,6 +413,7 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False)
                 fig.savefig(dir + r['path'] + 'SKQ.png', dpi = dpi, bbox_inches='tight')
             if show:
                 plt.show()
+            plt.close()
         # save fit as dataframe to csv
         dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
         dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
@@ -450,21 +452,13 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
         # write the hysteresis value and variance to a csv file
         dfsave = pd.DataFrame.from_dict({'A': [df.loc[0,'avg']], 'B': [df.loc[0,'std']]})
         dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
-        continue
 
         if plot or show:
             # collect the hysteresis data, show
             for j in range(1, n):
                 f.append(df.loc[j,'f'])
                 e.append(df.loc[j,'avg'])
-                # if math.isnan(e[-1]):
-                #     hasnan = True
-                #     break
                 s.append(df.loc[j,'std'])
-            # if hasnan:
-            #     print(simfile + " has NaN.")
-            #     os.remove(simfile)
-            continue
 
             # would be cool to circularly color code each data point
             plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
@@ -473,10 +467,11 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
             plt.ylim(-1., 1.)
             plt.suptitle("Hysteresis Force Extension")
             plt.title("({:s})".format(r['id']))
-            plt.show()
-            if i == 20:
-                print(df)
-                exit()
+            if plot:
+                plt.savefig(dir + r['path'] + 'HYS.png', dpi = dpi, bbox_inches='tight')
+            if show:
+                plt.show()
+            plt.close()
 
 
 
@@ -605,7 +600,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
 def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False):
 
     if X_col is None or Y_col is None or iso_col is None:
-        print("plot_force_extension :: Must specift columns from data frame to plot!")
+        print("plot_force_extension :: Must specify columns from data frame to plot!")
         exit()
 
     # establish image parameters based on parameters passed to method
@@ -1233,7 +1228,7 @@ if bendingPARM:
 
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
-    compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png")
+    compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png", xmax = 100.)
     # compare the end-to-end distance scaling against the persistence length
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)")
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_fit.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True)
@@ -1283,7 +1278,7 @@ if hysteresis:
         hys_parms = pd.read_csv(data_dir + parm_file)
 
         # collect hysteresis results
-        check_hys(parms = hys_parms, dir = data_dir, show = True, plot = True)
+        check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True)
 
         # add the hysteresis results to the bending parameter data frame
         hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 1, title = 'A_avg', M1 = True)
@@ -1295,3 +1290,8 @@ if hysteresis:
         hys_parms.to_csv(anal_dir + parm_file)
     else:
         hys_parms = pd.read_csv(anal_dir + parm_file)
+
+    # for each topology, plot the hysteresis for each of the bending potentials
+    for ring in hys_parms['R'].unique():
+        plotdf = hys_parms.loc[hys_parms['R'] == ring]
+        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'T', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.0001, y_max = 1., x_min = 1000, x_max = 100000000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Period ($T$)", Y_label = "Hysteresis ($A$)")
