@@ -18,13 +18,13 @@ declare -i BOOL_GEN=0
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( "TRUE" "FALSE" )
+PARM_RING=( "FALSE" )
 # array containing which potential to test
 PARM_CSA=( "FALSE" "TRUE" )
 # array containing persistance lengths to test for either potential
 # assigned persistance length is used to select bending potential strength
 # according to scaling equation unique to each potential'
-PARM_LP=( 1 3 5 7 9 11 13 15 )
+PARM_LP=( "0.1" "0.2" "0.25" "0.3" "0.4" "0.5" "0.6" "0.7" "0.75" "0.8" "0.9" "1" "1.25" "1.5" "1.75" "2.0" "2.25" "2.5" "2.75" "3" "5" "7" "9" "11" "13" "15" )
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name
@@ -37,7 +37,7 @@ declare -i N_MCS=2000000000
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=1000000000
+declare -i t_equilibrium=500000000
 
 
 ## FUNCTIONS
