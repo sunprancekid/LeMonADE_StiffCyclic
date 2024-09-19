@@ -29,12 +29,13 @@ PARM_CSA=( "TRUE" )
 PARM_LP=( 0 2 5 9 )
 # number of points sampled by hysteresis calculator
 # NOTE :: this is a fixed value in the hysteresis analyzer
-declare -i N_SAMPLE=100
+# TODO :: integrate number of sampling points in the script and the number of the executable
+declare -i N_SAMPLE=500
 # number of times that the hysteresis loops through one period once equilibrated
-declare -i N_PERIOD_EQUILIBRIUM=1000
+declare -i N_PERIOD_EQUILIBRIUM=500
 # number of times that the hysteresis loops through one period to reach equilibrium
-declare -i N_PERIOD_EQUILIBRIATE=1000
-# number of period sampling points
+declare -i N_PERIOD_EQUILIBRIATE=5
+# number of different period points to test
 declare -i N_PERIOD_VAL=30
 # maximum period value to test
 declare -i MAX_PERIOD_VAL=10000000
@@ -196,10 +197,10 @@ gen_simparm() {
 		elif [ $r -eq 1 ]; then
 			# single ring
 			R="RING"
-			R_FLAG="-r "
+			R_FLAG=" -r"
 		elif [ $r -eq 2 ]; then
 			R="RINGx2"
-			R_FLAG="-r -m 2 "
+			R_FLAG=" -r -m 2"
 		fi
 
 		for n in "${PARM_N[@]}"; do
@@ -254,7 +255,7 @@ gen_simparm() {
 						echo "set -e" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 						echo "PATH=\"./\"" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 						echo "while getopts \"p:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-						echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+						echo -e "\tcase \$option in" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 						echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 						echo -e "\t\t\tPATH=\${OPTARG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 						echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
