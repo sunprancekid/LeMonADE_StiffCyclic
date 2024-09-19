@@ -920,7 +920,7 @@ def plot_property_against_lp (df = None, R_col = None, Title = None, Y_label = N
     plt.close()
 
 # method for comparing the persistence length of two different bending potentials
-def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = False, xmax = None, ymax = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None):
+def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = False, xmin = None, xmax = None,  ymin = None, ymax = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None):
 
     # check that the proper parameters have been passed to the method
     if df is None:
@@ -941,6 +941,10 @@ def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = F
         Y_label = "Persistence Length (${{\\ell_{p}}}$)"
     if dpi is None:
         dpi = default_dpi
+    if xmin == None:
+        xmin = 1.
+    if ymin == None:
+        ymin = 1.
 
     # create the data frame
     plotdf = df[df["R"] == top ]
@@ -972,8 +976,8 @@ def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = F
             pass
         plt.scatter(bendcon, bbc_lp, label = p_label, marker = next(marks), s = 40)
     plt.legend(loc = "best")
-    plt.xlim(1, xmax)
-    plt.ylim(1, ymax)
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
     if logscale:
         plt.xscale("log")
         plt.yscale("log")
@@ -1124,7 +1128,8 @@ if scaling:
         plot_scaling (mod_parm, N_col = 'N', R_col = ['E2Etot', 'ROG'], logscale_x = True, logscale_y = True, x_min = 10, x_max = 1000, y_min = 1, y_max = 1500, X_label = "Number of Monomers ($N$)", Y_label = 'Equilibrium Property Value', data_label = ["End-to-End Distance", "Radius of Gyration"], Title = "Scaling for " + mod , saveas = save_name + "_scale.png", fit = True, error = True, color = ['tab:orange', 'tab:blue'])
 
 if forceExtension:
-    lin = ['log', 'lin']
+    # lin = ['log', 'lin']
+    lin = ['log']
     for l in lin:
         # force extension for linear data set
         job = 'forceExtension_' + l
@@ -1202,7 +1207,7 @@ if bendingPARM:
         # parse persistence length from BBC, plot if requested
         check_bbc(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False, lp_decay = True, lp_theta = True)
         # parse scattering factor slope from SKQ, plot if requested
-        check_skq(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False)
+        check_skq(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = True)
 
         ## PARSE DATA, ADD TO RESULTS DATAFRAME
         # get the end-to-end distance vector data
@@ -1228,16 +1233,16 @@ if bendingPARM:
 
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
-    compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png", xmax = 100.)
+    compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png", xmin = .1, xmax = 80.)
     # compare the end-to-end distance scaling against the persistence length
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)")
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_fit.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True)
     compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True, Lo = 300., WLC = True)
-    exit()
+
     # compare the persistence length for CSA and CA potentials
-    compare_bending_lp_pot(df = bendingparms,logscale = True, show = True, xmax = 100, ymax = 200, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_lp_BBC.png")
-    compare_propery_v_lp(df = bendingparms,  R_col = 'BVDMSE_M2', logscale = True, show = True, xmax = 100, ymax = 1., ymin = .001, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_BVD_lp_BBC.png", Y_label = "Bond Vector Distribution Mean Square Difference")
-    exit()
+    compare_bending_lp_pot(df = bendingparms,logscale = True, show = True, xmax = 100, ymax = 200, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_lp_BBC.png", dpi = 300, ymin = 0.1, xmin = 0.1)
+    compare_propery_v_lp(df = bendingparms,  R_col = 'BVDMSE_M2', logscale_x = True, logscale_y = True, show = True, xmax = 100, ymax = 1., ymin = .001, xmin = 1, lp_BBC = True, top = "CHAIN", saveas = "02_processed_data/bendingPARM/" + "CHAIN_BVD_lp_BBC.png", Y_label = "Bond Vector Distribution Mean Square Difference")
+
     # loop through each potential, type of structure (ring or chain)
     for pot in bendingparms['pot'].unique():
         for ring in bendingparms['R'].unique():
