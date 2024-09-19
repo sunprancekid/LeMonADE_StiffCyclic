@@ -473,7 +473,29 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
                 plt.show()
             plt.close()
 
+# add column to data frame which converts hysteresis simulation period frequency
+def period2freq (parms = None, period_col = None, freq_col = None, timescale = 1.):
 
+    # check for mandatory parameters
+    if parms is None:
+        print("ERROR :: period2freq :: must pass parameters as dataframe to method.")
+        exit()
+    if period_col is None:
+        print("ERROR :: period2freq :: must specify title of column containing period data as 'period_col'.")
+        exit()
+
+    # fill optional parameters
+    if freq_col is None:
+        freq_col = 'frequency'
+
+    # loop through all parameters, get period, covert to frequency
+    f = [] # empty list containing frequency
+    for i, r in parms.iterrows():
+        t = r[period_col]
+        f.append(timescale * 2. * math.pi / t)
+
+    parms[freq_col] = f
+    return parms
 
 
 #######################################
@@ -597,7 +619,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best"):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -696,7 +718,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         plt.xscale('log')
     if logscale_y:
         plt.yscale('log')
-    plt.legend(loc = 'lower right')
+    plt.legend(loc = legend_loc)
     if Title is not None:
         plt.title(Title)
     if Y_label is not None:
@@ -1282,6 +1304,8 @@ if hysteresis:
         # get simulation parameters
         hys_parms = pd.read_csv(data_dir + parm_file)
 
+        hys_parms = period2freq (parms = hys_parms, period_col = 'T', timescale = 200000)
+
         # collect hysteresis results
         check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True)
 
@@ -1299,4 +1323,4 @@ if hysteresis:
     # for each topology, plot the hysteresis for each of the bending potentials
     for ring in hys_parms['R'].unique():
         plotdf = hys_parms.loc[hys_parms['R'] == ring]
-        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'T', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.0001, y_max = 1., x_min = 1000, x_max = 100000000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Period ($T$)", Y_label = "Hysteresis ($A$)")
+        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.0001, y_max = 1., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)")
