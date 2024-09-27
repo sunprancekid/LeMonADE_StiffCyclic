@@ -249,7 +249,7 @@ gen_simparm() {
                             echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo "\${PATH}simulatePolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "\${PATH}simulateRealPolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             # add parameters to parm file
                             echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL},${fv}" >> $FILE_SIMPARM
