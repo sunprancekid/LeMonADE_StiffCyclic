@@ -140,13 +140,15 @@ gen_simparm() {
 
 
 ## OPTIONS
-while getopts "hvgsudj:l:p:" option; do
+while getopts "hvgij:p:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help
 			exit 0 ;;
         v) # exectue script verbosely
             declare -i BOOL_VERB=1 ;;
+		i) # ideal polymer simulation
+			declare -i BOOL_IDEAL=1;;
         g) # generate simulation parameters
             declare -i BOOL_GEN=1 ;;
 		j) # update job name
@@ -169,9 +171,9 @@ done
 if [ $BOOL_GEN -eq 1 ]; then
 	# check for ideal polymer simulation
 	if [[ $BOOL_IDEAL -eq 1 ]]; then
-		IDEAL_TAG="ideal"
+		IDEAL_TAG="Ideal"
 	else
-		IDEAL_TAG="real"
+		IDEAL_TAG="Real"
 	fi
 	gen_simparm
 fi
