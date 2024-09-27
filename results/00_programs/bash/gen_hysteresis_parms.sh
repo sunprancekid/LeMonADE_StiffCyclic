@@ -33,7 +33,7 @@ PARM_LP=( 0 2 5 9 )
 # TODO :: integrate number of sampling points in the script and the number of the executable
 declare -i N_SAMPLE=5000
 # number of times that the hysteresis loops through one period once equilibrated
-declare -i N_PERIOD_EQUILIBRIUM=500
+declare -i N_PERIOD_EQUILIBRIUM=5000
 # number of times that the hysteresis loops through one period to reach equilibrium
 declare -i N_PERIOD_EQUILIBRIATE=5
 # number of different period points to test
