@@ -14,6 +14,8 @@ PI_CON=$(echo "scale=10; 4*a(1)" | bc -l)
 declare -i BOOL_VERB=0
 # boolean determining if the script should generate the simulation parameters
 declare -i BOOL_GEN=0
+# boolean for ideal simulations
+declare -i BOOL_IDEAL=0
 ## PARAMETERS -- JOB
 # array containing N to test
 PARM_N=( 200 )
@@ -50,6 +52,7 @@ help () {
 	echo -e " -h           | display script options, exit 0."
 	echo -e " -v           | execute script verbosely."
 	echo -e " -g           | generate simulation parameters / directories ."
+	echo -e " -i           | simulate ideal polymers (otherwise excluded volume interactions are included)."
 	echo -e "\n"
 	echo -e " ## SCRIPT PARAMETERS ##"
 	echo -e " -j << ARG >> | specify job title (default is ${JOB})."
@@ -62,9 +65,9 @@ gen_simparm() {
 
 	## PARAMETERS
 	# path to simulation directories
-	PATH_SIMPARM="${MAINDIR}/${JOB}/"
+	PATH_SIMPARM="${MAINDIR}/${JOB}_${IDEAL_TAG}/"
 	# file to write simulation parameters to
-	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
+	FILE_SIMPARM="${PATH_SIMPARM}${JOB}_${IDEAL_TAG}.csv"
 	# header used for the simulation parameter file
 	HEADER_SIMPARM="id,path,pot,N,R,k"
 
@@ -81,11 +84,6 @@ gen_simparm() {
 	echo $HEADER_SIMPARM > $FILE_SIMPARM
 	for r in ${PARM_RING[@]}; do
 		for n in "${PARM_N[@]}"; do
-
-# 			if [ "${r}" == "TRUE" ]; then
-# 				n=$( echo "${n} * 2" | bc -l) # double number of monomers for ring so same length as chain
-# 			fi
-
 			for c in ${PARM_CSA[@]}; do
 
 				if [ "${c}" == "TRUE" ]; then
@@ -130,7 +128,7 @@ gen_simparm() {
 					else
 						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					fi
-					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}simulate${IDEAL_TAG}PolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					# add parameters to parm file
 					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING}" >> $FILE_SIMPARM
@@ -169,5 +167,11 @@ done
 ## SCRIPT
 # generate parameters save to file
 if [ $BOOL_GEN -eq 1 ]; then
+	# check for ideal polymer simulation
+	if [[ $BOOL_IDEAL -eq 1 ]]; then
+		IDEAL_TAG="ideal"
+	else
+		IDEAL_TAG="real"
+	fi
 	gen_simparm
 fi
