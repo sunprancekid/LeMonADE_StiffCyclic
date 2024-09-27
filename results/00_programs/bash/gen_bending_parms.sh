@@ -130,7 +130,7 @@ gen_simparm() {
 					else
 						echo "\${PATH}generatePolymerBFM ${C_FLAG}-n ${n} -k ${K_STRING}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					fi
-					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+					echo "\${PATH}simulatePolymerBFM -e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -q -d -c -a -g -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
 					# add parameters to parm file
 					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING}" >> $FILE_SIMPARM

@@ -217,7 +217,7 @@ gen_simparm() {
 
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n}${FORCE_FLAG}-v ${fv} -b 512"
-                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -m"
                             if [ $l != 0 ]; then
                                 # calculate the bending parameter constant from the assigned persistence length
                                 # according to the type of potential assigned to the simulation
