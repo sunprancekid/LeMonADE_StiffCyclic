@@ -7,7 +7,7 @@ using namespace std;
 #include <LeMonADE/core/Ingredients.h>
 #include <LeMonADE/feature/FeatureMoleculesIO.h>
 #include <LeMonADE/feature/FeatureAttributes.h>
-#include <LeMonADE/feature/FeatureExcludedVolumeSc.h>
+// #include <LeMonADE/feature/FeatureExcludedVolumeSc.h>
 // #include <LeMonADE/feature/FeatureLinearForce.h>
 
 #include <LeMonADE/updater/UpdaterAddLinearChains.h>
