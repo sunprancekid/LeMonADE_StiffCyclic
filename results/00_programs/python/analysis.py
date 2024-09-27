@@ -1155,7 +1155,7 @@ if forceExtension:
     for l in lin:
         # force extension for linear data set
         job = 'forceExtension_' + l
-        data_dir = "01_raw_data/" + job + "/"
+        data_dir = "01_raw_data/" + job + "_old/"
         anal_dir = "02_processed_data/" + job + "/"
         parm_file = job + ".csv"
         if update or (not os.path.exists(anal_dir + parm_file)):

@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "abcdgmqi:o:s:n:e:h"))  != EOF){
+        while ((option_char = getopt (argc, argv, "abcdgmqf:o:s:n:e:h"))  != EOF){
             switch (option_char)
             {
                 case 'a':
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
                 case 'q':
                     add_scatter_analyzer = true;
                     break;
-                case 'i':
+                case 'f':
                     infile = optarg;
                     break;
                 case 'o':
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n[-m create movie]\n[-q add static scattering factor analyzer]\n\n";
+                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-f load file containing initial coordinates] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n[-m create movie]\n[-q add static scattering factor analyzer]\n\n";
                     return 0;
             }
         }
