@@ -221,11 +221,6 @@ public:
   
   //the FeatureBoltzmann: adds a probability for the move -> done after all checks in the feature list 
   typedef LOKI_TYPELIST_1(FeatureBoltzmann) required_features_back;
-  
-  //FeatureExcludedVolumeSc needs to be in front, because the bonds have be behave well defined.
-  // TODO :: delete for ideal chain simulations
-  typedef LOKI_TYPELIST_1(FeatureExcludedVolumeSc< >) required_features_front;
-  
 
   //! Export the relevant functionality for reading bfm-files to the responsible reader object
   template<class IngredientsType>
