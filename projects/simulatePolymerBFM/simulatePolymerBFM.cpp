@@ -49,11 +49,12 @@ int main(int argc, char* argv[])
         bool add_bondvecdist_analyzer = false;
         bool add_radiusgyr_analyzer = false;
         bool add_scatter_analyzer = false;
+        bool add_movie = false;
 
         // determine if any options were passed to the executable
         // read in options by getopt
         int option_char(0);
-        while ((option_char = getopt (argc, argv, "abcdgqi:o:s:n:e:h"))  != EOF){
+        while ((option_char = getopt (argc, argv, "abcdgmqi:o:s:n:e:h"))  != EOF){
             switch (option_char)
             {
                 case 'a':
@@ -70,6 +71,9 @@ int main(int argc, char* argv[])
                     break;
                 case 'g':
                     add_radiusgyr_analyzer = true;
+                    break;
+                case 'm':
+                    add_movie = true;
                     break;
                 case 'q':
                     add_scatter_analyzer = true;
@@ -91,7 +95,7 @@ int main(int argc, char* argv[])
                     break;
                 case 'h':
                 default:
-                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n[-q add static scattering factor analyzer]\n\n";
+                    std::cerr << "\n\nUsage: ./simulatePolymerBFM << OPTIONS >> \n[-i load file] \n[-o output file] \n[-n number of total Monte Carlo steps] \n[-s save frequency (in Monte Carlo steps)]\n[-e equilibriation time]\n[-a add end-to-end analyzer]\n[-b add hysteresis analyzer]\n[-c add bond-bond correlation analyzer]\n[-d add bond vector distribution analyzer]\n[-g add radius of gyration analyzer]\n[-m create movie]\n[-q add static scattering factor analyzer]\n\n";
                     return 0;
             }
         }
@@ -144,7 +148,9 @@ int main(int argc, char* argv[])
 
         // add updaters and analyzers to task manager
         taskmanager.addUpdater(new UpdaterSimpleSimulator<IngredientsType,MoveLocalSc>(ingredients,save_interval));
-        taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
+        if (add_movie) {
+            taskmanager.addAnalyzer(new AnalyzerWriteBfmFile<IngredientsType>(outfile,ingredients,AnalyzerWriteBfmFile<IngredientsType>::APPEND));
+        }
         if (add_end2end_analyzer) {
             taskmanager.addAnalyzer(new AnalyzerEndToEndDistance<IngredientsType>(ingredients, "RE2E.dat", t_equil));
         }

@@ -16,7 +16,7 @@ declare -i BOOL_VERB=0
 declare -i BOOL_GEN=0
 ## PARAMETERS -- JOB
 # array containing N to test
-PARM_N=( 100 )
+PARM_N=( 200 )
 # array containing whether to test rings structures or not
 PARM_RING=( "FALSE" )
 # array containing which potential to test
@@ -24,7 +24,7 @@ PARM_CSA=( "FALSE" "TRUE" )
 # array containing persistance lengths to test for either potential
 # assigned persistance length is used to select bending potential strength
 # according to scaling equation unique to each potential'
-PARM_LP=( "0.1" "0.2" "0.25" "0.3" "0.4" "0.5" "0.6" "0.7" "0.75" "0.8" "0.9" "1" "1.25" "1.5" "1.75" "2.0" "2.25" "2.5" "2.75" "3" "5" "7" "9" "11" "13" "15" )
+PARM_LP=( "1" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4" "2.6" "2.8" "3" "3.2" "3.4" "3.6" "3.8" "4.0" "4.2" "4.4" "4.6" "4.8" "5" "7" "9" "11" "13" "15" "20" )
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name

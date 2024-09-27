@@ -223,6 +223,7 @@ public:
   typedef LOKI_TYPELIST_1(FeatureBoltzmann) required_features_back;
   
   //FeatureExcludedVolumeSc needs to be in front, because the bonds have be behave well defined.
+  // TODO :: delete for ideal chain simulations
   typedef LOKI_TYPELIST_1(FeatureExcludedVolumeSc< >) required_features_front;
   
 

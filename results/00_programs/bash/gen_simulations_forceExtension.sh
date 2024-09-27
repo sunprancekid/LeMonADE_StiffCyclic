@@ -25,15 +25,16 @@ declare -i BOOL_DWN=0
 declare -i BOOL_LOGSCALE=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
-declare -i N_FORCE_VAL=25
+declare -i N_FORCE_VAL=40
 # maxmium force to test
-MAX_FORCE_VAL="2"
+MAX_FORCE_VAL="1"
 # minimum force to test
 MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 2 ) # 2
+# PARM_RING=( 0 1 2 ) # 2
+PARM_RING=( 0 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
@@ -122,7 +123,7 @@ logscale () {
 
      ## SCRIPT
      # generate the parameter along scale
-     scale=$( echo "($NUM / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
+     scale=$( echo "(($NUM - 1) / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
      scale=$( echo "(${scale} * (${MAX_VAL_LOG10} - ${MIN_VAL_LOG10}) + ${MIN_VAL_LOG10})" | bc -l )
      scale=$( pow10 "$scale" )
      echo $(printf "%8.5f\n" "${scale}")
@@ -142,7 +143,7 @@ linscale() {
 
     ## SCRIPT
     # generate the parameter along the linear scale
-    scale=$( echo "($NUM / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
+    scale=$( echo "(($NUM - 1 ) / ( ${N_FORCE_VAL} - 1 ))" | bc -l )
     scale=$( echo "(${scale} * (${MAX_VAL_LIN} - ${MIN_VAL_LIN}) + ${MIN_VAL_LIN})" | bc -l )
     echo $(printf "%8.5f\n" "${scale}")
 }
@@ -194,7 +195,7 @@ gen_simparm() {
             for n in "${PARM_N[@]}"; do
 
                 for l in "${PARM_LP[@]}"; do
-                    for f in $(seq 0 $(($N_FORCE_VAL-1))); do
+                    for f in $(seq 0 $(($N_FORCE_VAL))); do
                         for fv in "${PARM_FORCEVEC[@]}"; do
 
                             # generate the simulation directory
@@ -202,15 +203,20 @@ gen_simparm() {
                             SIMDIR="${R}/${C}/N${n}/LP${l}/FV${fv}/F${f}/"
                             mkdir -p ${PATH_SIMPARM}${SIMDIR}
 
-                            # use the force integer to calculate the real force value passed to the simulation executable
-                            if [[ $BOOL_LOGSCALE -eq 1 ]]; then
-                                FORCE_VAL=$( logscale $f )
-                            else
-                                FORCE_VAL=$( linscale $f )
+                            # for the first incrementation of the force val, get the equilibrium end to end distance (i.e. no force)
+                            FORCE_FLAG=" "
+                            if [[ $f -gt 0 ]]; then
+                                # use the force integer to calculate the real force value passed to the simulation executable
+                                if [[ $BOOL_LOGSCALE -eq 1 ]]; then
+                                    FORCE_VAL=$( logscale $f )
+                                else
+                                    FORCE_VAL=$( linscale $f )
+                                fi
+                                FORCE_FLAG=" -f ${FORCE_VAL} "
                             fi
 
                             # generate flags for simulation executables
-                            GENFLAGS="-n ${n} -f ${FORCE_VAL} -v ${fv} -b 512"
+                            GENFLAGS="-n ${n}${FORCE_FLAG}-v ${fv} -b 512"
                             SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a"
                             if [ $l != 0 ]; then
                                 # calculate the bending parameter constant from the assigned persistence length

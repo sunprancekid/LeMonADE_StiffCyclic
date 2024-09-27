@@ -20,7 +20,8 @@ declare -i BOOL_OVER=0
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 2 )
+# PARM_RING=( 0 1 2 )
+PARM_RING=( 0 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistance lengths to test for either potential
@@ -30,15 +31,15 @@ PARM_LP=( 0 2 5 9 )
 # number of points sampled by hysteresis calculator
 # NOTE :: this is a fixed value in the hysteresis analyzer
 # TODO :: integrate number of sampling points in the script and the number of the executable
-declare -i N_SAMPLE=500
+declare -i N_SAMPLE=5000
 # number of times that the hysteresis loops through one period once equilibrated
 declare -i N_PERIOD_EQUILIBRIUM=500
 # number of times that the hysteresis loops through one period to reach equilibrium
 declare -i N_PERIOD_EQUILIBRIATE=5
 # number of different period points to test
-declare -i N_PERIOD_VAL=30
+declare -i N_PERIOD_VAL=40
 # maximum period value to test
-declare -i MAX_PERIOD_VAL=10000000
+declare -i MAX_PERIOD_VAL=100000000
 # minimum period value to test
 declare -i MIN_PERIOD_VAL=10000
 # force base value
@@ -216,17 +217,18 @@ gen_simparm() {
 					C_FLAG=""
 				else
 					C="CA"
-					C_FLAG="-c "
+					C_FLAG=" -c"
 				fi
 
 				for l in "${PARM_LP[@]}"; do
 
 					# use the persistence length to determine the bending constant according to the potential
 					if [ "${c}" == "TRUE" ]; then
-						K_STRING=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
+						K_STRING=$( echo $( printf "%0.4f\n" $( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )))
 					else
 						K_STRING="${l}"
 					fi
+					K_FLAG=" -k ${K_STRING}"
 
                     for p in $(seq 0 $(($N_PERIOD_VAL-1))); do
 
@@ -244,7 +246,7 @@ gen_simparm() {
 						declare -i EQUILIBRIATE=$( echo "(${PERIOD_VAL} * ${N_PERIOD_EQUILIBRIATE})" | bc -l )
 
 						# generate flags for simulation executables
-						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAG}"
+						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAG}${K_FLAG}${C_FLAG}"
 						SIMFLAGS="-e ${EQUILIBRIATE} -n ${TOTAL} -b"
 						# TODO :: add sample frequency to execute flag
 
