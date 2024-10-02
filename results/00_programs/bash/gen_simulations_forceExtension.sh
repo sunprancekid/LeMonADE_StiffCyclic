@@ -33,8 +33,7 @@ MIN_FORCE_VAL=".0001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-# PARM_RING=( 0 1 2 ) # 2
-PARM_RING=( 0 )
+PARM_RING=( 0 1 2 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
@@ -205,6 +204,7 @@ gen_simparm() {
 
                             # for the first incrementation of the force val, get the equilibrium end to end distance (i.e. no force)
                             FORCE_FLAG=" "
+                            FORCE_VAL="0"
                             if [[ $f -gt 0 ]]; then
                                 # use the force integer to calculate the real force value passed to the simulation executable
                                 if [[ $BOOL_LOGSCALE -eq 1 ]]; then

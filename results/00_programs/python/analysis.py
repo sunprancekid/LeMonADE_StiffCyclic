@@ -619,7 +619,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best"):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -650,6 +650,18 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         x = iso_df[X_col].tolist()
         y = iso_df[y_col_m].tolist()
+        # normalize the force and end-to-end distance if asked
+        if norm:
+            # get the no-force chain extension
+            idx = x.index(0.)
+            norm_val = y[idx]
+            # remove from the list
+            del x[idx]
+            del y[idx]
+            # normalize each element by the no force chain extension
+            for i in range(len(x)):
+                x[i] = x[i] * norm_val
+                y[i] = y[i] / norm_val
         if error:
             v = iso_df[Y_col + '_var'].tolist()
         if logscale_y is True:
@@ -1155,12 +1167,25 @@ if forceExtension:
     for l in lin:
         # force extension for linear data set
         job = 'forceExtension_' + l
-        data_dir = "01_raw_data/" + job + "_old/"
+        data_dir = "01_raw_data/" + job + "/"
         anal_dir = "02_processed_data/" + job + "/"
         parm_file = job + ".csv"
         if update or (not os.path.exists(anal_dir + parm_file)):
             # get simulation parameters
             FE_parms = pd.read_csv(data_dir + parm_file)
+            # loop through parameters, relabel ring format
+            top = []
+            for i, r in FE_parms.iterrows():
+                if r['R'] == 0:
+                    top.append("CHAIN")
+                elif r['R'] == 1:
+                    top.append("RING")
+                elif r['R'] == 2:
+                    top.append("RINGx2")
+                else:
+                    print("forceExtension :: ERROR :: Unknown top code " + r['R'] + ".")
+                    exit()
+            FE_parms['top'] = top
             # average simulation properties
             FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
             # save results
@@ -1170,35 +1195,39 @@ if forceExtension:
         else:
             FE_parms = pd.read_csv(anal_dir + parm_file)
 
-        # perform analysis for each unqiue set of 'modules'
+        ## MAKE GRAPHS
+        # perform analysis for each unique set of bending parameters
+        for k in FE_parms['K'].unique():
+            for pot in FE_parms['pot'].unique():
+                for N in FE_parms['N'].unique():
+                    # get the unique df
+                    k_df = FE_parms[(FE_parms['K'] == k) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
+                    save_name = anal_dir + f"FE_k{k:0.2f}_{pot}_N{N}"
+                    # master plot
+                    plot_force_extension (k_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'top', isolabel = '{:s}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True) # saveas = save_name + '_norm_data.png',
+
+        # perform analysis for each unqiue set of 'topologies'
         # loop through each topology, bending potential, bending potential strength, and chain length
-        for top in FE_parms['R'].unique():
-            if top == 0:
-                top_NAME = "CHAIN"
-                # continue
-            elif top == 1:
-                top_NAME = "RING"
-            elif top == 2:
-                top_NAME = "RINGx2"
-            else:
-                print(f"forceExtension :: unknown TOP code {top}")
-                exit()
-            # TODO include force vector variance
+        for top in FE_parms['top'].unique():
             for pot in FE_parms['pot'].unique():
                 for N in FE_parms['N'].unique():
 
                     # establish data and name
-                    top_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
+                    top_df = FE_parms[(FE_parms['top'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
                     if top_df.empty:
+                        # if the data frame is empty, skip
                         continue
-                    save_name = anal_dir + f"FE_{top_NAME}_{pot}_N{N}"
+                    save_name = anal_dir + f"FE_{top}_{pot}_N{N}"
 
                     # plot force extension data
                     if l == 'lin':
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
                     elif l == 'log':
+                        # regular plot
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data.png', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = True)
-                        # exit()
+
+                        # master plot
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True)
 
                     continue
                     # plot error in bond vector distribution against force for all bending constants
@@ -1219,40 +1248,58 @@ if forceExtension:
                         # plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
 
 if bendingPARM:
-    if update or (not os.path.exists("02_processed_data/bendingPARM/bendingPARM.csv")):
-        # load parameters, add property calculations from simulations
-        bendingparms = pd.read_csv(bendingPARM_parmcsv)
+    tag = ['Ideal', 'Real']
+    for t in tag:
+        # force extension for linear data set
+        job = 'bendingPARM_' + t
+        data_dir = "01_raw_data/" + job + "/"
+        anal_dir = "02_processed_data/" + job + "/"
+        parm_file = job + ".csv"
 
-        ## PROCESS DATA
-        # calculate the bvd error, plot difference if requested
-        check_bvd(parms = bendingparms, dir = '01_raw_data/bendingPARM/', plot = False)
-        # parse persistence length from BBC, plot if requested
-        check_bbc(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = False, lp_decay = True, lp_theta = True)
-        # parse scattering factor slope from SKQ, plot if requested
-        check_skq(parms = bendingparms, dir = '01_raw_data/bendingPARM/', show = False, plot = True)
+        if update or (not os.path.exists(anal_dir + parm_file)):
+            # load parameters, add property calculations from simulations
+            bendingparms = pd.read_csv(data_dir + parm_file)
 
-        ## PARSE DATA, ADD TO RESULTS DATAFRAME
-        # get the end-to-end distance vector data
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
-        # get radius of gyration data
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, bootstrapping = False, tabsep = True) # don't bootsrap ROG data, does not fit normal distribution
-        # get the BVD error
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
-        # get persistence length
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.csv', col = 2, title = 'lp_d', M1 = True)
-        # get the scattering factor slope
-        bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'SKQ.csv', col = 2, title = 'm_sq', M1 = True)
-        # collect the bond-bond correlation at different bond distances
-        for i in range(30):
-            bendingparms = parse_results(parms = bendingparms, dir = '01_raw_data/bendingPARM/', simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
+            ## PROCESS DATA
+            # calculate the bvd error, plot difference if requested
+            check_bvd(parms = bendingparms, dir = data_dir, plot = False)
+            # parse persistence length from BBC, plot if requested
+            check_bbc(parms = bendingparms, dir = data_dir, show = False, plot = True, lp_decay = True, lp_theta = True)
+            # parse scattering factor slope from SKQ, plot if requested
+            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True)
 
-        # save results
-        if not os.path.exists("02_processed_data/bendingPARM/"):
-            os.mkdir("02_processed_data/bendingPARM/")
-        bendingparms.to_csv("02_processed_data/bendingPARM/bendingPARM.csv")
-    else:
-        bendingparms = pd.read_csv("02_processed_data/bendingPARM/bendingPARM.csv")
+            ## PARSE DATA, ADD TO RESULTS DATAFRAME
+            # get the end-to-end distance vector data
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+            # get radius of gyration data
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'ROG.dat', col = 4, title = 'ROG', M1 = True, bootstrapping = False, tabsep = True) # don't bootsrap ROG data, does not fit normal distribution
+            # get the BVD error
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'BVD.csv', col = 3, title = 'BVDMSE', M1 = True, M2 = True)
+            # get persistence length
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'BBC.csv', col = 2, title = 'lp_d', M1 = True)
+            # get the scattering factor slope
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'SKQ.csv', col = 2, title = 'm_sq', M1 = True)
+            # collect the bond-bond correlation at different bond distances
+            for i in range(30):
+                bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
 
+            # save results
+            if not os.path.exists(anal_dir):
+                os.mkdir(anal_dir)
+            bendingparms.to_csv(anal_dir + parm_file)
+        else:
+            bendingparms = pd.read_csv(anal_dir + parm_file)
+
+        ## PLOT RESULTS
+        if t == "Ideal":
+            # plot the end to end distance against the measured persistence length
+            compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = .01, lp_BBC = True, top = "CHAIN", saveas = anal_dir + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = False, Lo = 600., WLC = True)
+        elif t == "Real":
+            pass
+        else:
+            print("ERROR :: bendingPARM :: Unknown tag " + t + ".")
+
+    exit()
     ## PLOT RESULTS
     # plot the rod-like transition for chains with either CA or CSA potentials
     compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor Slope", saveas = "02_processed_data/bendingPARM/" + "CHAIN_SKQ_lp.png", xmin = .1, xmax = 80.)
