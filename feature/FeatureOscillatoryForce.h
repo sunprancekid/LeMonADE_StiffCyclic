@@ -46,8 +46,8 @@
 /*****************************************************************************/
 /**
  * @file
- * @date   2021/03/18
- * @author Toni & Bodonki
+ * @date   2024/07/04
+ * @author Matthew Dorsey
  *
  * @class FeatureOscillatoryForce
  * @brief This Feature applies a force on certain monomers.
