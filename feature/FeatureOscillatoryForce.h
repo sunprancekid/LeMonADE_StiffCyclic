@@ -36,8 +36,12 @@
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureBoltzmann.h>
 #include <LeMonADE/io/FileImport.h>
-#include <boost/lexical_cast.hpp> // used to parse 64 bit integers
-#include <bits/stdc++.h> // used to parse comma seperated force vector
+// used to parse 64 bit itneger
+#include <iostream>
+#include <string>
+#include <cstdlib>
+// used to parse comma seperated force vector
+#include <bits/stdc++.h>
 
 /*****************************************************************************/
 /**
@@ -441,13 +445,18 @@ void ReadForceOscillationPeriod<IngredientsType>::execute()
 {
     std::cout<<"reading oscillationPeriod...";
 
-    double p = 0.0;
+    uint64_t p = 2000000;
     IngredientsType& ingredients=this->getDestination();
     std::istream& source=this->getInputStream();
 
+    // parse 64 bit integer
+    // std::string value= "14443434343434343434";
+    // uint64_t a;
+    char* end;
     std::string line;
     getline(source,line);
-    p = atoi(line.c_str());
+    p = strtoull( line.c_str(), &end, 10 );
+    // p = atoi(line.c_str());
     std::cout << "#!force_oscillation_period=" << (p) << std::endl;
 
     ingredients.setForceOscillationPeriod(p);
