@@ -213,7 +213,8 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
             norm_length = (double) num_monomers / 2.;
         }
     }
-    norm_length = 3. * norm_length;
+    // norm_length = 3. * norm_length;
+    norm_length = 1.;
 
     // initialize the histograms / arrays that collect hysteresis statistics
     // arrays that collect averaged data
