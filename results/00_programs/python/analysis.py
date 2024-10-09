@@ -44,13 +44,21 @@ max_pincus_force = 1.
 ## USED FOR EQUATION FITTING
 ############################
 
+# converts linear scale to log scale
+def lin2log(x, base):
+    return math.log(x) / math.log(base)
+
+# converts log scale to linear scale
+def log2lin (x, base):
+    return math.pow(base, x)
+
 # model equation for power law fitting
 def power_fit(x, A, B):
     return A * (x ** B)
 
 # model equation for power law fitting in the hookean regime
 def power_fit_hook(x, A):
-    return A * (x ** 1.)
+    return power_fit(x, A, 1.)
 
 # model equation for fitting data to a line
 def linear_fit (x, m, b):
@@ -619,7 +627,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -629,10 +637,15 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     if dpi is None:
         dpi = default_dpi
 
+    # booleans for documenting if the pincus regime and the hookean regime have been added to the figures
+    added_pinus = False
+    added_hookean = False
+
     # parse data from data frame, plot
     if isovals is None:
         isovals = parms[iso_col].unique()
     for iso in isovals:
+
         y_col_m = ""
         if M2:
             y_col_m = Y_col + '_M2'
@@ -698,15 +711,68 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
                 y_fit[i] = math.pow(10, y_fit[i])
 
         # plot the data
+        label = isolabel.format(iso)
+        if norm:
+            label += " (X = {:.02f})".format(norm_val)
         if flip_axis:
-            line = plt.plot(y, x, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
+            line = plt.plot(y, x, label = label, fillstyle = 'full', marker = next(marks), ls = ' ')
         else:
-            line = plt.plot(x, y, label = isolabel.format(iso), fillstyle = 'full', marker = next(marks), ls = ' ')
+            line = plt.plot(x, y, label = label, fillstyle = 'full', marker = next(marks), ls = ' ')
 
         # plot the slope if requested
         if plot_slope:
             # plot the slope of the line fit to the simulation data
             plt.plot(x_fit, y_fit, '--', label = "m = {:.03f}".format(popt[0]), color = line[-1].get_color())
+
+        # add pincus regime to graph
+        if norm and pincus and (not added_pinus):
+            # plot a line with a slope of 2/3
+            # plot the line tangent to one point within the pincus regime
+            # find one point within the pincus regime from the data
+            for i in range(len(x)):
+                if x[i] > 2.:
+                    break
+            # use the data point to identify the y-intercept of the line, on log scale
+            x_log = lin2log(x[i], 10.)
+            y_log = lin2log(y[i], 10.)
+            A = math.pow(10., y_log - (2. / 3.) * x_log)
+            # create that data points on a linear scale
+            x_pincus = np.linspace(0.5, 1000, 20)
+            y_pincus = [ power_fit(i, A, 2./3.) for i in x_pincus ]
+            # plot
+            # if norm:
+            #     plt.plot(x_pincus, y_pincus, '--', color = 'k')
+            # else:
+            #     plt.plot(x_pincus, y_pincus, '--', color = line[-1].get_color())
+            added_pinus = True
+
+        if norm and hookean and (not added_hookean):
+            # plot a line with a slope of 1
+            # plot the line tangent to one point within the hookean regime
+            # find one point within the hookea regime from the data
+            for i in range(len(x)):
+                if x[i] > 0.5:
+                    break
+            # use the data point to identify the y_intercept of the line, on log scale
+            x_log = lin2log(x[i], 10.)
+            y_log = lin2log(y[i], 10.)
+            A = math.pow(10., y_log - (1.) * x_log)
+            # create data points on a linear scale
+            x_hookean = np.linspace(0.0001, 5., 20)
+            y_hookean = [ power_fit_hook(i, A) for i in x_hookean ]
+            # plot
+            # if norm:
+            #     plt.plot(x_hookean, y_hookean, ls = ':', color = 'k')
+            # else:
+            #     plt.plot(x_hookean, y_hookean, ls = ':', color = line[-1].get_color)
+            added_hookean = True
+
+    # if the pincus regime has been add, include a label
+    if added_pinus:
+        plt.plot(x_pincus, y_pincus, ls = '--', color = 'k', label = "Pincus Regime ($R \\propto f^{{2/3}}$)")
+    # add hookean regmie to graph
+    if added_hookean:
+        plt.plot(x_hookean, y_hookean, ls = ':', color = 'k', label = "Hookean Regime ($R \\propto f$)")
 
     if vertbar is True:
         if flip_axis:
@@ -1058,7 +1124,7 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = Fa
 
     # add Worm-like Chain model persistence length scaling, if called
     if WLC:
-        x_log = [ ((2. - (-1.)) / (100 - 1)) * i + (-1.) for i in range(100) ] # calculate samples along log scale
+        x_log = [ ((10. - (-1.)) / (100 - 1)) * i + (-1.) for i in range(100) ] # calculate samples along log scale
         x = [ math.pow(10., i) for i in x_log ] # convert to linear scale
         y = [ WLC_lp2R(i, Lo = Lo) for i in x ]
         plt.plot(x, y, label = "WLC Model", color = 'r')
@@ -1081,7 +1147,18 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = Fa
         plt.scatter(bbc_lp, potdf[R_col].tolist(), label = p_label, marker = next(marks), s = 40)
         if fit and p == "CSA":
             # fit data to power law equation, determine parameters
-            popt, pcov = curve_fit(power_fit, bbc_lp, potdf[R_col].tolist())
+            l = potdf[R_col].tolist()
+            x_slope = []
+            y_slope = []
+            for i in range(len(bbc_lp)):
+                if bbc_lp[i] > 1. and bbc_lp[i] < 3.:
+                    x_slope.append(bbc_lp[i])
+                    y_slope.append(l[i])
+            popt, pcov = curve_fit(power_fit, x_slope, y_slope)
+            # x_fit = []
+            # for i in range(len(bbc_lp)):
+            #     if bbc_lp[i] > 1. and bbc_lp[i] < 3.:
+            #         x_fit.append(bbc_lp[i])
             x_fit = [ ((max(bbc_lp) - min(bbc_lp)) / (100 - 1)) * i + min(bbc_lp) for i in range(100)]
             y_fit = [ power_fit(i, *popt) for i in x_fit ]
             plt.plot(x_fit, y_fit, '--', label = "Power Law Fit", color = 'k')
@@ -1204,7 +1281,7 @@ if forceExtension:
                     k_df = FE_parms[(FE_parms['K'] == k) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
                     save_name = anal_dir + f"FE_k{k:0.2f}_{pot}_N{N}"
                     # master plot
-                    plot_force_extension (k_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'top', isolabel = '{:s}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True) # saveas = save_name + '_norm_data.png',
+                    plot_force_extension (k_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'top', isolabel = '{:s}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True) # saveas = save_name + '_norm_data.png',
 
         # perform analysis for each unqiue set of 'topologies'
         # loop through each topology, bending potential, bending potential strength, and chain length
@@ -1224,10 +1301,10 @@ if forceExtension:
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
                     elif l == 'log':
                         # regular plot
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data.png', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = True)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data.png', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = False)
 
                         # master plot
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True)
 
                     continue
                     # plot error in bond vector distribution against force for all bending constants
@@ -1293,7 +1370,8 @@ if bendingPARM:
         ## PLOT RESULTS
         if t == "Ideal":
             # plot the end to end distance against the measured persistence length
-            compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 100, ymax = 300, ymin = 10, xmin = .01, lp_BBC = True, top = "CHAIN", saveas = anal_dir + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = False, Lo = 600., WLC = True)
+            compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 1000, ymax = 1000, ymin = 30, xmin = .1, lp_BBC = True, top = "CHAIN", saveas = anal_dir + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True, Lo = 600., WLC = True)
+            compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor", saveas = anal_dir + "CHAIN_SKQ_lp.png", xmin = .1, xmax = 200.)
         elif t == "Real":
             pass
         else:

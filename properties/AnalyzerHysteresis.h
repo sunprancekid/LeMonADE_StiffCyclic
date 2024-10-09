@@ -110,7 +110,7 @@ private:
     //! amplitude of oscillatory force
     double hys_amplitude;
     //! intermediate array that collects the average end to end distance over one period
-    std::vector<double> single_hys_loop;
+    std::vector<double> single_hys_loop_distance;
     //! array of histogram statistics for each point sampled along hysteresis curve over course of simulation
     std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
     //! collects statistics for hysteresis integral, averaged for each loop
@@ -215,7 +215,9 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
     norm_length = 3. * norm_length;
 
     // initialize the histograms / arrays that collect hysteresis statistics
-    single_hys_loop.resize(numPeriodPoints);
+    // arrays that collect averaged data
+    single_hys_loop_distance.resize(numPeriodPoints);
+    single_hys_loop_force.resize(numPeriodPoints);
     averaged_hys_loop.resize(numPeriodPoints);
     for (int n; n < averaged_hys_loop.size(); n++) {
         // initialize each of the arrays for each of the points along the period that will be sampled
@@ -224,6 +226,12 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
         // one more histogram represents hysteresis which is calculated after the completion of each loop
         single_hys_loop[n] = 0.;
     }
+
+    // TEST test for collecting all data
+    // initialize file that will contain all of the
+    // arrays that collect all data
+    // actual_force
+    // actual_distance
     initialized=true;
 }
 
@@ -267,7 +275,9 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
         }
 
         // accumulate the length according to the current phase of oscillation
-        single_hys_loop[period_idx] = len;
+        single_hys_loop_distance[period_idx] = len; // actual end-to-end distance relative to force vector
+        single_hys_loop_force[period_idx] = ingredients.getForceNow(ingredients.getMolecules().getAge()); // actual force experienced by polymer
+        // TODO add modelo operator of force period to getForceNow calculations
 
         // if a complete period cycle has been reached
         if (period_idx == (numPeriodPoints - 1)) {
@@ -291,8 +301,8 @@ bool AnalyzerHysteresis<IngredientsType>::execute() {
 
             // accumulate the loop in the histogram for hysteresis, reset and repeat
             for (int n; n < averaged_hys_loop.size(); n++) {
-                averaged_hys_loop[n].addValue(single_hys_loop[n], 1.); // add the value to the histogram tracking statistics around the hysteresis loop
-                single_hys_loop[n] = 0.; // reset for the next loop
+                averaged_hys_loop[n].addValue(single_hys_loop_distance[n], 1.); // add the value to the histogram tracking statistics around the hysteresis loop
+                single_hys_loop_distance[n] = 0.; // reset for the next loop
             }
         }
     }
@@ -322,7 +332,7 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
  
     double hysteresis_integral = 0.0;
  
-    for(size_t i = 0; i < single_hys_loop.size(); i++) {
+    for(size_t i = 0; i < single_hys_loop_distance.size(); i++) {
         int i_1 = i;
         int i_2 = i + 1;
         if (i_2 == numPeriodPoints) {i_2 = 0;}
@@ -330,8 +340,8 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
         // double t_2 = i_2 * stepSize;
         double F_1 = ingredients.getForceNow(i_1 * stepSize);
         double F_2 = ingredients.getForceNow(i_2 * stepSize);
-        // hysteresis_integral += single_hys_loop.at(i) * omega * hys_amplitude * std::cos(omega * i * stepSize) * stepSize;
-        hysteresis_integral += 0.5 * (single_hys_loop[i_2] - single_hys_loop[i_1]) * (F_2 - F_1);
+        // hysteresis_integral += single_hys_loop_distance.at(i) * omega * hys_amplitude * std::cos(omega * i * stepSize) * stepSize;
+        hysteresis_integral += 0.5 * (single_hys_loop_distance[i_2] - single_hys_loop_distance[i_1]) * (F_2 - F_1);
     }
  
     // The first value counts twice (2*0.5=1)at this is Rxx at t%T=0 in the cycle

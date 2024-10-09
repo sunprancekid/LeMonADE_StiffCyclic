@@ -26,7 +26,7 @@ PARM_CSA=( "FALSE" "TRUE" )
 # array containing persistance lengths to test for either potential
 # assigned persistance length is used to select bending potential strength
 # according to scaling equation unique to each potential'
-PARM_LP=( "1" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4" "2.6" "2.8" "3" "3.2" "3.4" "3.6" "3.8" "4.0" "4.2" "4.4" "4.6" "4.8" "5" "7" "9" "11" "13" "15" "20" )
+PARM_LP=( "1" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4" "2.6" "2.8" "3" "3.2" "3.4" "3.6" "3.8" "4.0" "4.2" "4.4" "4.6" "4.8" "5" "7" "9" "11" "13" "15" "20" "25" "30" "35" "40" "45" "50" "55" "60" "65" "70" "80" "100" "150" "300" )
 # default directory for upload / download, generating parameters
 MAINDIR="01_raw_data"
 # default job name
