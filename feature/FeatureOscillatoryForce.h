@@ -36,6 +36,7 @@
 #include <LeMonADE/feature/FeatureAttributes.h>
 #include <LeMonADE/feature/FeatureBoltzmann.h>
 #include <LeMonADE/io/FileImport.h>
+#include <boost/lexical_cast.hpp> // used to parse 64 bit integers
 #include <bits/stdc++.h> // used to parse comma seperated force vector
 
 /*****************************************************************************/
@@ -121,11 +122,11 @@ public:
     //! get boolean determining whether the force oscillation is on
     bool isForceOscillationOn() const { return OscillatoryForceOn;}
 
-    //! double used to set the period that the oscillatory force changes
-    void setForceOscillationPeriod(double p) { OscillationPeriod = p; }
+    //! 64 bit integer used to set the period that the oscillatory force changes
+    void setForceOscillationPeriod(uint64_t p) { OscillationPeriod = p; }
 
-    //! get oscillation period
-    int getForceOscillationPeriod () const { return OscillationPeriod; }
+    //! get oscillation period as 64 bit integer
+    uint64_t getForceOscillationPeriod () const { return OscillationPeriod; }
 
     //! set force oscillation amplitude
     void setForceOscillationAmplitude (double a) { OscillationAmplitude = a; }
@@ -162,7 +163,7 @@ private:
     //! boolean determining if force oscillation is on or off
     bool OscillatoryForceOn;
     //! double representing oscillatory force period (MCS)
-    int OscillationPeriod;
+    uint64_t OscillationPeriod;
     //! double represnting force amplitude
     double OscillationAmplitude;
     //!probability
@@ -196,7 +197,7 @@ bool FeatureOscillatoryForce::checkMove(const IngredientsType& ingredients, Move
         // negative force applied on attribute 5 in negative forceVec direction
         // NOTE :: algorithm assumes force vector is positive for all cartessian coordinates (this would be a problem for a rotating force vector)
 
-        double f = getForceNow(ingredients.getMolecules().getAge());
+        double f = getForceNow(ingredients.getMolecules().getAge() % OscillationPeriod);
 
         if ( dx == 1 ) {
             // positive x-direction

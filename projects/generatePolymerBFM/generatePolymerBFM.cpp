@@ -2,8 +2,7 @@
 #include <string>
 #include <unistd.h> //for getopt
 #include <cstring>
-#include <boost/lexical_cast.hpp>
-#include <sstream>
+#include <cstdint> // used to parse 64 bit integers
 using namespace std;
 
 #include <LeMonADE/core/Ingredients.h>
@@ -46,7 +45,7 @@ int main(int argc, char* argv[])
         bool bendingPot_CA = false; // determines if a CA potential should be used for bending potential interactions (default is CSA)
         std::string forceVecString = "100";
         bool forceOscillation = false;
-        uint64_t forceOscPeriod = 1.;
+        uint64_t forceOscPeriod = 2000000.;
         double forceOscAmplitude = 1.;
 
         // determine if any options were passed to the executable
@@ -90,7 +89,8 @@ int main(int argc, char* argv[])
                     forceOscillation = true;
                     break;
                 case 'p':
-                    forceOscPeriod = boost::lexical_cast<uint64_t>(optarg);
+                    std::istringstream iss(optarg);
+                    iss >> forceOscPeriod();
                     forceOscillation = true;
                     break;
                 case 'h':
@@ -99,19 +99,6 @@ int main(int argc, char* argv[])
                     return 0;
             }
         }
-
-        // test boost, reading 64 bit integers
-        uint64_t test;
-        test = boost::lexical_cast<uint64_t>("594348534879");
-
-        std::istringstream ss("48543954385");
-        if (forceOscPeriod > test){
-            std::cout << "Period: " << std::to_string(forceOscPeriod) << " is greater than " << std::to_string(test) << std::endl;
-        } else {
-            std::cout << "Period: " << std::to_string(forceOscPeriod) << " is less than " << std::to_string(test) << std::endl;
-        }
-        exit(0);
-
 
         // generate ingredients
         typedef LOKI_TYPELIST_5(FeatureMoleculesIO,
