@@ -237,7 +237,7 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
     for (int n; n < avg_hys_loop_forc.size(); n++) {
         // initilize each histogram with the minimum and maximum forces that the chain can experience
         // (determined by amplitude)
-        avg_hys_loop_forc[n] = HistogramGeneralStatistik1D(-hys_amplitude - tolerance, hys_amplitude + tolerance, hys_hist_bins)
+        avg_hys_loop_forc[n] = HistogramGeneralStatistik1D(-hys_amplitude - TOL, hys_amplitude + TOL, hys_hist_bins);
     }
 
     initialized=true;
@@ -399,7 +399,7 @@ void AnalyzerHysteresis<IngredientsType>::cleanup() {
 
     // print results into a file
     for (int n = 0; n < avg_hys_loop_dist.size(); n++) {
-        file << (n+1) << "," << ingredients.getForceNow(n * step_interval) << "," << single_hys_loop_force[n].getHistAverage() << "," << single_hys_loop_force[n].getHistSTD() << "," << avg_hys_loop_dist[n].getHistAverage() << "," << avg_hys_loop_dist[n].getHistSTD() << "," << avg_hys_loop_dist[n].getNCounts() << std::endl;
+        file << (n+1) << "," << ingredients.getForceNow(n * step_interval) << "," << avg_hys_loop_forc[n].getHistAverage() << "," << avg_hys_loop_forc[n].getHistSTD() << "," << avg_hys_loop_dist[n].getHistAverage() << "," << avg_hys_loop_dist[n].getHistSTD() << "," << avg_hys_loop_dist[n].getNCounts() << std::endl;
     }
     file.close();
 
