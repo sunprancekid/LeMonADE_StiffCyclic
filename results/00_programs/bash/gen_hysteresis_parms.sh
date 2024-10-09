@@ -31,9 +31,9 @@ PARM_LP=( 0 2 5 9 )
 # number of points sampled by hysteresis calculator
 # NOTE :: this is a fixed value in the hysteresis analyzer
 # TODO :: integrate number of sampling points in the script and the number of the executable
-declare -i N_SAMPLE=5000
+declare -i N_SAMPLE=500
 # number of times that the hysteresis loops through one period once equilibrated
-declare -i N_PERIOD_EQUILIBRIUM=5000
+declare -i N_PERIOD_EQUILIBRIUM=45
 # number of times that the hysteresis loops through one period to reach equilibrium
 declare -i N_PERIOD_EQUILIBRIATE=5
 # number of different period points to test

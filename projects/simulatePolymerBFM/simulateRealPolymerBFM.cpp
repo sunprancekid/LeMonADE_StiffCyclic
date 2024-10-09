@@ -44,7 +44,8 @@ int main(int argc, char* argv[])
         double t_equil = 0; // simulation time before which properties are not calculated
         bool add_end2end_analyzer = false;
         bool add_hysteresis_analyzer = false;
-        int num_hysanal_points = 5000;
+        // TODO :: remove hard code for number of hysteresis analysis points
+        int num_hysanal_points = 500;
         bool add_bondbondcorr_analyzer = false;
         bool add_bondvecdist_analyzer = false;
         bool add_radiusgyr_analyzer = false;
