@@ -2,7 +2,7 @@
 #include <string>
 #include <unistd.h> //for getopt
 #include <cstring>
-#include <cstdint> // used to parse 64 bit integers
+#include <cstdlib>
 using namespace std;
 
 #include <LeMonADE/core/Ingredients.h>
@@ -47,6 +47,10 @@ int main(int argc, char* argv[])
         bool forceOscillation = false;
         uint64_t forceOscPeriod = 2000000.;
         double forceOscAmplitude = 1.;
+        // helper
+        std::string value;
+        char* end;
+
 
         // determine if any options were passed to the executable
         // read in options by getopt
@@ -89,8 +93,8 @@ int main(int argc, char* argv[])
                     forceOscillation = true;
                     break;
                 case 'p':
-                    std::istringstream iss(optarg);
-                    iss >> forceOscPeriod();
+                    value=optarg;
+                    forceOscPeriod = strtoull( value.c_str(), &end, 10 );
                     forceOscillation = true;
                     break;
                 case 'h':
