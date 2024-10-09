@@ -111,6 +111,7 @@ private:
     double hys_amplitude;
     //! intermediate array that collects the average end to end distance over one period
     std::vector<double> single_hys_loop_distance;
+    std::vector<double> single_hys_loop_force;
     //! array of histogram statistics for each point sampled along hysteresis curve over course of simulation
     std::vector<HistogramGeneralStatistik1D> averaged_hys_loop;
     //! collects statistics for hysteresis integral, averaged for each loop
@@ -224,7 +225,7 @@ void AnalyzerHysteresis<IngredientsType>::initialize() {
         // one histogram array represents the averaged end-to-end distance at each time point along the hystersis (oscillation) loop
         averaged_hys_loop[n] = HistogramGeneralStatistik1D(hys_hist_min_value, hys_hist_max_value, hys_hist_bins);
         // one more histogram represents hysteresis which is calculated after the completion of each loop
-        single_hys_loop[n] = 0.;
+        // single_hys_loop[n] = 0.;
     }
 
     // TEST test for collecting all data
