@@ -427,7 +427,7 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False)
         dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
 
 # method that collects the hysteresis area, plots hysteresis curve
-def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False):
+def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False, check = True):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -447,36 +447,69 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False)
         simfile = dir + r['path'] + 'HYS.dat'
         if not os.path.exists(simfile):
             continue
-
         # parse data, hysteresis curve
         df = pd.read_csv(simfile)
         # TODO :: parse the hysteresis area (if nan, delete the file so that it can be rerun)
         n = len(df.index)
-        f = [ ] # collects the force values associated with the hysteresis
-        e = [ ] # collects the extension values associated with the hysteresis
-        s = [ ] # collects the standard deviation values associated with hysteresis
+        f_e = [ ] # collects the expected force values associated with the hysteresis
+        f_a = [ ] # colelcts the averaged force values associated with the hysteresis
+        f_s = [ ] # collects the standard deviation of force values associated with hysteresis
+        r_a = [ ] # collects the averaged end to end distance values associated with the hysteresis
+        r_s = [ ] # collects the standard deviation of the end to end distance associated with hysteresis
         hasnan = False
 
+        if 'f_exp' not in df:
+            # old hys file that has not been updated yet
+            continue
+        print(r['path'])
+        # collect the values from the dataframe
+        for j in range(1, n):
+            f_e.append(df.loc[j,'f_exp'])
+            f_a.append(df.loc[j,'f_avg'])
+            f_s.append(df.loc[j,'f_std'])
+            r_a.append(df.loc[j,'E2E_avg'])
+            r_s.append(df.loc[j,'E2E_std'])
+
         # write the hysteresis value and variance to a csv file
-        dfsave = pd.DataFrame.from_dict({'A': [df.loc[0,'avg']], 'B': [df.loc[0,'std']]})
+        dfsave = pd.DataFrame.from_dict({'A': [df.loc[0,'E2E_avg']], 'B': [df.loc[0,'E2E_std']]})
         dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
 
-        if plot or show:
-            # collect the hysteresis data, show
-            for j in range(1, n):
-                f.append(df.loc[j,'f'])
-                e.append(df.loc[j,'avg'])
-                s.append(df.loc[j,'std'])
+        if check and (plot or show):
+            # check the correlation between the expected and measured forces
+            # plt.errorbar(f_e, f_a, yerr = f_s, fmt = '.', ms = 5, lolims = True, uplims = True)
+            plt.scatter(f_e, f_a, s = 2, color = 'r', label = "Actual Correlation")
+            plt.xlabel("Expected Force ($f$)")
+            plt.ylabel("Measured Force ($f$)")
+            if max(f_e) > max(f_a):
+                maxy = max(f_e)
+            else:
+                maxy = max(f_a)
+            if min(f_e) < min(f_a):
+                miny = min(f_e)
+            else:
+                miny = min(f_a)
+            # plt.plot([min(f_e), max(f_e)], [min(f_e), max(f_e)], '--', linewidth=2, color = 'k', label = "Expected Correlation")
+            plt.ylim(miny*1.1, maxy*1.1)
+            plt.legend()
+            plt.suptitle("Correlaton between Measured and Expected Force")
+            plt.title("({:s})".format(r['id']))
+            if plot:
+                plt.savefig(dir + r['path'] + 'HYS_check.png', dpi = dpi, bbox_inches='tight')
+            if show:
+                plt.show()
+            plt.close()
 
+        if plot or show:
+            # plot end to end distance against averaged force
             # would be cool to circularly color code each data point
-            plt.errorbar(f, e, yerr = s, fmt = 'o', lolims = True, uplims = True)
+            plt.errorbar(f_a, r_a, yerr = r_s, fmt = 'o', lolims = True, uplims = True)
             plt.xlabel("Force ($f$)")
             plt.ylabel("Extension ($R$)")
             plt.ylim(-1., 1.)
             plt.suptitle("Hysteresis Force Extension")
             plt.title("({:s})".format(r['id']))
             if plot:
-                plt.savefig(dir + r['path'] + 'HYS.png', dpi = dpi, bbox_inches='tight')
+                plt.savefig(dir + r['path'] + 'HYS2.png', dpi = dpi, bbox_inches='tight')
             if show:
                 plt.show()
             plt.close()
@@ -627,7 +660,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False, timescale = 1.):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -663,6 +696,8 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         x = iso_df[X_col].tolist()
         y = iso_df[y_col_m].tolist()
+        for i in range(len(x)):
+            x[i] = x[i] * timescale
         # normalize the force and end-to-end distance if asked
         if norm:
             # get the no-force chain extension
@@ -1429,10 +1464,10 @@ if hysteresis:
         # get simulation parameters
         hys_parms = pd.read_csv(data_dir + parm_file)
 
-        hys_parms = period2freq (parms = hys_parms, period_col = 'T', timescale = 200000)
+        hys_parms = period2freq (parms = hys_parms, period_col = 'T', timescale = 1.)
 
         # collect hysteresis results
-        check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True)
+        check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True, check = True)
 
         # add the hysteresis results to the bending parameter data frame
         hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 1, title = 'A_avg', M1 = True)
@@ -1448,4 +1483,4 @@ if hysteresis:
     # for each topology, plot the hysteresis for each of the bending potentials
     for ring in hys_parms['R'].unique():
         plotdf = hys_parms.loc[hys_parms['R'] == ring]
-        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.00001, y_max = 1., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)")
+        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.00001, y_max = 1., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)

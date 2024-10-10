@@ -353,9 +353,10 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
         int i_2 = i + 1;
         if (i_2 == numPeriodPoints) {i_2 = 0;}
         // calculate hysteresis according to trapazoidal method
-        hysteresis_integral += 0.5 * (single_hys_loop_distance[i_2] - single_hys_loop_distance[i_1]) * (single_hys_loop_force[i_2] - single_hys_loop_force[i_1]);
+        hysteresis_integral += 0.5 * (single_hys_loop_distance[i_2] + single_hys_loop_distance[i_1]) * (single_hys_loop_force[i_2] - single_hys_loop_force[i_1]);
     }
 
+    hsyteresis_integral = hys_amplitude * omega * hsyteresis_integral;
     return hysteresis_integral;
 }
     
