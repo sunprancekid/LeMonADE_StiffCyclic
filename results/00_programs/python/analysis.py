@@ -1483,4 +1483,4 @@ if hysteresis:
     # for each topology, plot the hysteresis for each of the bending potentials
     for ring in hys_parms['R'].unique():
         plotdf = hys_parms.loc[hys_parms['R'] == ring]
-        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.00001, y_max = 1., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)
+        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.01, y_max = 5., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)

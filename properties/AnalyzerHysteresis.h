@@ -355,8 +355,10 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
         // calculate hysteresis according to trapazoidal method
         hysteresis_integral += 0.5 * (single_hys_loop_distance[i_2] + single_hys_loop_distance[i_1]) * (single_hys_loop_force[i_2] - single_hys_loop_force[i_1]);
     }
-
+    // do not need to add amplitude or frequency as these factors are included in trapazoidal method
     // hysteresis_integral = hys_amplitude * omega * hysteresis_integral;
+    // the hysteresis integral is scaled by the length that is used to normalize the e2e vector
+    hysteresis_integral = norm_length * hysteresis_integral;
     return hysteresis_integral;
 }
     
