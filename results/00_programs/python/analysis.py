@@ -34,6 +34,10 @@ min_logscale = 0.00001
 min_pinus_force = 0.1
 # maxmimum force for pincus regime
 max_pincus_force = 1.
+# maximum amount of time that any simulation can equilibriate
+max_equilibriate_mcs = 100000000
+# maximum amount of time that any one simulation can run
+max_simulation_mcs = 5000000000
 
 #############
 ## METHODS ##

@@ -33,9 +33,9 @@ PARM_LP=( 0 2 5 9 )
 # TODO :: integrate number of sampling points in the script and the number of the executable
 declare -i N_SAMPLE=500
 # number of times that the hysteresis loops through one period once equilibrated
-declare -i N_PERIOD_EQUILIBRIUM=15
+declare -i N_PERIOD_EQUILIBRIUM=5000
 # number of times that the hysteresis loops through one period to reach equilibrium
-declare -i N_PERIOD_EQUILIBRIATE=5
+declare -i N_PERIOD_EQUILIBRIATE=100
 # number of different period points to test
 declare -i N_PERIOD_VAL=40
 # maximum period value to test
@@ -55,6 +55,10 @@ MAINDIR="01_raw_data"
 JOB="hysteresis"
 # path to LeMonADE executables
 EXECDIR="00_programs/build/bin/"
+# maximum amount of time that a simulation can equilibriate
+MAX_EQUILIBRIATE_MCS=500000000
+# maximum amount of time that any one simulatin can run
+MAX_SIMULATION_MCS=5000000000
 
 
 ## FUNCTIONS
@@ -244,6 +248,13 @@ gen_simparm() {
 						# adjust the length of the simulation according the period
 						declare -i TOTAL=$( echo "(${PERIOD_VAL} * (${N_PERIOD_EQUILIBRIATE} + ${N_PERIOD_EQUILIBRIUM}))" | bc -l )
 						declare -i EQUILIBRIATE=$( echo "(${PERIOD_VAL} * ${N_PERIOD_EQUILIBRIATE})" | bc -l )
+						# reduce simulation lengths if they surpace the maximum
+						if [[ $TOTAL -gt $MAX_SIMULATION_MCS ]]; then
+							TOTAL=$MAX_SIMULATION_MCS
+						fi
+						if [[ $EQUILIBRIATE -gt $MAX_EQUILIBRIATE_MCS ]]; then
+							EQUILIBRIATE=$MAX_SIMULATION_MCS
+						fi
 
 						# generate flags for simulation executables
 						GENFLAGS="-n ${n} -v ${FORCEVEC} -f ${VAL_FO} -a ${VAL_FA} -p ${PERIOD_VAL} -b 512 ${R_FLAG}${K_FLAG}${C_FLAG}"
