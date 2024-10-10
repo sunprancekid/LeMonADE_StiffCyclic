@@ -471,7 +471,7 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
             r_s.append(df.loc[j,'E2E_std'])
 
         # write the hysteresis value and variance to a csv file
-        dfsave = pd.DataFrame.from_dict({'A': [df.loc[0,'E2E_avg']], 'B': [df.loc[0,'E2E_std']]})
+        dfsave = pd.DataFrame.from_dict({'A': [abs(df.loc[0,'E2E_avg'])], 'B': [df.loc[0,'E2E_std']]})
         dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
 
         if check and (plot or show):

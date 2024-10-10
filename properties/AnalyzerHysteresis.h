@@ -356,7 +356,7 @@ double AnalyzerHysteresis<IngredientsType>::calculateHysteresisInOnePeriodWithTr
         hysteresis_integral += 0.5 * (single_hys_loop_distance[i_2] + single_hys_loop_distance[i_1]) * (single_hys_loop_force[i_2] - single_hys_loop_force[i_1]);
     }
 
-    hysteresis_integral = hys_amplitude * omega * hysteresis_integral;
+    // hysteresis_integral = hys_amplitude * omega * hysteresis_integral;
     return hysteresis_integral;
 }
     
