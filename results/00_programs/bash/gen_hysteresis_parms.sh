@@ -56,9 +56,9 @@ JOB="hysteresis"
 # path to LeMonADE executables
 EXECDIR="00_programs/build/bin/"
 # maximum amount of time that a simulation can equilibriate
-MAX_EQUILIBRIATE_MCS=500000000
+MAX_EQUILIBRIATE_MCS=500000000 # 500 million
 # maximum amount of time that any one simulatin can run
-MAX_SIMULATION_MCS=5000000000
+MAX_SIMULATION_MCS=5000000000 # 5 billion
 
 
 ## FUNCTIONS
@@ -253,7 +253,7 @@ gen_simparm() {
 							TOTAL=$MAX_SIMULATION_MCS
 						fi
 						if [[ $EQUILIBRIATE -gt $MAX_EQUILIBRIATE_MCS ]]; then
-							EQUILIBRIATE=$MAX_SIMULATION_MCS
+							EQUILIBRIATE=$MAX_EQUILIBRIATE_MCS
 						fi
 
 						# generate flags for simulation executables
