@@ -431,7 +431,7 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False)
         dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
 
 # method that collects the hysteresis area, plots hysteresis curve
-def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False, check = True):
+def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False, check = True, clear = False):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -451,9 +451,8 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
         simfile = dir + r['path'] + 'HYS.dat'
         if not os.path.exists(simfile):
             continue
-        # parse data, hysteresis curve
+        # parse the hysteresis area (if nan, delete the file so that it can be rerun)
         df = pd.read_csv(simfile)
-        # TODO :: parse the hysteresis area (if nan, delete the file so that it can be rerun)
         n = len(df.index)
         f_e = [ ] # collects the expected force values associated with the hysteresis
         f_a = [ ] # colelcts the averaged force values associated with the hysteresis
@@ -473,6 +472,14 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
             f_s.append(df.loc[j,'f_std'])
             r_a.append(df.loc[j,'E2E_avg'])
             r_s.append(df.loc[j,'E2E_std'])
+            if math.isnan(f_a[-1]) or math.isnan(r_a[-1]):
+                hasnan = True
+
+        # if the file has nan, delete the file and continue
+        if clear and hasnan:
+            print(simfile + " has NaN.")
+            os.remove(simfile)
+            continue
 
         # write the hysteresis value and variance to a csv file
         dfsave = pd.DataFrame.from_dict({'A': [abs(df.loc[0,'E2E_avg'])], 'B': [df.loc[0,'E2E_std']]})
@@ -1467,11 +1474,10 @@ if hysteresis:
 
         # get simulation parameters
         hys_parms = pd.read_csv(data_dir + parm_file)
-
         hys_parms = period2freq (parms = hys_parms, period_col = 'T', timescale = 1.)
 
         # collect hysteresis results
-        check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True, check = True)
+        check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True, check = True, clear = True)
 
         # add the hysteresis results to the bending parameter data frame
         hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 1, title = 'A_avg', M1 = True)
@@ -1487,4 +1493,4 @@ if hysteresis:
     # for each topology, plot the hysteresis for each of the bending potentials
     for ring in hys_parms['R'].unique():
         plotdf = hys_parms.loc[hys_parms['R'] == ring]
-        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.01, y_max = 5., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)
+        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)
