@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 from scipy.optimize import curve_fit
 from scipy.stats import norm
+from scipy import interpolate # spline for curve fitting
+from scipy import signal as sig # used for monotonic curve smoothing
 import itertools # used for iterating over markers
+from decimal import Decimal # used for formating large numbers to scientific notation
 
 ################
 ## PARAMETERS ##
@@ -43,6 +46,69 @@ max_simulation_mcs = 5000000000
 ## METHODS ##
 #############
 
+# format number to scientific notation string
+# n  :: floating number
+# sd :: number of significant digits (default is 2)
+def format_e(n, sd = 2):
+    d = Decimal(str(n))
+    a = '%E' % d
+    return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
+
+#############################################
+## USED FOR MONOTONIC SPLINE CURVE FITTING ##
+#############################################
+#!/usr/bin/env python
+"""https://stackoverflow.com/questions/56551114/fully-monotone-interpolation-in-python """
+# see also
+# https://en.wikipedia.org/wiki/Monotone-spline aka I-spline
+# https://scikit-learn.org/stable/modules/isotonic.html
+# denis 2 March 2020
+
+def butter_filtfilt( x, Wn=0.5, axis=0 ):
+    """ butter( 2, Wn ), filtfilt
+        axis 0 each col, -1 each row
+    """
+    b, a = sig.butter( N=2, Wn=Wn )
+    return sig.filtfilt( b, a, x, axis=axis, method="gust" )  # twice, forward backward
+
+def ints( x ):
+    return x.round().astype(int)
+
+def minavmax( x ):
+    return "min av max %.3g %.3g %.3g" % (
+            x.min(), x.mean(), x.max() )
+
+def pvec( x ):
+    n = len(x) // 25 * 25
+    return "%s \n%s \n" % (
+        minavmax( x ),
+        ints( x[ - n : ]) .reshape( -1, 25 ))
+
+#...............................................................................
+def monofit( y, Wn=0.1, verbose = False ):
+    """ monotone-increasing curve fit """
+    y = np.asarray(y).squeeze()
+    if verbose: print( "\n{ monofit: y %d %s  Wn %.3g " % (len(y), minavmax( y ), Wn ))
+    ygrad = np.gradient( y )
+    if verbose: print( "grad y:", pvec( ygrad ))
+
+        # lowpass filter --
+    gradsmooth = butter_filtfilt( ygrad, Wn=Wn )
+    if verbose: print( "gradsmooth:", pvec( gradsmooth ))
+
+    ge0 = np.fmax( gradsmooth, 0 )
+
+    ymono = np.cumsum( ge0 )  # integrate, sensitive to first few
+    ymono += (y - ymono).mean()
+
+    err = y - ymono
+    if verbose: print( "y - ymono:", pvec( err ))
+    errstr = "average |y - monofit|: %.2g" % np.abs( err ).mean()
+    if verbose: print( errstr )
+    if verbose: print( "} \n" )
+
+    return ymono, err, errstr
+
 
 ############################
 ## USED FOR EQUATION FITTING
@@ -67,6 +133,10 @@ def power_fit_hook(x, A):
 # model equation for fitting data to a line
 def linear_fit (x, m, b):
     return (x * m) + b
+
+# model equation for fitting line with no decay
+def no_decay_fit (x, A):
+    return power_fit(x, A, 0.)
 
 # model equation for exponential decay fitting
 def exp_decay_fit(x, A, B):
@@ -368,7 +438,7 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
         dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
 
 # method that calculates the slope of the scattering factor
-def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False):
+def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False, porod = False, real = False, monotonic = False, monotonic_parameter = 0.25, spline = False):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -426,6 +496,75 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False)
             if show:
                 plt.show()
             plt.close()
+
+        # create porod-kratsky plot
+        if porod:
+            # create plot by scaling the y-axis by scaled wave number
+            y_log = []
+            x_log = []
+            nu = 0.5
+            if real:
+                nu = 0.588
+            for i in range(len(y)):
+                y[i] = y[i] * (pow(x[i], 1. / nu))
+                # convert data to logscale for slope calculation
+                y_log.append(lin2log(y[i], 10.))
+                x_log.append(lin2log(x[i], 10.))
+
+            # fit function, if specified, calculate the slope of the curve
+            xder = []
+            yder = []
+            if monotonic:
+                # use monofit to smooth function according to a parameter (Wn)
+                ymono, err, errstr = monofit(y_log, Wn = monotonic_parameter)
+                # use the smoothed data to calculate the derivative
+                for i in range(len(x_log) - 1):
+                    print(ymono[i])
+                    # calculate, convert from log scale to linear scale (except the slope)
+                    xder.append(log2lin((x_log[i + 1] + x_log[i]) / 2., 10.))
+                    yder.append((ymono[i + 1] - ymono[i]) / (x_log[i + 1] - x_log[i]))
+                    ymono = log2lin(ymono[i], 10.)
+            elif spline:
+                # use spline to interpolate data
+                tck = interpolate.splrep(x_log, y_log, s=0)
+                xder = np.arange(min(x_log), max(x_log), (max(x_log) - min(x_log)) / 1000)
+                yspl = interpolate.splev(xder, tck, der=0)
+                yder = interpolate.splev(xder, tck, der=1)
+                for i in range(len(xnew)):
+                    # convert from log scale to linear scale (except the slope)
+                    xder[i] = log2lin(xder[i], 10.)
+                    yspl[i] = log2lin(yspl[i], 10.)
+            else:
+                # calclate the slope from the raw data
+                for i in range(len(x_log) - 1):
+                    yder.append((y_log[i + 1] - y_log[i]) / (x_log[i + 1] - x_log[i]))
+                    xder.append(log2lin(((x_log[i + 1] + x_log[i]) / 2.), 10.))
+
+            # plot
+            if plot or show:
+                fig, ax = plt.subplots()
+                ax.plot(x, y, 'k', label = '$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$')
+                if monotonic:
+                    # plot monotonic fit
+                    ax.plot(x, ymono, 'r', label = "Monotonic Fit ($W_{{n}}$ = {:.02f})".format(monotonic_parameter))
+                elif spline:
+                    ax.plot(xder, yspl, 'r', label = 'Cubic Spline Fit')
+                ax2 = ax.twinx()
+                ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                # ax2.plot(xnew, yder, '-', label = "$\\frac{{d}}{{dq}}$", color = 'b', alpha = 0.8)
+                ax.set_yscale('log')
+                ax.set_xscale('log')
+                fig.suptitle("Kratky-Porod Plot")
+                ax.set_title("({:s})".format(r['id']))
+                ax.set_ylabel("$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$")
+                ax.set_xlabel("|q|")
+                ax.legend()
+                if plot:
+                    fig.savefig(dir + r['path'] + 'SKQ_KP.png', dpi = dpi, bbox_inches='tight')
+                if show:
+                    plt.show()
+                plt.close()
+            exit()
         # save fit as dataframe to csv
         dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
         dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
@@ -623,7 +762,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
             # fit data to power log5 equation
             popt, pcov = curve_fit(f = log5_fit, xdata =  x_log, ydata = y_log, p0 = init, bounds = parameterBounds, maxfev = 100000000) # sigma = v_log,
             x_fit = [ ((max(x_log) - min(x_log)) / (100 - 1)) * i + min(x_log) for i in range(100)]
-            y_fit = [ log5_fit(i, *popt) for i in x_fit]
+            y_fit = [ log5_fit(i, *popt) for i in x_fit ]
             # calculate the slope of the line
             if plot_slope:
                 # calculate the of the line
@@ -671,7 +810,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False, timescale = 1.):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False, timescale = 1., hys = True, fa = None):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -684,6 +823,10 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     # booleans for documenting if the pincus regime and the hookean regime have been added to the figures
     added_pinus = False
     added_hookean = False
+    added_hys_pos = False
+    added_hys_neg = False
+    A_max_neg = None
+    A_max_pos = None
 
     # parse data from data frame, plot
     if isovals is None:
@@ -707,10 +850,18 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         x = iso_df[X_col].tolist()
         y = iso_df[y_col_m].tolist()
-        for i in range(len(x)):
-            x[i] = x[i] * timescale
+        if norm and hys:
+            # if the normalization is true
+            # identify the maximum frequency at which the hysteresis occurs
+            timescale = 1. / x[y.index(max(y))]
+            # use the maximum frequency to normalize the
+            for i in range(len(x)):
+                x[i] = x[i] * timescale
+            if fa is not None:
+                for i in range(len(y)):
+                    y[i] = y[i] * pow(fa, 2.)
         # normalize the force and end-to-end distance if asked
-        if norm:
+        elif norm and not hys:
             # get the no-force chain extension
             idx = x.index(0.)
             norm_val = y[idx]
@@ -758,7 +909,9 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         # plot the data
         label = isolabel.format(iso)
-        if norm:
+        if norm and hys:
+            label += " ($\\tau_{{R}} \\approx$ {:.01E})".format(Decimal(timescale))
+        if (norm and not hys):
             label += " (X = {:.02f})".format(norm_val)
         if flip_axis:
             line = plt.plot(y, x, label = label, fillstyle = 'full', marker = next(marks), ls = ' ')
@@ -771,7 +924,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             plt.plot(x_fit, y_fit, '--', label = "m = {:.03f}".format(popt[0]), color = line[-1].get_color())
 
         # add pincus regime to graph
-        if norm and pincus and (not added_pinus):
+        if (norm and not hys) and pincus and (not added_pinus):
             # plot a line with a slope of 2/3
             # plot the line tangent to one point within the pincus regime
             # find one point within the pincus regime from the data
@@ -792,7 +945,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             #     plt.plot(x_pincus, y_pincus, '--', color = line[-1].get_color())
             added_pinus = True
 
-        if norm and hookean and (not added_hookean):
+        if (norm and not hys) and hookean and (not added_hookean):
             # plot a line with a slope of 1
             # plot the line tangent to one point within the hookean regime
             # find one point within the hookea regime from the data
@@ -813,6 +966,59 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             #     plt.plot(x_hookean, y_hookean, ls = ':', color = line[-1].get_color)
             added_hookean = True
 
+        # add lines with slopes of one and negative point five
+        if norm and hys:
+            # find the y_intercept for a line with a slope of negative point five fit to data set
+            # find data point to plot line
+            for i in range(len(x)):
+                if x[i] > (5.) and (max(x) > 5.):
+                    break
+                elif x[i] > 1. - TOL:
+                    break
+                elif math.isnan(y[i+1]):
+                    break
+            x_log = lin2log(x[i], 10.)
+            y_log = lin2log(y[i], 10.)
+            A = math.pow(10., y_log - (-0.5 * x_log))
+            # assign the y-intercept for the line only if it is the greatest so far
+            if A_max_neg is None:
+                A_max_neg = A
+            elif A_max_neg < A:
+                A_max_neg = A
+            # find the y_intercept for a line with a slope of one fit to data set
+            # find data point to plot line
+            for i in range(len(x)):
+                if x[i] < (0.5) and (min(x) < 0.5):
+                    break
+                elif (x[i] <= 1. + TOL) and (not min(x) < 0.5):
+                    break
+                elif math.isnan(y[i+1]):
+                    break
+            x_log = lin2log(x[i], 10.)
+            y_log = lin2log(y[i], 10.)
+            A = math.pow(10., y_log - (1. * x_log))
+            # assign y-intercept for the line only if it is the greatest so far
+            if A_max_pos is None:
+                A_max_pos = A
+            elif A_max_pos < A:
+                A_max_pos = A
+
+
+    ## plot for hysterseis
+    if norm and hys and not added_hys_neg and (A_max_neg is not None):
+        A_max_neg = A_max_neg * 1.5
+        x_hys_neg = np.linspace(1., x_max, 20)
+        y_hys_neg = [power_fit(i, A_max_neg, -0.5) for i in x_hys_neg]
+        plt.plot(x_hys_neg, y_hys_neg, ls = '--', color = 'k', label = "$y \\propto x^{{-0.5}}$")
+        added_hys_neg = True
+
+    if norm and hys and not added_hys_pos and (A_max_pos is not None):
+        A_max_pos = A_max_pos * 1.5
+        x_hys_pos = np.linspace(x_min, 1., 20)
+        y_hys_pos = [power_fit(i, A_max_pos, 1.) for i in x_hys_pos]
+        plt.plot(x_hys_pos, y_hys_pos, ls = ':', color = 'k', label = "$y \\propto x^{{1.}}$")
+
+    ## plot for force extension
     # if the pincus regime has been add, include a label
     if added_pinus:
         plt.plot(x_pincus, y_pincus, ls = '--', color = 'k', label = "Pincus Regime ($R \\propto f^{{2/3}}$)")
@@ -1389,7 +1595,7 @@ if bendingPARM:
             # parse persistence length from BBC, plot if requested
             check_bbc(parms = bendingparms, dir = data_dir, show = False, plot = True, lp_decay = True, lp_theta = True)
             # parse scattering factor slope from SKQ, plot if requested
-            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True)
+            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = True)
 
             ## PARSE DATA, ADD TO RESULTS DATAFRAME
             # get the end-to-end distance vector data
@@ -1491,6 +1697,10 @@ if hysteresis:
         hys_parms = pd.read_csv(anal_dir + parm_file)
 
     # for each topology, plot the hysteresis for each of the bending potentials
-    for ring in hys_parms['R'].unique():
-        plotdf = hys_parms.loc[hys_parms['R'] == ring]
-        plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Hysteresis ($A$)", timescale = 200000)
+    for fa in hys_parms['fA'].unique():
+        for ring in hys_parms['R'].unique():
+            plotdf = hys_parms.loc[(hys_parms['R'] == ring) & (hys_parms['fA'] == fa)]
+            # file for plotting hysteresis against actual frequency
+            plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .0000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            # file for plotting hysteresis against normalized frequency
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.5, y_max = 100., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm.png", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}}$)", fa = fa)
