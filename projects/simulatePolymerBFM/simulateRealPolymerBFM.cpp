@@ -170,6 +170,7 @@ int main(int argc, char* argv[])
             taskmanager.addAnalyzer(new AnalyzerHysteresis<IngredientsType>(ingredients, "HYS.dat", t_equil, save_interval));
         }
         if (add_scatter_analyzer) {
+            // TODO :: pass number of points used by scattering function as parameter to analyzer
             taskmanager.addAnalyzer(new AnalyzerScatteringSingleObject<IngredientsType>(ingredients, "SKQ.dat", t_equil), (1));
         }
 
