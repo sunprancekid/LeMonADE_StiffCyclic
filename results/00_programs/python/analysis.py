@@ -1595,7 +1595,7 @@ if bendingPARM:
             # parse persistence length from BBC, plot if requested
             check_bbc(parms = bendingparms, dir = data_dir, show = False, plot = True, lp_decay = True, lp_theta = True)
             # parse scattering factor slope from SKQ, plot if requested
-            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = True)
+            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = False)
 
             ## PARSE DATA, ADD TO RESULTS DATAFRAME
             # get the end-to-end distance vector data

@@ -20,8 +20,8 @@ declare -i BOOL_OVER=0
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-# PARM_RING=( 0 1 2 )
-PARM_RING=( 0 )
+PARM_RING=( 0 1 2 )
+# PARM_RING=( 0 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistance lengths to test for either potential
