@@ -234,6 +234,15 @@ gen_simparm() {
 					fi
 					K_FLAG=" -k ${K_STRING}"
 
+					# generate the no force simulation for measuring the equilibrium end-to-end distance
+					## TODO :: combine instructions for generating hystersis and no-force chain extension
+					## 			into one script that this script calls (to reduce copied instructions)
+					## flags
+					## directory
+					## execute script
+					## slurm script
+					## simulation id
+
                     for p in $(seq 0 $(($N_PERIOD_VAL-1))); do
 
 						# loop through points, generate on a log scale
