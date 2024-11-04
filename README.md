@@ -43,23 +43,16 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 [-g add radius of gyration analyzer]
 
 ```
-## Submit batch jobs
+## Submitting batch jobs
 >[!NOTE]
 >These programs were designed to execute on the IPFDD remote computing cluster system.
 1. Navtigate to `./results`
-2. Generate simulation parameters.
-	-  Generate simulations in which the bending potential strength is parameterized. 
-	-  Generate force extension simulations in which stiff polymers are exposed to a constant force. 
+2. Generate simulation parameters and directory hirearchy in `./01_raw_data`.
+	*  Generate simulations in which the bending potential strength is parameterized. 
+	*  Generate force extension simulations in which stiff polymers under a constant force. 
+	*  Generate hysteresis simulations in which polymers of various stiffness and topologies are exposed to an oscillating sinusodal force.
 3. Run batch simulations.
-	-  Run locally.
-	-  Submit to computing cluster.
+	*  Run locally.
+	*  Submit to computing cluster.
 4. Analyze simulation results.
 
-
-## projects/AnalyzerScatteringSingleObject/
-
-Calculates the scattering intensity S(q) with respect to the absolute magnitute of the scattering wave vector q.  
-
-```
-    ./AnalyzerScatteringSingleObject [-f filename(=test.bfm)] [-e evaluation_time(=0)] [-s skipframe(=0)]
-```
