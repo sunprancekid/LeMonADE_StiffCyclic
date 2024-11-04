@@ -438,7 +438,7 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
         dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
 
 # method that calculates the slope of the scattering factor
-def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False, porod = False, real = False, monotonic = False, monotonic_parameter = 0.25, spline = False):
+def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False, porod = False, real = False, monotonic = False, monotonic_parameter = 0.25, spline = False , tol_mk = 0.25):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -519,11 +519,10 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
                 ymono, err, errstr = monofit(y_log, Wn = monotonic_parameter)
                 # use the smoothed data to calculate the derivative
                 for i in range(len(x_log) - 1):
-                    print(ymono[i])
                     # calculate, convert from log scale to linear scale (except the slope)
                     xder.append(log2lin((x_log[i + 1] + x_log[i]) / 2., 10.))
                     yder.append((ymono[i + 1] - ymono[i]) / (x_log[i + 1] - x_log[i]))
-                    ymono = log2lin(ymono[i], 10.)
+                    ymono[i] = log2lin(ymono[i], 10.)
             elif spline:
                 # use spline to interpolate data
                 tck = interpolate.splrep(x_log, y_log, s=0)
@@ -540,23 +539,119 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
                     yder.append((y_log[i + 1] - y_log[i]) / (x_log[i + 1] - x_log[i]))
                     xder.append(log2lin(((x_log[i + 1] + x_log[i]) / 2.), 10.))
 
+            # identify regimes with 'm = 0'
+            # find the beginning of the regime with a slope of 0
+            for i in range(len(xder)):
+                if yder[i] < (0. + tol_mk):
+                    break
+            idx_m0_start = i
+
+            # next, find the end of the regime with slope of 0
+            x_m0 = []
+            y_m0 = []
+            for i in range(idx_m0_start, len(xder)):
+                if yder[i] > (0. + tol_mk):
+                    break
+                else:
+                    # if the slope is still within the linear regime, add the data to the list
+                    x_m0.append(x[i])
+                    y_m0.append(y[i])
+            idx_m0_end = i
+
+            # fit a line to the data within the linear regime, determine slope
+            popt_m0, pcov = curve_fit(power_fit, x_m0, y_m0)
+            # create fit for the linear regime
+            nfit = 10
+            xfit_m0 = []
+            yfit_m0 = []
+            xfit_m0_start = x_m0[0] * (1. / 3.)
+            xfit_m0_end = x_m0[-1] * (3.)
+            for i in range(nfit):
+                xfit_m0.append(xfit_m0_start + (i * (xfit_m0_end - xfit_m0_start) / (nfit - 1)))
+                yfit_m0.append(power_fit(xfit_m0[i], popt_m0[0], popt_m0[1]))
+
+
+            # identify regimes with 'm = 1'
+            # find the beginning of the regime with a slope of 1
+            for i in range(idx_m0_end, len(xder)):
+                if yder[i] > (1. - tol_mk):
+                    break
+            idx_m1_start = i
+
+            # next, find the end of the regime with slope of 0
+            x_m1 = []
+            y_m1 = []
+            for i in range(idx_m1_start, len(xder)):
+                if yder[i] > (1. + tol_mk):
+                    break
+                else:
+                    # if the slope is still within the linear regime, add the data to the list
+                    x_m1.append(x[i])
+                    y_m1.append(y[i])
+            idx_m1_end = i
+
+            # fit a line to the data within the rod-like regime, determine slope
+            popt_m1, pcov = curve_fit(power_fit, x_m1, y_m1)
+            # create fit for the linear regime
+            xfit_m1 = []
+            yfit_m1 = []
+            xfit_m1_start = x_m1[0] * (1. / 3.)
+            xfit_m1_end = x_m1[-1] * (3.)
+            for i in range(nfit):
+                xfit_m1.append(xfit_m1_start + (i * (xfit_m1_end - xfit_m1_start) / (nfit - 1)))
+                yfit_m1.append(power_fit(xfit_m1[i], popt_m1[0], popt_m1[1]))
+
+            # use the two lines to identify the cross over regime, where to two lines intersect
+            b_m0 = power_fit(1., popt_m0[0], popt_m0[1])
+            b_m1 = power_fit(1., popt_m1[0], popt_m1[1])
+            x_x = math.pow(10., math.log(popt_m0[0] / popt_m1[0], 10.) / (popt_m1[1] - popt_m0[1]))
+            y_x = power_fit(x_x, popt_m0[0], popt_m0[1])
+
             # plot
             if plot or show:
+                # create figure axis
                 fig, ax = plt.subplots()
+                ax2 = ax.twinx()
+
+                # plot scattering, scattering slope as well as fit if specified
                 ax.plot(x, y, 'k', label = '$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$')
                 if monotonic:
                     # plot monotonic fit
                     ax.plot(x, ymono, 'r', label = "Monotonic Fit ($W_{{n}}$ = {:.02f})".format(monotonic_parameter))
+                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
                 elif spline:
                     ax.plot(xder, yspl, 'r', label = 'Cubic Spline Fit')
-                ax2 = ax.twinx()
-                ax2.plot(xder, yder, color = 'b', alpha = 0.8)
-                # ax2.plot(xnew, yder, '-', label = "$\\frac{{d}}{{dq}}$", color = 'b', alpha = 0.8)
+                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
+                else:
+                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Data')
+
+                # plot lines that identify the two regimes
+                # slope with 'm = 0'
+                ax2.plot([xder[idx_m0_start], max(x)], [popt_m0[1], popt_m0[1]], '--', color = 'tab:purple') # line corresponding to slope
+                ax2.plot([xder[idx_m0_start], xder[idx_m0_start]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # start of linear regime
+                ax2.plot([xder[idx_m0_end], xder[idx_m0_end]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # end of linear regime
+                ax.plot(xfit_m0, yfit_m0, color = 'tab:purple', label = "Linear Regime \n (m = {:.02f})".format(popt_m0[1])) # line fit to data within linear regime plus data label
+
+                # slope with 'm = 1'
+                ax2.plot([xder[idx_m1_start], max(x)], [popt_m1[1], popt_m1[1]], '--', color = 'tab:orange') # line corresponding to rod_like regime
+                ax2.plot([xder[idx_m1_start], xder[idx_m1_start]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # start of linear regime
+                ax2.plot([xder[idx_m1_end], xder[idx_m1_end]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # end of linear regime
+                ax.plot(xfit_m1, yfit_m1, color = 'tab:orange', label = "Rod-Like Regime \n (m = {:.02f})".format(popt_m1[1]))
+
+                # plot the cross over
+                ax.plot(x_x, y_x, 'ro', markerfacecolor='none') # plot location of intersection of two lines
+                ax.plot([x_x, x_x], [min(y) , max(y)], '--', color = 'r') # plot line corresponding to cross over
+
+                # set scales, labels
                 ax.set_yscale('log')
                 ax.set_xscale('log')
                 fig.suptitle("Kratky-Porod Plot")
                 ax.set_title("({:s})".format(r['id']))
                 ax.set_ylabel("$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$")
+                ax2.set_ylabel("Slope")
                 ax.set_xlabel("|q|")
                 ax.legend()
                 if plot:
@@ -589,7 +684,19 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
         # if the file does not exist, skip to the next file
         simfile = dir + r['path'] + 'HYS.dat'
         if not os.path.exists(simfile):
-            continue
+            # if the hysteresis file is not present, the simulatin could be for calculating the no force chain extension
+            simfile = dir + r['path'] + 'RE2E.dat'
+            # bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
+            if os.path.exists(simfile):
+                # if the end to end file does exist, parse the end to end distance as the hysteresis
+                clean_file(simfile)
+                data = parse_data(simfile, avgcol = 4, tab = True)
+                dfsave = pd.DataFrame.from_dict({'A': [np.mean(data)], 'B': [np.var(data)]})
+                dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
+                continue
+            else:
+                print(simfile)
+                exit()
         # parse the hysteresis area (if nan, delete the file so that it can be rerun)
         df = pd.read_csv(simfile)
         n = len(df.index)
@@ -683,7 +790,10 @@ def period2freq (parms = None, period_col = None, freq_col = None, timescale = 1
     f = [] # empty list containing frequency
     for i, r in parms.iterrows():
         t = r[period_col]
-        f.append(timescale * 2. * math.pi / t)
+        if t == 0.:
+            f.append(0.)
+        else:
+            f.append(timescale * 2. * math.pi / t)
 
     parms[freq_col] = f
     return parms
@@ -810,7 +920,7 @@ def plot_scaling(parms, N_col = None, R_col = None, fit = False, Title = None, X
     plt.close()
 
 # method for plotting data from force extension simulations
-def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False, timescale = 1., hys = True, fa = None):
+def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isovals = None, isolabel = None, logscale_x = False, logscale_y = False, x_min = None, x_max = None, y_min = None, y_max = None, X_label = None, Y_label = None, Title = None, saveas = None, plot_log5 = False, plot_data = False, plot_slope = False, dpi = None, M2 = False, error = False, flip_axis = False, horizbar = False, vertbar = False, show = False, legend_loc = "best", norm = False, pincus = False, hookean = False, timescale = 1., hys = False, fa = None, diff = False):
 
     if X_col is None or Y_col is None or iso_col is None:
         print("plot_force_extension :: Must specify columns from data frame to plot!")
@@ -827,6 +937,10 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     added_hys_neg = False
     A_max_neg = None
     A_max_pos = None
+    if diff and hys:
+        # initialize diffusion correlation for hysteresis
+        x_diff = []
+        y_diff = []
 
     # parse data from data frame, plot
     if isovals is None:
@@ -852,6 +966,12 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         y = iso_df[y_col_m].tolist()
         if norm and hys:
             # if the normalization is true
+            # find the zero force extension value
+            idx = x.index(0.)
+            norm_val = y[idx] # this value corresponds to the equilibrium chain length
+            # remove from the values from the list as they do not actually correspond to hystresis
+            del x[idx]
+            del y[idx]
             # identify the maximum frequency at which the hysteresis occurs
             timescale = 1. / x[y.index(max(y))]
             # use the maximum frequency to normalize the
@@ -859,7 +979,11 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
                 x[i] = x[i] * timescale
             if fa is not None:
                 for i in range(len(y)):
-                    y[i] = y[i] * pow(fa, 2.)
+                    y[i] = y[i] * pow(fa, 2.) / norm_val
+            if diff:
+                # if calculating diffusion determine bending strength and approximate scaling
+                x_diff.append(iso)
+                y_diff.append(timescale / pow(norm_val, 2.))
         # normalize the force and end-to-end distance if asked
         elif norm and not hys:
             # get the no-force chain extension
@@ -994,6 +1118,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
                     break
                 elif math.isnan(y[i+1]):
                     break
+            print(x[i])
             x_log = lin2log(x[i], 10.)
             y_log = lin2log(y[i], 10.)
             A = math.pow(10., y_log - (1. * x_log))
@@ -1008,15 +1133,15 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     if norm and hys and not added_hys_neg and (A_max_neg is not None):
         A_max_neg = A_max_neg * 1.5
         x_hys_neg = np.linspace(1., x_max, 20)
-        y_hys_neg = [power_fit(i, A_max_neg, -0.5) for i in x_hys_neg]
-        plt.plot(x_hys_neg, y_hys_neg, ls = '--', color = 'k', label = "$y \\propto x^{{-0.5}}$")
+        y_hys_neg = [power_fit(i, A_max_neg, -0.54) for i in x_hys_neg]
+        plt.plot(x_hys_neg, y_hys_neg, ls = '--', color = 'k', label = "$A \\propto \\omega^{{-0.54}}$")
         added_hys_neg = True
 
     if norm and hys and not added_hys_pos and (A_max_pos is not None):
         A_max_pos = A_max_pos * 1.5
         x_hys_pos = np.linspace(x_min, 1., 20)
         y_hys_pos = [power_fit(i, A_max_pos, 1.) for i in x_hys_pos]
-        plt.plot(x_hys_pos, y_hys_pos, ls = ':', color = 'k', label = "$y \\propto x^{{1.}}$")
+        plt.plot(x_hys_pos, y_hys_pos, ls = ':', color = 'k', label = "$A \\propto \\omega^{{1.}}$")
 
     ## plot for force extension
     # if the pincus regime has been add, include a label
@@ -1064,10 +1189,18 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         else:
             plt.xlabel(X_label)
     if saveas is not None:
-        plt.savefig(saveas, dpi = dpi, bbox_inches='tight')
+        plt.savefig(saveas + ".png", dpi = dpi, bbox_inches='tight')
     if show:
         plt.show()
     plt.close()
+
+    if diff and hys:
+        # plot the diffusion correlation against the bending strength
+        plt.scatter(x_diff, y_diff)
+        plt.xlabel("Bending Strength ($\\kappa_{{\\theta}}$)")
+        plt.ylabel("Diffusion ($\\tau_{{R}} / R_{{E2E}}$)")
+        plt.show()
+        exit()
 
 # method for plotting the bond bond correlation for bending potential simulation data against s, the bond distance
 def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, saveas = None, logscale_y = True, Title = None, Y_label = None, X_label = None, dpi = None):
@@ -1533,7 +1666,7 @@ if forceExtension:
                     k_df = FE_parms[(FE_parms['K'] == k) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N)]
                     save_name = anal_dir + f"FE_k{k:0.2f}_{pot}_N{N}"
                     # master plot
-                    plot_force_extension (k_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'top', isolabel = '{:s}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True) # saveas = save_name + '_norm_data.png',
+                    plot_force_extension (k_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'top', isolabel = '{:s}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True) # saveas = save_name + '_norm_data.png',
 
         # perform analysis for each unqiue set of 'topologies'
         # loop through each topology, bending potential, bending potential strength, and chain length
@@ -1550,31 +1683,13 @@ if forceExtension:
 
                     # plot force extension data
                     if l == 'lin':
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data.png', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", saveas = save_name + '_data', plot_data = True, flip_axis = True, horizbar = True, vertbar = True, y_max = 300, y_min = -300, x_min = -2., x_max = 2., show = True)
                     elif l == 'log':
                         # regular plot
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data.png', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = False)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force ($f$)", Y_label = "Chain Extension ($R_{{E2E}}$)", saveas = save_name + '_data', plot_data = True, y_max = 500., y_min = 0.1, x_min = 0.0001, x_max = 5., show = True, logscale_x = True, logscale_y = True, plot_slope = False)
 
                         # master plot
-                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data.png', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True)
-
-                    continue
-                    # plot error in bond vector distribution against force for all bending constants
-                    plot_force_extension(top_df, Y_col = 'BVDMSE', X_col = 'F', iso_col = 'K', isovals = [0, 1, 5, 10, 30], isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Bond Vector Distribution Mean Square Difference", saveas = save_name + '_BVDMSE.png', plot_data = True, M2 = True, y_max = 0.25, show = True)
-                    # plot positive data on semi-log
-                    plot_force_extension(top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 10., x_min = 0.1, x_max = 2., show = True, logscale_x = True, logscale_y = True)
-                    # create unique force extension plots for each unique bending constant
-                    for k in FE_parms['K'].unique():
-                        # establish file names
-                        save_name = f"02_processed_data/forceExtension/FE_{top_NAME}_{pot}_N{N}_k{k}"
-                        # isolate the parameters corresponding to the set
-                        isoK_df = FE_parms[(FE_parms['R'] == top) & (FE_parms['pot'] == pot) & (FE_parms['N'] == N) & (FE_parms['K'] == k)]
-                        if isoK_df.empty:
-                            print(save_name + " does not exist!")
-                            continue
-                        # plot positive data on semi-log
-                        # plot_force_extension(isoK_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:2}', X_label = "External Force", Y_label = "Chain Extension", plot_data = True, y_max = 300, y_min = 0.01, x_min = 0.01, x_max = 2., show = True, logscale_x = True, logscale_y = True)
-                        # plot_scaling(isoK_df, N_col = 'F', R_col = ['E2Etot'], X_label = "External Force ($f_{x}$)", Y_label = "Chain Extension (X-Direction)", data_label = ["Simulation Data"], Title = f"Force Extension for {top_NAME} with {pot} potential ($k_{{\\theta}}$ = {k}, N = {N})", saveas = save_name + 'M2.png', error = True, color = ['tab:purple'], flip_axis = True)
+                        plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True)
 
 if bendingPARM:
     tag = ['Ideal', 'Real']
@@ -1590,6 +1705,7 @@ if bendingPARM:
             bendingparms = pd.read_csv(data_dir + parm_file)
 
             ## PROCESS DATA
+            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = False)
             # calculate the bvd error, plot difference if requested
             check_bvd(parms = bendingparms, dir = data_dir, plot = False)
             # parse persistence length from BBC, plot if requested
@@ -1681,6 +1797,19 @@ if hysteresis:
         # get simulation parameters
         hys_parms = pd.read_csv(data_dir + parm_file)
         hys_parms = period2freq (parms = hys_parms, period_col = 'T', timescale = 1.)
+        # loop through parameters, relabel ring format
+        top = []
+        for i, r in hys_parms.iterrows():
+            if r['R'] == 0:
+                top.append("CHAIN")
+            elif r['R'] == 1:
+                top.append("RING")
+            elif r['R'] == 2:
+                top.append("RINGx2")
+            else:
+                print("forceExtension :: ERROR :: Unknown top code " + r['R'] + ".")
+                exit()
+        hys_parms['top'] = top
 
         # collect hysteresis results
         check_hys(parms = hys_parms, dir = data_dir, show = False, plot = True, check = True, clear = True)
@@ -1696,11 +1825,22 @@ if hysteresis:
     else:
         hys_parms = pd.read_csv(anal_dir + parm_file)
 
+
     # for each topology, plot the hysteresis for each of the bending potentials
     for fa in hys_parms['fA'].unique():
         for ring in hys_parms['R'].unique():
             plotdf = hys_parms.loc[(hys_parms['R'] == ring) & (hys_parms['fA'] == fa)]
             # file for plotting hysteresis against actual frequency
-            plot_force_extension(plotdf, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .0000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}.png", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
             # file for plotting hysteresis against normalized frequency
-            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.5, y_max = 100., x_min = .01, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm.png", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}}$)", fa = fa)
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa, diff = (ring == 0))
+
+    # for each bending strength, compare the different topologies
+    for fa in hys_parms['fA'].unique():
+        for k in hys_parms['k'].unique():
+            plotdf = hys_parms.loc[(hys_parms['k'] == k) & (hys_parms['fA'] == fa)]
+            save_name = anal_dir + f"HYS_k{k:0.2f}"
+            # file for plotting hysteresis against actual frequency
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = save_name, X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            # file for plotting hysteresis against normalized frequency
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = save_name + "_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa)
