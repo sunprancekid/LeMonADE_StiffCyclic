@@ -248,7 +248,7 @@ gen_simparm() {
 					SIMID="${R}${C}_N${n}LP${l}_NF"
 					# make directory and add executable
 					mkdir -p ${PATH_SIMPARM}${SIMDIR}
-					./00_programs/bash/gen_LeMonADE_exec.sh ${PATH_SIMPARM}${SIMDIR} ${SIMID} "-n ${n} -v ${FORCEVEC} -b 512 ${R_FLAG}${K_FLAG}${C_FLAG}" "-e 100000 -n 100000000 -a -g"
+					./00_programs/bash/gen_LeMonADE_exec.sh ${PATH_SIMPARM}${SIMDIR} ${SIMID} "-n ${n} -v ${FORCEVEC} -b 512 ${R_FLAG}${K_FLAG}${C_FLAG}" "-e 100000 -n 100000000 -a -g -m"
 					# add parameters to list
 					echo "${SIMID},${SIMDIR},${C},${n},${r},${K_STRING},${VAL_FO},${VAL_FA},0.,${FORCEVEC}" >> $FILE_SIMPARM
 
