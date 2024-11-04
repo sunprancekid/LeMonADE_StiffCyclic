@@ -47,10 +47,10 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 >[!NOTE]
 >These programs were designed to execute on the IPFDD remote computing cluster system.
 1. Navtigate to `./results`
-2. Generate simulation parameters and directory hirearchy in `./01_raw_data`.
-	*  Generate simulations in which the bending potential strength is parameterized. 
-	*  Generate force extension simulations in which stiff polymers under a constant force. 
-	*  Generate hysteresis simulations in which polymers of various stiffness and topologies are exposed to an oscillating sinusodal force.
+2. Generate instructions and directory hirearchy for parameterzed simulations in `./01_raw_data`.
+	a.  *bendingPARM*: Generate simulations in which the bending potential strength is parameterized. 
+	b.  *forceExtension*: Generate force extension simulations in which stiff polymers under a constant force. 
+	c.  *hysteresis*: Generate hysteresis simulations in which polymers of various stiffness and topologies are exposed to an oscillating sinusodal force.
 3. Run batch simulations.
 	*  Run locally.
 	*  Submit to computing cluster.
