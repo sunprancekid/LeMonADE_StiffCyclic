@@ -11,6 +11,7 @@ Generally speaking, simulations are generated in batch according to the proceedu
 3. *Compile and Analyze Simulation Results*: Analyze simulation results.
 
 There are three different modules which can be used to generate sets of simulations in which certain sets of parameters are varied in order to explore their effect of simulated polymer systems.
+
 ###bendingPARM
 Generate simulations in which the bending potential strength is parameterized. Explore the effect of the polymer stiffness of ideal and real polymer chains.
 
