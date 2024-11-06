@@ -8,7 +8,7 @@ Generally speaking, simulations are generated in batch from the command line ter
 2. *Run Simulations*: Run simulations in batch, either locally on you machine by calling `./00_programs/bash/submit_batch_jobs.sh -j ${JOBID}` (not recommended) or on a remote computing cluster `./00_programs/bash/submit_batch_jobs.sh -s -j ${JOBID}`. The flag `-l` can be used to specify a remote cluster from the default.
 >[!NOTE]
 >These scripts were designed to submit simulations on the IPFDD remote computing cluster systems.
->Furthermore, the `LeMonADE_StiffCyclic` should also be installed on comupting cluster in question.
+>Furthermore, the `LeMonADE_StiffCyclic` repository should also be installed on specified comupting cluster.
 ```
 USAGE: ./submit_batch_job.sh << FLAGS >>
 
@@ -28,7 +28,11 @@ USAGE: ./submit_batch_job.sh << FLAGS >>
 
 ```
 
-3. *Compile and Analyze Simulation Results*: Analyze simulation results.
+3. *Compile and Analyze Simulation Results*: Run `python ./00_programs/python/analysis.py ${JOBID}` to collect the results from one job and create graphs which visualize results.
+Results from simulation are stored in `./02_processed_data/${JOBID}/${JOBID}.csv` (optional CLT argument `update` refreshes csv file if simulation results are updated).
+>[!NOTE]
+>`./00_programs/python/venv.txt` contains the python packages necissary to run `./00_programs/python/analysis.py`.
+>Python environment can be installed via `pip` or `conda` according by calling `pip install -r ./00_programs/python/venv.txt` or `conda create -n ENVNAME --file `, respectively.
 
 There are three different modules which can be used to generate sets of simulations in which certain sets of parameters are varied in order to explore their effect of simulated polymer systems.
 
