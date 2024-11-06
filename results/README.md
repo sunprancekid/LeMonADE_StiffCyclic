@@ -12,11 +12,11 @@ Generally speaking, simulations are generated in batch according to the proceedu
 
 There are three different modules which can be used to generate sets of simulations in which certain sets of parameters are varied in order to explore their effect of simulated polymer systems.
 
-###bendingPARM
+### bendingPARM
 Generate simulations in which the bending potential strength is parameterized. Explore the effect of the polymer stiffness of ideal and real polymer chains.
 
-###forceExtension
+### forceExtension
 Generate force extension simulations in which stiff polymers under a constant force. 
 
-###hysteresis
+### `JOBID=hysteresis`
 Generate hysteresis simulations in which polymers of various stiffness and topologies are exposed to an oscillating sinusodal force.
