@@ -438,7 +438,7 @@ def check_bbc (parms = None, dir = None, dpi = None, show = False, plot = False,
         dfsave.to_csv(dir + r['path'] + 'BBC.csv', header = False)
 
 # method that calculates the slope of the scattering factor
-def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False, porod = False, real = False, monotonic = False, monotonic_parameter = 0.25, spline = False , tol_mk = 0.25):
+def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False, porod = False, real = False, monotonic = False, monotonic_parameter = 0.25, spline = False , tol_mk = 0.2, debug = False, plot_fit = False):
 
     # check that mandatory information was passed to method
     if parms is None:
@@ -458,6 +458,8 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
         simfile = dir + r['path'] + 'SKQ.dat'
         if not os.path.exists(simfile):
             continue
+
+        if debug: print(simfile)
 
         # parse results from local file
         clean_file(simfile)
@@ -499,6 +501,9 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
 
         # create porod-kratsky plot
         if porod:
+            # boolean determining if the cross over regime exists
+            xc_exist = True
+
             # create plot by scaling the y-axis by scaled wave number
             y_log = []
             x_log = []
@@ -540,72 +545,93 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
                     xder.append(log2lin(((x_log[i + 1] + x_log[i]) / 2.), 10.))
 
             # identify regimes with 'm = 0'
-            # find the beginning of the regime with a slope of 0
-            for i in range(len(xder)):
-                if yder[i] < (0. + tol_mk):
-                    break
-            idx_m0_start = i
+            tol_m0 = tol_mk
+            while xc_exist:
+                # find the beginning of the regime with a slope of 0
+                for i in range(len(xder)):
+                    if yder[i] < (0. + tol_m0):
+                        break
+                idx_m0_start = i
 
-            # next, find the end of the regime with slope of 0
-            x_m0 = []
-            y_m0 = []
-            for i in range(idx_m0_start, len(xder)):
-                if yder[i] > (0. + tol_mk):
+                # next, find the end of the regime with slope of 0
+                x_m0 = []
+                y_m0 = []
+                for i in range(idx_m0_start, len(xder)):
+                    if yder[i] > (0. + tol_m0):
+                        break
+                    else:
+                        # if the slope is still within the linear regime, add the data to the list
+                        x_m0.append(x[i])
+                        y_m0.append(y[i])
+                idx_m0_end = i
+
+                # if the length of the array is greater than 1, proceed with the line fitting
+                if len(x_m0) > 1:
+                    # fit a line to the data within the linear regime, determine slope
+                    popt_m0, pcov = curve_fit(power_fit, x_m0, y_m0)
+                    # create fit for the linear regime
+                    nfit = 10
+                    xfit_m0 = []
+                    yfit_m0 = []
+                    xfit_m0_start = x_m0[0] * (1. / 3.)
+                    xfit_m0_end = x_m0[-1] * (3.)
+                    for i in range(nfit):
+                        xfit_m0.append(xfit_m0_start + (i * (xfit_m0_end - xfit_m0_start) / (nfit - 1)))
+                        yfit_m0.append(power_fit(xfit_m0[i], popt_m0[0], popt_m0[1]))
                     break
                 else:
-                    # if the slope is still within the linear regime, add the data to the list
-                    x_m0.append(x[i])
-                    y_m0.append(y[i])
-            idx_m0_end = i
-
-            # fit a line to the data within the linear regime, determine slope
-            popt_m0, pcov = curve_fit(power_fit, x_m0, y_m0)
-            # create fit for the linear regime
-            nfit = 10
-            xfit_m0 = []
-            yfit_m0 = []
-            xfit_m0_start = x_m0[0] * (1. / 3.)
-            xfit_m0_end = x_m0[-1] * (3.)
-            for i in range(nfit):
-                xfit_m0.append(xfit_m0_start + (i * (xfit_m0_end - xfit_m0_start) / (nfit - 1)))
-                yfit_m0.append(power_fit(xfit_m0[i], popt_m0[0], popt_m0[1]))
+                    # increment the tolerance and repeat
+                    tol_m0 += .01
+                    # if the tolerance for identifying the cross-over regime has
+                    # surpassed the threshold, the cross over regime cannot be idenitified or does not exist
+                    if tol_m0 > (1. - tol_mk):
+                        xc_exist = False
 
 
             # identify regimes with 'm = 1'
-            # find the beginning of the regime with a slope of 1
-            for i in range(idx_m0_end, len(xder)):
-                if yder[i] > (1. - tol_mk):
-                    break
-            idx_m1_start = i
+            tol_m1 = tol_mk
+            if xc_exist:
+                # find the beginning of the regime with a slope of 1
+                for i in range(idx_m0_end, len(xder)):
+                    if yder[i] > (1. - tol_m1):
+                        break
+                idx_m1_start = i
 
-            # next, find the end of the regime with slope of 0
-            x_m1 = []
-            y_m1 = []
-            for i in range(idx_m1_start, len(xder)):
-                if yder[i] > (1. + tol_mk):
-                    break
+                # next, find the end of the regime with slope of 0
+                x_m1 = []
+                y_m1 = []
+                for i in range(idx_m1_start, len(xder)):
+                    if yder[i] > (1. + tol_m1):
+                        break
+                    else:
+                        # if the slope is still within the linear regime, add the data to the list
+                        x_m1.append(x[i])
+                        y_m1.append(y[i])
+                idx_m1_end = i
+
+                # if the length of the array is greater than 1, proceed with the line fitting
+                if len(x_m1) > 1:
+                    # fit a line to the data within the rod-like regime, determine slope
+                    popt_m1, pcov = curve_fit(power_fit, x_m1, y_m1)
+                    # create fit for the linear regime
+                    xfit_m1 = []
+                    yfit_m1 = []
+                    xfit_m1_start = x_m1[0] * (1. / 3.)
+                    xfit_m1_end = x_m1[-1] * (3.)
+                    for i in range(nfit):
+                        xfit_m1.append(xfit_m1_start + (i * (xfit_m1_end - xfit_m1_start) / (nfit - 1)))
+                        yfit_m1.append(power_fit(xfit_m1[i], popt_m1[0], popt_m1[1]))
                 else:
-                    # if the slope is still within the linear regime, add the data to the list
-                    x_m1.append(x[i])
-                    y_m1.append(y[i])
-            idx_m1_end = i
+                    # otherwise increment the tolerance and repeat
+                    tol_m1 += 0.01
 
-            # fit a line to the data within the rod-like regime, determine slope
-            popt_m1, pcov = curve_fit(power_fit, x_m1, y_m1)
-            # create fit for the linear regime
-            xfit_m1 = []
-            yfit_m1 = []
-            xfit_m1_start = x_m1[0] * (1. / 3.)
-            xfit_m1_end = x_m1[-1] * (3.)
-            for i in range(nfit):
-                xfit_m1.append(xfit_m1_start + (i * (xfit_m1_end - xfit_m1_start) / (nfit - 1)))
-                yfit_m1.append(power_fit(xfit_m1[i], popt_m1[0], popt_m1[1]))
-
-            # use the two lines to identify the cross over regime, where to two lines intersect
-            b_m0 = power_fit(1., popt_m0[0], popt_m0[1])
-            b_m1 = power_fit(1., popt_m1[0], popt_m1[1])
-            x_x = math.pow(10., math.log(popt_m0[0] / popt_m1[0], 10.) / (popt_m1[1] - popt_m0[1]))
-            y_x = power_fit(x_x, popt_m0[0], popt_m0[1])
+            # if the cross over regime exists, identify it
+            if xc_exist:
+                # use the two lines to identify the cross over regime, where to two lines intersect
+                b_m0 = power_fit(1., popt_m0[0], popt_m0[1])
+                b_m1 = power_fit(1., popt_m1[0], popt_m1[1])
+                x_x = math.pow(10., math.log(popt_m0[0] / popt_m1[0], 10.) / (popt_m1[1] - popt_m0[1]))
+                y_x = power_fit(x_x, popt_m0[0], popt_m0[1])
 
             # plot
             if plot or show:
@@ -613,41 +639,44 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
                 fig, ax = plt.subplots()
                 ax2 = ax.twinx()
 
-                # plot scattering, scattering slope as well as fit if specified
-                ax.plot(x, y, 'k', label = '$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$')
-                if monotonic:
-                    # plot monotonic fit
-                    ax.plot(x, ymono, 'r', label = "Monotonic Fit ($W_{{n}}$ = {:.02f})".format(monotonic_parameter))
-                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
-                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
-                elif spline:
-                    ax.plot(xder, yspl, 'r', label = 'Cubic Spline Fit')
-                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
-                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
-                else:
-                    ax2.plot(xder, yder, color = 'b', alpha = 0.8)
-                    ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Data')
+                # if the cross over regime exists, plot it
+                if xc_exist:
+                    # plot scattering, scattering slope as well as fit if specified
+                    ax.plot(x, y, 'k', label = '$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$')
+                    if monotonic:
+                        # plot monotonic fit
+                        if plot_fit: ax.plot(x, ymono, 'r', label = "Monotonic Fit ($W_{{n}}$ = {:.02f})".format(monotonic_parameter))
+                        ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                        ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
+                    elif spline:
+                        if plot_fit: ax.plot(xder, yspl, 'r', label = 'Cubic Spline Fit')
+                        ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                        ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Fit')
+                    else:
+                        ax2.plot(xder, yder, color = 'b', alpha = 0.8)
+                        ax.plot([], [], color = 'b', alpha = 0.8, label = 'Slope of Data')
 
-                # plot lines that identify the two regimes
-                # slope with 'm = 0'
-                ax2.plot([xder[idx_m0_start], max(x)], [popt_m0[1], popt_m0[1]], '--', color = 'tab:purple') # line corresponding to slope
-                ax2.plot([xder[idx_m0_start], xder[idx_m0_start]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # start of linear regime
-                ax2.plot([xder[idx_m0_end], xder[idx_m0_end]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # end of linear regime
-                ax.plot(xfit_m0, yfit_m0, color = 'tab:purple', label = "Linear Regime \n (m = {:.02f})".format(popt_m0[1])) # line fit to data within linear regime plus data label
+                    # plot lines that identify the two regimes
+                    # slope with 'm = 0'
+                    ax2.plot([xder[idx_m0_start], max(x)], [popt_m0[1], popt_m0[1]], '--', color = 'tab:purple') # line corresponding to slope
+                    ax2.plot([xder[idx_m0_start], xder[idx_m0_start]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # start of linear regime
+                    ax2.plot([xder[idx_m0_end], xder[idx_m0_end]], [popt_m0[1], max(yder)], '--', color = 'tab:purple') # end of linear regime
+                    ax.plot(xfit_m0, yfit_m0, color = 'tab:purple', label = "Linear Regime \n (m = {:.02f})".format(popt_m0[1])) # line fit to data within linear regime plus data label
 
-                # slope with 'm = 1'
-                ax2.plot([xder[idx_m1_start], max(x)], [popt_m1[1], popt_m1[1]], '--', color = 'tab:orange') # line corresponding to rod_like regime
-                ax2.plot([xder[idx_m1_start], xder[idx_m1_start]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # start of linear regime
-                ax2.plot([xder[idx_m1_end], xder[idx_m1_end]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # end of linear regime
-                ax.plot(xfit_m1, yfit_m1, color = 'tab:orange', label = "Rod-Like Regime \n (m = {:.02f})".format(popt_m1[1]))
+                    # slope with 'm = 1'
+                    ax2.plot([xder[idx_m1_start], max(x)], [popt_m1[1], popt_m1[1]], '--', color = 'tab:orange') # line corresponding to rod_like regime
+                    ax2.plot([xder[idx_m1_start], xder[idx_m1_start]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # start of linear regime
+                    ax2.plot([xder[idx_m1_end], xder[idx_m1_end]], [popt_m1[1], max(yder)], '--', color = 'tab:orange') # end of linear regime
+                    ax.plot(xfit_m1, yfit_m1, color = 'tab:orange', label = "Rod-Like Regime \n (m = {:.02f})".format(popt_m1[1]))
 
-                # plot the cross over
-                ax.plot(x_x, y_x, 'ro', markerfacecolor='none') # plot location of intersection of two lines
-                ax.plot([x_x, x_x], [min(y) , max(y)], '--', color = 'r') # plot line corresponding to cross over
+                    # plot the cross over
+                    ax.plot(x_x, y_x, 'ro', markerfacecolor='none') # plot location of intersection of two lines
+                    ax.plot([x_x, x_x], [min(y) , max(y)], '--', color = 'r') # plot line corresponding to cross over
 
                 # set scales, labels
                 ax.set_yscale('log')
                 ax.set_xscale('log')
+                if min(yder) > 0.: ax2.set_ylim(0., None)
                 fig.suptitle("Kratky-Porod Plot")
                 ax.set_title("({:s})".format(r['id']))
                 ax.set_ylabel("$I(q) \cdot q^{{\\frac{{1}}{{\\nu}}}}$")
@@ -659,10 +688,30 @@ def check_skq (parms = None, dir = None, dpi = None, show = False, plot = False,
                 if show:
                     plt.show()
                 plt.close()
-            exit()
-        # save fit as dataframe to csv
-        dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
-        dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
+            # add cross over regime to fit
+            dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m], 'C': [1. / x_x]})
+            dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
+        else:
+            # save fit as dataframe to csv with out cross over regime
+            dfsave = pd.DataFrame.from_dict({'A': [popt[0]], 'B': [m]})
+            dfsave.to_csv(dir + r['path'] + 'SKQ.csv', header = False)
+
+# calculate hysteresis (area in loop) for force amplitude correlation
+def calc_hys (f, r, omega = 1., f_a = 1., norm = 1.):
+
+    # initialize hysteresis value
+    a = 0.
+
+    # loop though each neighboring pair, calculate area under curve according to trapazoidal method
+    for i in range(len(f)):
+        # establish integers used to access arrays
+        i_1 = i
+        i_2 = i + 1
+        if (i_2 >= len(f)): i_2 = 0
+        # accumulate hysteresis integral
+        a += norm * 0.5 * (r[i_2] + r[i_1]) * (f[i_2] - f[i_1])
+
+    return -a
 
 # method that collects the hysteresis area, plots hysteresis curve
 def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False, check = True, clear = False):
@@ -686,12 +735,12 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
         if not os.path.exists(simfile):
             # if the hysteresis file is not present, the simulatin could be for calculating the no force chain extension
             simfile = dir + r['path'] + 'RE2E.dat'
-            # bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True)
             if os.path.exists(simfile):
                 # if the end to end file does exist, parse the end to end distance as the hysteresis
                 clean_file(simfile)
                 data = parse_data(simfile, avgcol = 4, tab = True)
-                dfsave = pd.DataFrame.from_dict({'A': [np.mean(data)], 'B': [np.var(data)]})
+                dfsave = pd.DataFrame.from_dict({'A': [np.mean(data)], 'B': [np.var(data)], 'C': [np.mean(data)]})
+                # TODO add radius of gyration calculation
                 dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
                 continue
             else:
@@ -727,8 +776,11 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
             os.remove(simfile)
             continue
 
+        # use the average end-to-end distance and force to estimate the hysteresis
+        a = calc_hys(f_a, r_a, omega = 2. * math.pi / r['T'], f_a = r['fA'], norm = 300)
+
         # write the hysteresis value and variance to a csv file
-        dfsave = pd.DataFrame.from_dict({'A': [abs(df.loc[0,'E2E_avg'])], 'B': [df.loc[0,'E2E_std']]})
+        dfsave = pd.DataFrame.from_dict({'A': [abs(df.loc[0,'E2E_avg'])], 'B': [df.loc[0,'E2E_std']], 'C': [a]})
         dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
 
         if check and (plot or show):
@@ -759,7 +811,8 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
         if plot or show:
             # plot end to end distance against averaged force
             # would be cool to circularly color code each data point
-            plt.errorbar(f_a, r_a, yerr = r_s, fmt = 'o', lolims = True, uplims = True)
+            # plt.errorbar(f_a, r_a, yerr = r_s, fmt = 'o', lolims = True, uplims = True)
+            plt.plot(f_a, r_a)
             plt.xlabel("Force ($f$)")
             plt.ylabel("Extension ($R$)")
             plt.ylim(-1., 1.)
@@ -1478,7 +1531,7 @@ def compare_bending_lp_pot (df = None, saveas = None, logscale = False, show = F
         plt.show()
     plt.close()
 
-def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = False, logscale_y = False, show = False, xmax = None, ymax = None, ymin = None, xmin = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None, fit = False, WLC = False, Lo = 1.):
+def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = False, logscale_y = False, show = False, xmax = None, ymax = None, ymin = None, xmin = None, lp_BBC = False, lp_theta = False, top = None, X_label = None, Y_label = None, Title = None, dpi = None, fit = False, WLC = False, Lo = 1., m = None, b = None):
 
     # check that the proper parameters have been passed to the method
     if df is None:
@@ -1549,6 +1602,21 @@ def compare_propery_v_lp(df = None, saveas = None, R_col = None, logscale_x = Fa
             plt.plot(x_fit, y_fit, '--', label = "Power Law Fit", color = 'k')
             plt.plot([], [], ' ', label="Slope = {:.3f}".format(popt[1]))
 
+    if m is not None and b is not None:
+        # plot a line corresponding to y = mx + b
+        # min x point
+        if xmin is not None:
+            x_start = xmin
+        else:
+            x_start = min(bbc_lp)
+        # max x point
+        if xmax is not None:
+            x_end = xmax
+        else:
+            x_end = max(bbc_lp)
+        y_start = x_start * m + b
+        y_end = x_end * m + b
+        plt.plot([x_start, x_end], [y_start, y_end], '--', color = 'k')
 
     # finish plot, show
     plt.legend(loc = "best")
@@ -1692,7 +1760,7 @@ if forceExtension:
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True)
 
 if bendingPARM:
-    tag = ['Ideal', 'Real']
+    tag = ['Ideal']
     for t in tag:
         # force extension for linear data set
         job = 'bendingPARM_' + t
@@ -1705,13 +1773,13 @@ if bendingPARM:
             bendingparms = pd.read_csv(data_dir + parm_file)
 
             ## PROCESS DATA
-            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = False)
+            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = True)
             # calculate the bvd error, plot difference if requested
             check_bvd(parms = bendingparms, dir = data_dir, plot = False)
             # parse persistence length from BBC, plot if requested
             check_bbc(parms = bendingparms, dir = data_dir, show = False, plot = True, lp_decay = True, lp_theta = True)
             # parse scattering factor slope from SKQ, plot if requested
-            check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = False)
+            # check_skq(parms = bendingparms, dir = data_dir, show = False, plot = True, porod = True, real = (tag == 'REAL'), monotonic = False)
 
             ## PARSE DATA, ADD TO RESULTS DATAFRAME
             # get the end-to-end distance vector data
@@ -1724,6 +1792,8 @@ if bendingPARM:
             bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'BBC.csv', col = 2, title = 'lp_d', M1 = True)
             # get the scattering factor slope
             bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'SKQ.csv', col = 2, title = 'm_sq', M1 = True)
+            # get scattering factor cross-over regime
+            bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'SKQ.csv', col = 3, title = 'lp_xc', M1 = True)
             # collect the bond-bond correlation at different bond distances
             for i in range(30):
                 bendingparms = parse_results(parms = bendingparms, dir = data_dir, simfile = 'BBC.dat', row = i, title = "l"+str(i), M1 = True)
@@ -1740,6 +1810,7 @@ if bendingPARM:
             # plot the end to end distance against the measured persistence length
             compare_propery_v_lp(df = bendingparms,  R_col = 'E2Etot_M1', logscale_x = True, logscale_y = True, show = False, xmax = 1000, ymax = 1000, ymin = 30, xmin = .1, lp_BBC = True, top = "CHAIN", saveas = anal_dir + "CHAIN_RE2E_lp_BBC_WLC.png", Y_label = "End-to-End Distance ($R_{{E2E}}$)", fit = True, Lo = 600., WLC = True)
             compare_propery_v_lp(df = bendingparms, R_col = 'm_sq_M1', show = False, top = 'CHAIN', logscale_x = True, Y_label = "Scattering Factor", saveas = anal_dir + "CHAIN_SKQ_lp.png", xmin = .1, xmax = 200.)
+            compare_propery_v_lp(df = bendingparms, R_col = 'lp_xc_M1', show = False, top = 'CHAIN', logscale_x = True, logscale_y = True, Y_label = "Estimated Cross Over Regime", saveas = anal_dir + "CHAIN_XC_lp.png", xmin = .1, xmax = 200., ymin = 0.1, m = 1., b = 0.)
         elif t == "Real":
             pass
         else:
@@ -1817,6 +1888,7 @@ if hysteresis:
         # add the hysteresis results to the bending parameter data frame
         hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 1, title = 'A_avg', M1 = True)
         hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 2, title = 'A_std', M1 = True)
+        hys_parms = parse_results(parms = hys_parms, dir = data_dir, simfile = 'HYS.csv', col = 3, title = 'A_sl', M1 = True)
 
         # save results
         if not os.path.exists(anal_dir):
@@ -1831,9 +1903,9 @@ if hysteresis:
         for ring in hys_parms['R'].unique():
             plotdf = hys_parms.loc[(hys_parms['R'] == ring) & (hys_parms['fA'] == fa)]
             # file for plotting hysteresis against actual frequency
-            plot_force_extension(plotdf, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
             # file for plotting hysteresis against normalized frequency
-            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa, diff = (ring == 0))
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa) #, diff = (ring == 0))
 
     # for each bending strength, compare the different topologies
     for fa in hys_parms['fA'].unique():
@@ -1841,6 +1913,6 @@ if hysteresis:
             plotdf = hys_parms.loc[(hys_parms['k'] == k) & (hys_parms['fA'] == fa)]
             save_name = anal_dir + f"HYS_k{k:0.2f}"
             # file for plotting hysteresis against actual frequency
-            plot_force_extension(plotdf, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = save_name, X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = save_name, X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
             # file for plotting hysteresis against normalized frequency
-            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_avg', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = save_name + "_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa)
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'top', isolabel = '{:s}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = save_name + "_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa)

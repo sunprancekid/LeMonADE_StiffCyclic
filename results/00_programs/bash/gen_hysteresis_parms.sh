@@ -20,7 +20,7 @@ declare -i BOOL_OVER=0
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 2 )
+PARM_RING=( 0 2 )
 # PARM_RING=( 0 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
@@ -45,7 +45,7 @@ declare -i MIN_PERIOD_VAL=10000 # 10 thousand
 # force base value
 VAL_FO="0.0"
 # force amplitude
-VAL_FA="0.5"
+VAL_FA="5.0"
 # force vector applied by oscillatory force
 FORCEVEC="100"
 ## PARAMETERS -- SIMULATION
@@ -56,9 +56,9 @@ JOB="hysteresis"
 # path to LeMonADE executables
 EXECDIR="00_programs/build/bin/"
 # maximum amount of time that a simulation can equilibriate
-MAX_EQUILIBRIATE_MCS=1000000000 # 1 billion
+MAX_EQUILIBRIATE_MCS=5000000000 # 500 million
 # maximum amount of time that any one simulatin can run
-MAX_SIMULATION_MCS=10000000000 # 10 billion
+MAX_SIMULATION_MCS=5000000000 # 5 billion
 
 
 ## FUNCTIONS

@@ -398,7 +398,7 @@ void AnalyzerHysteresis<IngredientsType>::cleanup() {
     file << "i,f_exp,f_avg,f_std,E2E_avg,E2E_std,n" << std::endl;
 
     // print the average hysteresis value
-    file << (0) << ",NA,NA,NA," << avg_single_hys_loop.getHistAverage() << "," << avg_single_hys_loop.getHistSTD() << "," << avg_single_hys_loop.getNCounts() << std::endl;
+    file << (0) << ",NA,NA," << (norm_length) << "," << avg_single_hys_loop.getHistAverage() << "," << avg_single_hys_loop.getHistSTD() << "," << avg_single_hys_loop.getNCounts() << std::endl;
 
     // print results into a file
     for (int n = 0; n < avg_hys_loop_dist.size(); n++) {

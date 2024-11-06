@@ -43,6 +43,6 @@ Usage: ./simulatePolymerBFM << OPTIONS >>
 [-g add radius of gyration analyzer]
 
 ```
-6. Simulation movies can be viewed by installing [LeMonADE_Viewer](https://github.com/LeMonADE-project/LeMonADE-Viewer).
+6. Simulation movies (stored in `config.bfm`) can be viewed by installing [LeMonADE_Viewer](https://github.com/LeMonADE-project/LeMonADE-Viewer).
 ## Submitting batch jobs
 For more instructions on generating and submitting batch jobs, please navigate to `./results`.

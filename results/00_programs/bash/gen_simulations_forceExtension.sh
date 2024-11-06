@@ -37,7 +37,7 @@ PARM_RING=( 0 1 2 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
-PARM_LP=( 0 ) #( 0 2 5 9 )
+PARM_LP=( 0 9 ) #( 0 2 5 9 )
 # array containing bending potential strings to test
 # PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
