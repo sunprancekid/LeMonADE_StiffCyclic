@@ -34,6 +34,9 @@ Results from simulation are stored in `./02_processed_data/${JOBID}/${JOBID}.csv
 >`./00_programs/python/venv.txt` contains the python packages necissary to run `./00_programs/python/analysis.py`.
 >Python environment can be installed via `pip` or `conda` according by calling `pip install -r ./00_programs/python/venv.txt` or `conda create -n ENVNAME --file `, respectively.
 
+
+## Modules
+
 There are three different modules which can be used to generate sets of simulations in which certain sets of parameters are varied in order to explore their effect of simulated polymer systems.
 
 ### bendingPARM
