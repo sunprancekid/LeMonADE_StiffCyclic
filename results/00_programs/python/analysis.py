@@ -738,14 +738,17 @@ def check_hys (parms = None, dir = None, dpi = None, show = False, plot = False,
             if os.path.exists(simfile):
                 # if the end to end file does exist, parse the end to end distance as the hysteresis
                 clean_file(simfile)
-                data = parse_data(simfile, avgcol = 4, tab = True)
-                dfsave = pd.DataFrame.from_dict({'A': [np.mean(data)], 'B': [np.var(data)], 'C': [np.mean(data)]})
-                # TODO add radius of gyration calculation
+                data_E2E = parse_data(simfile, avgcol = 4, tab = True)
+                data_ROG = parse_data(simfile, avgcol = 4, tab = True)
+                dfsave = pd.DataFrame.from_dict({'A': [np.mean(data_E2E)], 'B': [np.var(data_ROG)], 'C': [np.mean(data_ROG)]})
                 dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
                 continue
             else:
-                print(simfile)
-                exit()
+                # file doesn't exist, write NaN
+                dfsave = pd.DataFrame.from_dict({'A': [np.NaN], 'B': [np.NaN], 'C': [np.NaN]})
+                dfsave.to_csv(dir + r['path'] + 'HYS.csv', header = False)
+                print(simfile + " does not exist.")
+                continue
         # parse the hysteresis area (if nan, delete the file so that it can be rerun)
         df = pd.read_csv(simfile)
         n = len(df.index)
@@ -990,6 +993,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     added_hys_neg = False
     A_max_neg = None
     A_max_pos = None
+    y_max_check = None
     if diff and hys:
         # initialize diffusion correlation for hysteresis
         x_diff = []
@@ -1094,6 +1098,12 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
             line = plt.plot(y, x, label = label, fillstyle = 'full', marker = next(marks), ls = ' ')
         else:
             line = plt.plot(x, y, label = label, fillstyle = 'full', marker = next(marks), ls = ' ')
+            # check y range
+            if y_max_check is None:
+                y_max_check = max(y)
+            elif y_max_check < max(y):
+                y_max_check = max(y)
+
 
         # plot the slope if requested
         if plot_slope:
@@ -1221,7 +1231,10 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         plt.ylim(x_min, x_max)
     else:
         plt.xlim(x_min, x_max)
-        plt.ylim(y_min, y_max)
+        if y_max_check < y_max:
+            plt.ylim(y_min, y_max)
+        else:
+            plt.ylim(y_min, y_max_check * 10)
     if logscale_x:
         plt.xscale('log')
     if logscale_y:
@@ -1251,9 +1264,12 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         # plot the diffusion correlation against the bending strength
         plt.scatter(x_diff, y_diff)
         plt.xlabel("Bending Strength ($\\kappa_{{\\theta}}$)")
-        plt.ylabel("Diffusion ($\\tau_{{R}} / R_{{E2E}}$)")
-        plt.show()
-        exit()
+        plt.ylabel("Diffusion ($\\tau_{{R}} / R_{{ROG}}$)")
+        if saveas is not None:
+            plt.savefig(saveas + "_diff.png", dpi = dpi, bbox_inches='tight')
+        if show:
+            plt.show()
+        plt.close()
 
 # method for plotting the bond bond correlation for bending potential simulation data against s, the bond distance
 def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, saveas = None, logscale_y = True, Title = None, Y_label = None, X_label = None, dpi = None):
@@ -1903,9 +1919,9 @@ if hysteresis:
         for ring in hys_parms['R'].unique():
             plotdf = hys_parms.loc[(hys_parms['R'] == ring) & (hys_parms['fA'] == fa)]
             # file for plotting hysteresis against actual frequency
-            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 1., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 100., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
             # file for plotting hysteresis against normalized frequency
-            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.005, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa) #, diff = (ring == 0))
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.5, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa, diff = True) #, diff = (ring == 0)
 
     # for each bending strength, compare the different topologies
     for fa in hys_parms['fA'].unique():

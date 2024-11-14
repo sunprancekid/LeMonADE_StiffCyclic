@@ -29,7 +29,7 @@ declare -i N_FORCE_VAL=200
 # maxmium force to test
 MAX_FORCE_VAL="10"
 # minimum force to test
-MIN_FORCE_VAL=".01"
+MIN_FORCE_VAL=".001"
 # array containing N to test
 PARM_N=( 100 )
 # array containing whether to test rings structures or not
@@ -37,7 +37,7 @@ PARM_RING=( 0 1 2 )
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
-PARM_LP=( 0 9 ) #( 0 2 5 9 )
+PARM_LP=( 0 2 5 9 )
 # array containing bending potential strings to test
 # PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
@@ -54,11 +54,11 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 ## PARAMETERS -- SIMULATION
 # number of MCSs between each property calculation
-declare -i N_MCS=10000000000
+declare -i N_MCS=100000000000 # 100 billion
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=1000000000
+declare -i t_equilibrium=1000000000 # 1 billion
 
 
 ## FUNCTIONS
@@ -217,7 +217,7 @@ gen_simparm() {
 
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n}${FORCE_FLAG}-v ${fv} -b 512"
-                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a -m"
+                            SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a"
                             if [ $l != 0 ]; then
                                 # calculate the bending parameter constant from the assigned persistence length
                                 # according to the type of potential assigned to the simulation
