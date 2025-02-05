@@ -993,7 +993,15 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
     added_hys_neg = False
     A_max_neg = None
     A_max_pos = None
+    y_min_check = None
     y_max_check = None
+
+    # used for determing minimum and maximum axis
+    y_min_find = None
+    y_max_find = None
+    x_max_find = None
+    x_min_find = None
+
     if diff and hys:
         # initialize diffusion correlation for hysteresis
         x_diff = []
@@ -1103,6 +1111,11 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
                 y_max_check = max(y)
             elif y_max_check < max(y):
                 y_max_check = max(y)
+
+            if y_min_check is None:
+                y_min_check = min(y)
+            elif y_min_check > min(y):
+                y_min_check = min(y)
 
 
         # plot the slope if requested
@@ -1231,10 +1244,22 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         plt.ylim(x_min, x_max)
     else:
         plt.xlim(x_min, x_max)
-        if y_max_check < y_max:
-            plt.ylim(y_min, y_max)
-        else:
-            plt.ylim(y_min, y_max_check * 10)
+        # determine min and max ylimits based on check values
+        if y_max is None:
+            # if a maximum value was not assigned, use the check value
+            y_max = y_max_check * 5
+        elif (y_max_check > y_max):
+            # if the check value is greater than the assigned value, assign the check value
+            y_max = y_max_check * 5
+        if y_min is None:
+            # if a minimum value was not assigned, assign the check value
+            y_min = y_min_check * 0.5
+        elif (y_min_check < y_min):
+            # if the check value is less than the assigned value, assign the check value
+            y_min = y_min_check * 0.5
+        # set ylimits
+        plt.ylim(y_min, y_max)
+
     if logscale_x:
         plt.xscale('log')
     if logscale_y:
@@ -1919,9 +1944,9 @@ if hysteresis:
         for ring in hys_parms['R'].unique():
             plotdf = hys_parms.loc[(hys_parms['R'] == ring) & (hys_parms['fA'] == fa)]
             # file for plotting hysteresis against actual frequency
-            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 100., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
+            plot_force_extension(plotdf, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 100., y_max = 500., x_min = .00000001, x_max = 0.001, saveas = anal_dir + f"HYS_R{ring}_fa{fa}", X_label = "Frequency ($\\omega$)", Y_label = "Hysteresis ($|A|$)")
             # file for plotting hysteresis against normalized frequency
-            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.5, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa, diff = True) #, diff = (ring == 0)
+            plot_force_extension(plotdf, norm = True, hys = True, Y_col = 'A_sl', X_col = 'frequency', iso_col = 'k', isolabel = '$k_{{\\theta}}$ = {:.02f}', logscale_x = True, logscale_y = True, show = True, y_min = 0.5, y_max = 10., x_min = .001, x_max = 1000, saveas = anal_dir + f"HYS_R{ring}_fa{fa}_norm", X_label = "Normalized Frequency ($\\omega \\cdot \\tau_{R}$)", Y_label = "Normalized Hysteresis ($|A| \\cdot f_{{A}}^{{2}} \\cdot R^{{-1}}_{{0}}$)", fa = fa, diff = True) #, diff = (ring == 0)
 
     # for each bending strength, compare the different topologies
     for fa in hys_parms['fA'].unique():
