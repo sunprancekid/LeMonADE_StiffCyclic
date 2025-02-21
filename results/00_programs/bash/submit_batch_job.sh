@@ -169,7 +169,9 @@ gen_slurm_script () {
     echo "" >> $FILEPATH$FILENAME
     echo "### run job ####" >> $FILEPATH$FILENAME
     echo "echo \"Job start time is \$(date).\"" >> $FILEPATH$FILENAME
-    echo "srun ./${SIMID}.sh -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
+    echo "srun ./${SIMID}.sh -g -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
+    echo "srun ./${SIMID}.sh -e -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
+    echo "srun ./${SIMID}.sh -r -p /beetmp/dorsey/LeMonADE_StiffCyclic/build/bin/ > /dev/null 2>&1" >> $FILEPATH$FILENAME
     echo "echo \"Job end time is \$(date).\"" >> $FILEPATH$FILENAME
     echo "" >> $FILEPATH$FILENAME
     # add instructions for copying results back

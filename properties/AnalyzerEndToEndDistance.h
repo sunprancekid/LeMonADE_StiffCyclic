@@ -2,8 +2,9 @@
 #define LEMONADE_ANALYZER_END_TO_END_DISTANCE_H
 
 #include <string>
-#include <iostream>
+#include <iostream> // used for writing to file
 #include <cmath>
+#include <fstream> // used for appending to file
 
 #include <LeMonADE/utility/Vector3D.h>
 #include <LeMonADE/analyzer/AbstractAnalyzer.h>
@@ -233,30 +234,49 @@ void AnalyzerEndToEndDistance<IngredientsType>::cleanup()
 template<class IngredientsType>
 void AnalyzerEndToEndDistance<IngredientsType>::dumpTimeSeries()
 {
-    //fist make a single vector<vector<double> > for writing the results
+    // check if the outfile exists
+    ifstream f(outputFile.c_str());
+    bool file_bool = f.good();
+
+    // first make a single vector<vector<double> > for writing the results
     std::vector<std::vector<double> > resultsTimeseries=Re2eTimeSeries;
     resultsTimeseries.insert(resultsTimeseries.begin(),MCSTimes);
 
-    //if it is written for the first time, include comment in the output file
-    if(isFirstFileDump){
-        std::stringstream commentTimeSeries;
-        commentTimeSeries<<"Created by AnalyzerEndToEndDistance\n";
-        commentTimeSeries<<"file contains time series of average Re2e over all analyzed groups\n";
-        commentTimeSeries<<"format: mcs\t Re2e_X\t Re2e_Y\t Re2e_Z\t Re2e\n";
+    // if the file exists and should not be overwritten
+    if (file_bool) {
+        // create iostream for writing to file without overwritting
+        std::ofstream appendfile;
+        appendfile.open(outputFile, std::ios_base::app);
+        // loop through each sample
+        for (int n = 0; n < MCSTimes.size(); n++) {
+            char buffer[100]; // buffer contains results
+            sprintf(buffer, "%f\t%f\t%f\t%f\t%f", MCSTimes[n], Re2eTimeSeries[0][n], Re2eTimeSeries[1][n],Re2eTimeSeries[2][n],Re2eTimeSeries[3][n]); // formatted string
+            appendfile << buffer << std::endl; // write to file
 
-        ResultFormattingTools::writeResultFile(
-            outputFile,
-            ingredients,
-            resultsTimeseries,
-            commentTimeSeries.str()
-        );
+        }
+        exit(0);
+    } else {
+        //if it is written for the first time, include comment in the output file
+        if(isFirstFileDump){
+            std::stringstream commentTimeSeries;
+            commentTimeSeries<<"Created by AnalyzerEndToEndDistance\n";
+            commentTimeSeries<<"file contains time series of average Re2e over all analyzed groups\n";
+            commentTimeSeries<<"format: mcs\t Re2e_X\t Re2e_Y\t Re2e_Z\t Re2e\n";
 
-        isFirstFileDump=false;
-    }
-    //otherwise just append the new data
-    else{
-        ResultFormattingTools::appendToResultFile(outputFile,
-                                                  resultsTimeseries);
+            ResultFormattingTools::writeResultFile(
+                outputFile,
+                ingredients,
+                resultsTimeseries,
+                commentTimeSeries.str()
+            );
+
+            isFirstFileDump=false;
+        }
+        //otherwise just append the new data
+        else{
+            ResultFormattingTools::appendToResultFile(outputFile,
+                                                    resultsTimeseries);
+        }
     }
     //set all time series vectors back to zero size
     MCSTimes.resize(0);

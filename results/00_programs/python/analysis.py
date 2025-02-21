@@ -1,4 +1,5 @@
 ## PACKAGES
+# from conda
 import sys, os, math
 import csv
 from pathlib import Path
@@ -12,6 +13,9 @@ from scipy import interpolate # spline for curve fitting
 from scipy import signal as sig # used for monotonic curve smoothing
 import itertools # used for iterating over markers
 from decimal import Decimal # used for formating large numbers to scientific notation
+# local
+from fig.Figure import Figure
+from fig.scatter_plot import gen_scatter
 
 ################
 ## PARAMETERS ##
@@ -1701,11 +1705,36 @@ bendingPARM = ("bendingPARM" in sys.argv)
 hysteresis = ("hysteresis" in sys.argv)
 # update the simulation results, even if the simulation results file already exists
 update = ("update" in sys.argv)
+# create all figures
+figure = ("allfigs" in sys.argv)
+# generate / re-generate figure 1
+fig1 = ("fig1" in sys.argv)
 
 
 ############
 ## SCRIPT ##
 ############
+
+# use pre-analyzed results to generate publication quality figures
+if figure or fig1: ## generate figure one
+    ## grab data from folder
+    df = pd.read_csv("./03_figures/fig1/bendingPARM.csv")
+
+    # first plot compares bending parameter to persistence length for either beinding potential
+    # load data and establish figure parameters
+    fig1a = Figure()
+    fig1a.load_data(d = df, xcol = 'k', ycol = 'lp_d_M1', ccol = 'k', icol = 'pot')
+    fig1a.set_xaxis_label("Bending Constant ($\kappa_{{\\theta}}$)")
+    fig1a.set_yaxis_label("Persistence Length ($\ell_{{p}}$)")
+    # TODO adjust existing figure labels and markers, including adding custom list
+    # TODO add publication and poster settings
+    # TODO add log scale adjustments
+    # TODO add ticks
+
+    gen_scatter(fig = fig1a, legendloc = 'lower right', markersize = 60)
+    # second plot compares the measured persistence length to the cross-over regime
+    # gen_scatter(df)
+    exit()
 
 # compile and analyze results, as instructed
 if scaling:
@@ -1801,7 +1830,7 @@ if forceExtension:
                         plot_force_extension (top_df, Y_col = 'E2Etot', X_col = 'F', iso_col = 'K', isolabel = '$k_{{\\theta}}$ = {:.02f}', X_label = "Normalized External Force ($X \\cdot f$)", Y_label = "Normalized Chain Extension ($X^{{-1}} \\cdot R_{{E2E}}$)", saveas = save_name + '_norm_data', plot_data = True, y_max = 10., y_min = 0.01, x_min = 0.01, x_max = 100., show = True, logscale_x = True, logscale_y = True, plot_slope = False, norm = True, pincus = True, hookean = True)
 
 if bendingPARM:
-    tag = ['Ideal']
+    tag = ['Ideal', 'Real']
     for t in tag:
         # force extension for linear data set
         job = 'bendingPARM_' + t
