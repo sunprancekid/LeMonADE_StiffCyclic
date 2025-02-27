@@ -49,7 +49,7 @@ private:
     const IngredientsType& ingredients;
     //! Rg2 is calculated for the groups in this vector
     std::vector<MonomerGroup<molecules_type> > groups;
-    //! timeseries of the Re2e. Components: [0]-> Re2e_x, [1]->Re2e_y, [2]->Re2e_z, [3]:Re2e_tot
+    //! timeseries of the Re2e. Components: [0]-> Re2e_x, [1]->Re2e_y, [2]->Re2e_z, [3]->Re2e_dist, [4]->force_proj_mag, [5]-> theta_parallel, [6]-> check!
     std::vector< std::vector<double> > Re2eTimeSeries;
     //! vector of mcs times for writing the time series
     std::vector<double> MCSTimes;
@@ -70,6 +70,8 @@ private:
     //! integer representing the furthest monomer used for end-to-end vector calculation
     //! boolean that determines if the minimum image convention should be applied to distance vector calculations
     // bool minImage;
+    //! signifies that nothing has been calculated
+    std::string na_string = "NA";
 protected:
     //! Set the groups to be analyzed. This function is meant to be used in initialize() of derived classes.
     void setMonomerGroups(std::vector<MonomerGroup<molecules_type> > groupVector){groups=groupVector;}
@@ -98,16 +100,16 @@ public:
     uint32_t getEquilibrationTime(){return equilibrationTime;}
     //! monomers that are subjected to a force according to their attributes tag
     uint32_t indexMonomersForce[2];
-    //! vector that total distance is projected onto
-    VectorDouble3 projVec;
+    //! force vector, vector that end to end distance is projected onto
+    VectorDouble3 forceVec;
     //! boolean that determines if the distance should be calculated in terms of the projection vector
     bool calcProjVec;
     //! assigns vector that distance should be  projected onto
-    void setE2EProjVec(double x, double y, double z) {projVec.setAllCoordinates(x, y, z); calcProjVec = true;};
+    void setE2EProjVec(double x, double y, double z) {forceVec.setAllCoordinates(x, y, z); calcProjVec = true;};
     //! assigns projection vector as 3d double vector type
     void setE2EProjVec(VectorDouble3 v) {setE2EProjVec(v.getX(), v.getY(), v.getZ());};
     //! returns the projection vector
-    VectorDouble3 getE2EProjVec() {return projVec;};
+    VectorDouble3 getE2EProjVec() {return forceVec;};
 
 };
 
@@ -125,7 +127,7 @@ AnalyzerEndToEndDistance<IngredientsType>::AnalyzerEndToEndDistance(
     std::string filename,
     uint32_t equilibrationTime_)
 :ingredients(ing)
-,Re2eTimeSeries(4,std::vector<double>(0))
+,Re2eTimeSeries(9,std::vector<double>(0))
 ,bufferSize(100)
 ,outputFile(filename)
 ,isFirstFileDump(true)
@@ -165,8 +167,6 @@ void AnalyzerEndToEndDistance<IngredientsType>::initialize()
     if (ingredients.isConstantForceOn()) {
         // if the constant force is on, set the projection vector as the force vector
         setE2EProjVec(ingredients.getForceVector());
-        // std::cout << calcProjVec << std::endl;
-        // exit(0);
     }
 }
 
@@ -189,29 +189,57 @@ bool AnalyzerEndToEndDistance<IngredientsType>::execute()
         //this vector will contain (Re2e_x, Re2e_y, Re2e_z)
         Re2eComponents+=calculateRe2eComponents(groups[n]);
         // cumulate components, distance vector
+        double dist = Re2eComponents.getLength();
         Re2eTimeSeries[0].push_back(Re2eComponents.getX());
         Re2eTimeSeries[1].push_back(Re2eComponents.getY());
         Re2eTimeSeries[2].push_back(Re2eComponents.getZ());
-        // if a projection vector has been specified
+        Re2eTimeSeries[3].push_back(dist);
+        // include addition calculations a force is imposed on chain dyanmics
         if (calcProjVec) {
-            // determine whether the projected distance is positive or negative relative to the normal vector
-            double projmag = (Re2eComponents * projVec);
-            if (projmag > 0.) {
-                Re2eTimeSeries[3].push_back(std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+            // calculate the magnitude of the end to end distance which is projected onto the force vector
+            double mag = (Re2eComponents * forceVec) / (forceVec * forceVec); // (if f = [1 0 0], this should just be the x component of E2E)
+            VectorDouble3 projVec = mag * forceVec; // force vec (unity) scaled by the magnitude of the projection
+            // use the magnitude value to determine if distance vector should be positive or negative (this information is lost in distance calculation)
+            if (mag > 0.) {
+                Re2eTimeSeries[4].push_back( std::sqrt(std::pow(projVec.getX(), 2)+std::pow(projVec.getY(),2)+std::pow(projVec.getZ(),2)));
             } else {
-                Re2eTimeSeries[3].push_back(-std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+                Re2eTimeSeries[4].push_back(-std::sqrt(std::pow(projVec.getX(), 2)+std::pow(projVec.getY(),2)+std::pow(projVec.getZ(),2)));
             }
-        } else{
-            Re2eTimeSeries[3].push_back(std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)));
+            // recalculate the end to end vector, normalize to unity
+            projVec = Re2eComponents.normalize();
+            // determine the parallel angles
+            double norm_proj_mag = projVec * forceVec;  // magnitude of projection of e2e unit vector onto force unit vector
+            double theta_parallel = std::acos(norm_proj_mag); // inverse cosine determines angle
+            if (projVec.getX() < 0.) {theta_parallel = - theta_parallel;} // if e2e unit vector has a negative x component, the angle is also negative
+            // NOTE:: this algorithim assumes that f = [1 0 0]
+            // double check = std::pow(norm_proj_mag, 2) + std::pow(std::sin(theta_parallel), 2); // this value should equal one (it does)
+            Re2eTimeSeries[5].push_back(theta_parallel);
+            // determine the azimuth angle
+            VectorDouble3 orth_vector = projVec - (mag * forceVec); // vector that is orthoginal to force vec
+            double phi = std::acos(orth_vector.getZ()); // azimuth angle is defined relative to the z-axis
+            if (orth_vector.getZ() < 0.) {phi = - phi;} //
+            // NOTE:: The reference point for the azimuth angle is arbirary as long as it is constant
+            // NOTE:: once again, this algorithm assumes that the f = [1 0 0]
+            // NOTE:: in calculation of phi, axis are rotated (+pi/2) or (+90deg), which essentially means z -> x (two dimensional std. unit circle) and y -> -y (again, on a two dimensional std. unit circle)
+            Re2eTimeSeries[6].push_back(phi);
+            Re2eTimeSeries[7].push_back(norm_proj_mag); // cos theta_parallel
+            Re2eTimeSeries[8].push_back(std::sin(theta_parallel) * std::cos(phi)); // cos theta_perpendicular
+        } else {
+            // projection vector has not been specified, projection calculations cannot be performed
+            // add NA to time series to signify that no data is provided
+            Re2eTimeSeries[4].push_back(0.);
+            Re2eTimeSeries[5].push_back(0.);
+            Re2eTimeSeries[6].push_back(0.);
+            Re2eTimeSeries[7].push_back(0.);
+            Re2eTimeSeries[8].push_back(0.);
         }
-        // std::cout << std::sqrt(std::pow(Re2eComponents.getX(), 2)+std::pow(Re2eComponents.getY(),2)+std::pow(Re2eComponents.getZ(),2)) << "\n";
-        // exit(0);
     }
 
     MCSTimes.push_back(ingredients.getMolecules().getAge());
     //save to disk in regular intervals, only if equilibriation time has been reached
-    if(MCSTimes.size()>=bufferSize)
+    if(MCSTimes.size()>=bufferSize) {
         dumpTimeSeries();
+    }
 
     return true;
 }
@@ -250,18 +278,21 @@ void AnalyzerEndToEndDistance<IngredientsType>::dumpTimeSeries()
         // loop through each sample
         for (int n = 0; n < MCSTimes.size(); n++) {
             char buffer[100]; // buffer contains results
-            sprintf(buffer, "%f\t%f\t%f\t%f\t%f", MCSTimes[n], Re2eTimeSeries[0][n], Re2eTimeSeries[1][n],Re2eTimeSeries[2][n],Re2eTimeSeries[3][n]); // formatted string
+            sprintf(buffer, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f", MCSTimes[n], Re2eTimeSeries[0][n], Re2eTimeSeries[1][n],Re2eTimeSeries[2][n],Re2eTimeSeries[3][n],Re2eTimeSeries[4][n],Re2eTimeSeries[5][n],Re2eTimeSeries[6][n],Re2eTimeSeries[7][n],Re2eTimeSeries[8][n]); // formatted string
+            // if (calcProjVec) {
+            // } else {
+            //     sprintf(buffer, "%f\t%f\t%f\t%f\t%s\t%s\t%s", MCSTimes[n], Re2eTimeSeries[0][n], Re2eTimeSeries[1][n],Re2eTimeSeries[2][n],Re2eTimeSeries[3][n],Re2eTimeSeries[4][n],Re2eTimeSeries[5][n],Re2eTimeSeries[6][n]); // formatted string
+            // }
             appendfile << buffer << std::endl; // write to file
-
         }
-        exit(0);
+        // exit(0);
     } else {
         //if it is written for the first time, include comment in the output file
         if(isFirstFileDump){
             std::stringstream commentTimeSeries;
             commentTimeSeries<<"Created by AnalyzerEndToEndDistance\n";
             commentTimeSeries<<"file contains time series of average Re2e over all analyzed groups\n";
-            commentTimeSeries<<"format: mcs\t Re2e_X\t Re2e_Y\t Re2e_Z\t Re2e\n";
+            commentTimeSeries<<"format: mcs\tRe2e_X\tRe2e_Y\tRe2e_Z\tRe2e_L\tRe2e.F\ttheta_parallel\tphi\tcos_theta_parallel\tcos_theta_perp\n";
 
             ResultFormattingTools::writeResultFile(
                 outputFile,
@@ -281,7 +312,7 @@ void AnalyzerEndToEndDistance<IngredientsType>::dumpTimeSeries()
     //set all time series vectors back to zero size
     MCSTimes.resize(0);
     Re2eTimeSeries.resize(0);
-    Re2eTimeSeries.resize(4,std::vector<double>(0));
+    Re2eTimeSeries.resize(9,std::vector<double>(0));
 }
 
 /**
@@ -304,13 +335,9 @@ VectorDouble3 AnalyzerEndToEndDistance<IngredientsType>::calculateRe2eComponents
 
         // vector containing the difference between the first and last momomers in the group
         VectorDouble3 diff_vec;
-        diff_vec.setX(group[indexMonomersForce[1]].getX() - group[indexMonomersForce[0]].getX());
-        diff_vec.setY(group[indexMonomersForce[1]].getY() - group[indexMonomersForce[0]].getY());
-        diff_vec.setZ(group[indexMonomersForce[1]].getZ() - group[indexMonomersForce[0]].getZ());
-        if (calcProjVec) {
-            double mag = (diff_vec * projVec) / (projVec * projVec);
-            diff_vec = mag * projVec;
-        }
+        diff_vec.setX(group[indexMonomersForce[1]].getX() - group[indexMonomersForce[0]].getX()); // x component of end to end distance vector
+        diff_vec.setY(group[indexMonomersForce[1]].getY() - group[indexMonomersForce[0]].getY()); // y component of end to end distance vector
+        diff_vec.setZ(group[indexMonomersForce[1]].getZ() - group[indexMonomersForce[0]].getZ()); // z component of end to end distance vector
         return diff_vec;
     }
 
