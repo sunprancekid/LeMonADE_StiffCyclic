@@ -8,6 +8,7 @@
 ##############
 
 import pandas as pd
+import os # used to check path
 import itertools # used for iterating over markers
 
 
@@ -19,6 +20,11 @@ import itertools # used for iterating over markers
 default_label_size = 12
 minimum_label_size = 6
 
+## constants, defaults used for Axis class
+default_number_major_ticks = 3
+default_number_minor_ticks = 3
+default_major_format_string = "{:.2f}" # floating point number with two decimal places
+
 ## constants, defaults for Figure class
 default_title_label = None
 default_subtitle_label = None
@@ -27,8 +33,16 @@ default_yaxis_label = None
 default_dpi = 200
 minimum_dpi = 100
 default_file_location = "./"
-default_file_name = "figure.png"
-marks = itertools.cycle(("D", "^", "v", "<", "o", "s", "p", "*")) # list of random markers
+default_file_name = "figure"
+default_file_type = ".png"
+default_markerset = ["D", "^", "v", "<", "o", "s", "p", "*"]
+default_logscale_base = 10
+minimum_logscale_base = 0.1
+accepted_filetypes = [".png", ".tif"]
+# defaults used for figures used in publications
+pubdefault_dpi = 300
+pubdefault_label_size = 18
+# pubdefault_tick_size
 
 
 #############
@@ -85,7 +99,7 @@ class Label (object):
     # set label fontsize
     """ get label size as interger no less than minimum. """
     def set_size (self, s = None):
-        if s is None or not isinstant(s, int):
+        if s is None or not isinstance(s, int):
             # if s is not an object or not an integer
             self.size = default_label_size
         else:
@@ -102,6 +116,17 @@ class Label (object):
         return self.size
 
 
+## Axis class
+class Axis (object):
+
+    """ standard initialization for Axis object. """
+    def __init__ (self):
+        self.set_label()
+        self.reset_limits()
+        self.set_scale()
+        self.set_major_ticks()
+        self.set_minor_ticks()
+
 ## Figure class
 class Figure (object):
 
@@ -111,11 +136,11 @@ class Figure (object):
         ## related to figure formatting, labelling
         self.set_title_label()
         self.set_subtitle_label()
-        self.set_xaxis_label()
+        self.reset_xaxis_label()
         self.reset_xaxis_limits()
         # self.set_xaxis_major_ticks()
         # self.set_xaxis_minor_ticks()
-        self.set_yaxis_label()
+        self.reset_yaxis_label()
         self.reset_yaxis_limits()
         # self.set_yaxis_major_ticks()
         # self.set_yaxis_minor_ticks()
@@ -123,8 +148,9 @@ class Figure (object):
         # self.set_cscheme()
         # self.set_max_cbar()
         # self.set_min_cbar()
-        # self.set_logscale()
+        self.set_linscale()
         self.set_dpi()
+        self.set_saveas()
         # self.set_file_name() # TODO check file type
         # self.set_file_location() # TODO check that the location exists
 
@@ -177,6 +203,43 @@ class Figure (object):
 
         # set cbar limits
 
+    """ assign location, name, and type of save file. """
+    def set_saveas(self, savedir = default_file_location, filename = default_file_name, filetype = default_file_type):
+
+        # check the save directory passed to the method
+        if not os.path.exists(savedir):
+            self.savedir = default_file_location
+        else:
+            self.savedir = savedir
+
+        # check the filename passed to the method
+        if type(filename) is not str:
+            self.filename = default_file_name
+        else:
+            self.filename = filename
+
+        # check the filetype passed to the method
+        if filetype not in accepted_filetypes:
+            self.filetype = default_file_type
+        else:
+            self.filetype = filetype
+
+    """ method sets fontsizes for labels, ticks, etc. to presets for figures in publications. """
+    def set_publication(self):
+        self.filename = self.filename + "_pub"
+        # adjust axis labels size
+        self.set_xaxis_label(s = pubdefault_label_size)
+        self.set_yaxis_label(s = pubdefault_label_size)
+        # self.set_caxis_label(s = pubdefault_label_size)
+        # adjust tick size
+        # adjust legend label size
+        # adjust dpi
+        self.set_dpi (d = pubdefault_dpi)
+
+    """ return path to location of saved file. """
+    def get_saveas(self):
+        saveas = self.savedir + self.filename + self.filetype
+        return saveas
 
     ## GETTERS AND SETTERS ##
 
@@ -192,42 +255,6 @@ class Figure (object):
         self.icol = None
         self.icol_marker_dict = None
         self.icol_label_dict = None
-
-    # initialize set of random set of markers that can be used for each unique ival in icol
-    """ method generates a random set of markers than can be used with matplotlib. """
-    def reset_markers(self):
-        # create empty dictionary
-        self.marker_dict = {}
-        for i in self.get_unique_ivals():
-            self.marker_dict.update({i: next(marks)}) # assign random marker to each ival
-
-    # initialize list of labels that correspons to each unique ival in icol
-    """ method initializes labels used to describe each unique ival in plots as that ival stored within that Figure dataframe. """
-    def reset_labels(self):
-        # create empty dictionary
-        self.label_dict = {}
-        for i in self.get_unique_ivals():
-            self.label_dict.update({i: i}) # assign random marker to each ival
-
-    # adjusts one marker in marker dictionary
-    """ method changes one marker in the marker dictionary to a new marker type. the marker that is changed is the one that corresponds to the ival used as a key in the marker dictionary. """
-    def set_marker(self, ival = None, marker = None):
-        pass
-
-    # return marker corresponding to ival
-    """ method returns marker that correspons to ival in marker dictionary. """
-    def get_marker (self, ival = None):
-        return self.marker_dict[ival]
-
-    # adjusts one label in label dictionary
-    """ method changes one label in label dictionary to new string (not Label class). the label that is changed is the one that correspons to the ival used as a key in the label dictionary. """
-    def set_label (self, ival = None, label = None):
-        pass
-
-    # returns one label in label dictionary
-    """ method returns label that correspons to ival in label dictionary. """
-    def get_label (self, ival = None):
-        return self.label_dict[ival]
 
     # method that loads data from datafram into figure object
     """ loads data from data frame into Figure object. xcol specifies the xaxis data, ycol specifies the yaxis data, ccol specifies the color column data, icol specifies the isolation column data. """
@@ -264,6 +291,64 @@ class Figure (object):
         self.df = pd.DataFrame(df_dict)
         self.reset_markers()
         self.reset_labels()
+
+    # initialize set of random set of markers that can be used for each unique ival in icol
+    """ method generates a random set of markers than can be used with matplotlib. """
+    def reset_markers(self, markerset = None):
+
+        # create interable list
+        if markerset is None or type(markerset) is not list:
+            # if the marker set is not passed to the method, or is not a list
+            markerset = default_markerset
+        else:
+            # that marker set passed to the method is a list
+            # check that the marker set contains the correct number of markers
+            # if it does not, add to the marker list from the default until it contains the appropriate number
+            if len(markerset) < len(self.get_unique_ivals()):
+                n_default = len(default_markerset)
+                i = 0
+                while True:
+                    if default_markerset[i] not in markerset or (i >= len(default_markerset)):
+                        markerset.append(default_markerset[i])
+                    i+=1
+                    if len(markerset) >= len(self.get_unique_ivals()):
+                        break
+
+        # create empty dictionary
+        marks = itertools.cycle(markerset)
+        self.marker_dict = {} # empty dictionary
+        for i in self.get_unique_ivals():
+            self.marker_dict.update({i: next(marks)}) # assign random marker to each ival
+
+    # adjusts one marker in marker dictionary
+    """ method changes one marker in the marker dictionary to a new marker type. the marker that is changed is the one that corresponds to the ival used as a key in the marker dictionary. """
+    def set_marker(self, ival = None, marker = None):
+        if ival in self.marker_dict:
+            self.marker_dict[ival] = marker
+
+    # return marker corresponding to ival
+    """ method returns marker that correspons to ival in marker dictionary. """
+    def get_marker (self, ival = None):
+        return self.marker_dict[ival]
+
+    # initialize list of labels that correspons to each unique ival in icol
+    """ method initializes labels used to describe each unique ival in plots as that ival stored within that Figure dataframe. """
+    def reset_labels(self):
+        # create empty dictionary
+        self.label_dict = {}
+        for i in self.get_unique_ivals():
+            self.label_dict.update({i: i}) # assign random marker to each ival
+
+    # adjusts one label in label dictionary
+    """ method changes one label in label dictionary to new string (not Label class). the label that is changed is the one that correspons to the ival used as a key in the label dictionary. """
+    def set_label (self, ival = None, label = None):
+        if ival in self.label_dict:
+            self.label_dict[ival] = label
+
+    # returns one label in label dictionary
+    """ method returns label that correspons to ival in label dictionary. """
+    def get_label (self, ival = None):
+        return self.label_dict[ival]
 
     # method that returns unique values for the isolation column
     """ returns list of all unique values contained within icol. """
@@ -328,10 +413,17 @@ class Figure (object):
 
     ## XAXIS ##
 
-    # sets the xaxis label
-    """ method for setting Figure x-axis label. """
-    def set_xaxis_label(self, l = default_xaxis_label, s = None):
+    # resets the xaxis label
+    """ method for initializing Figure x-axis label as empty label. """
+    def reset_xaxis_label (self, l = default_xaxis_label, s = None):
         self.xaxis_label = Label(l, s)
+
+    # adjust xaxis label properties
+    def set_xaxis_label (self, l = None, s = None):
+        if l is not None:
+            self.xaxis_label.set_label(l)
+        if s is not None:
+            self.xaxis_label.set_size(s)
 
     # gets xaxis label as object
     """ returns x-axis label as Label object. """
@@ -397,13 +489,66 @@ class Figure (object):
     def get_xaxis_max (self):
         return self.xaxis_max
 
+    # set the xaxis as either linear or logscale
+    """ method sets the xaxis as either a linear or logscale. logscale base set the logscale base as default if not specified by user. """
+    def set_xaxis_scale (self, linear = False, log = False, logscale_base = default_logscale_base):
+
+        # check arguments passed to method
+        if not linear and not log:
+            # scale was not specified, exit method
+            return
+        if linear and log:
+            # both scales were specified, exit method
+            return
+
+        # if linear scale was specified
+        if linear:
+            self.xaxis_scale = None # if no scale is specified, then it is linear
+
+        # if the logscale was specified
+        if log:
+            # check the basis
+            if logscale_base < 0:
+                # if the logscale basis is negative, use the positive
+                logscale_base = -logscale_base
+            elif abs(logscale_base) < minimum_logscale_base:
+                # if the logscale base is less than the minimum, assign the default
+                logscale_base = default_logscale_base
+
+            # assign the logscale base
+            self.xaxis_scale = logscale_base # if the base has a value, it is log rather than linear
+
+    # check if xaxis is logscale
+    """ method returns boolean determining if the xaxis is logscale or not. """
+    def xaxis_is_logscale(self):
+        return (self.xaxis_scale is not None)
+
+    # returns the scale assigned to xaxis
+    """ method that returns scale used for xaxis as either 'log' or 'linear' """
+    def get_xaxis_scale (self):
+        if self.xaxis_scale is None:
+            return "linear"
+        else:
+            return "log"
+
+    # returns scale base assigned to xaxis
+    """ method that returns log base assigned to xaxis. if linear scale, returns None. """
+    def get_xaxis_scale_base (self):
+        return self.xaxis_scale
 
     ## YAXIS ##
 
-    # sets the yaxis label
-    """ method for setting Figure y-axis label. """
-    def set_yaxis_label (self, l = default_yaxis_label, s = None):
+    # initializes the yaxis label
+    """ method for initializing Figure y-axis label. """
+    def reset_yaxis_label (self, l = default_yaxis_label, s = None):
         self.yaxis_label = Label(l, s)
+
+    # adjust yaxis label properties
+    def set_yaxis_label (self, l = None, s = None):
+        if l is not None:
+            self.yaxis_label.set_label(l)
+        if s is not None:
+            self.yaxis_label.set_size(s)
 
     # gets the y-axis label as object
     """ returns the y-axis label as string. """
@@ -469,6 +614,80 @@ class Figure (object):
     def get_yaxis_max (self):
         return self.yaxis_max
 
+    # set the yaxis as either linear or logscale
+    """ method sets the yaxis as either a linear or logscale. logscale base set the logscale base as default if not specified by user. """
+    def set_yaxis_scale (self, linear = False, log = False, logscale_base = default_logscale_base):
+
+        # check arguments passed to method
+        if not linear and not log:
+            # scale was not specified, exit method
+            return
+        if linear and log:
+            # both scales were specified, exit method
+            return
+
+        # if linear scale was specified
+        if linear:
+            self.yaxis_scale = None # if no scale is specified, then it is linear
+
+        # if the logscale was specified
+        if log:
+            # check the basis
+            if logscale_base < 0:
+                # if the logscale basis is negative, use the positive
+                logscale_base = -logscale_base
+            elif abs(logscale_base) < minimum_logscale_base:
+                # if the logscale base is less than the minimum, assign the default
+                logscale_base = default_logscale_base
+
+            # assign the logscale base
+            self.yaxis_scale = logscale_base # if the base has a value, it is log rather than linear
+
+    # check if yaxis is logscale
+    """ method returns boolean determining if the yaxis is logscale or not. """
+    def yaxis_is_logscale(self):
+        return (self.xaxis_scale is not None)
+
+    # returns the scale assigned to yaxis
+    """ method that returns scale used for yaxis as either 'log' or 'linear' """
+    def get_yaxis_scale (self):
+        if self.yaxis_scale is None:
+            return "linear"
+        else:
+            return "log"
+
+    # returns scale base assigned to yaxis
+    """ method that returns log base assigned to yaxis. if linear scale, returns None. """
+    def get_yaxis_scale_base (self):
+        return self.yaxis_scale
+
+    # method used to set the tick marks and tick labels for the major and minor yaxis
+    def set_yaxis_ticks(self, minval = None, maxval = None, nmajorticks = default_number_major_ticks, nminorticks = default_number_minor_ticks, format_string = default_major_format_string):
+
+        # check arguments passed to method
+        # minimum value used for yaxis
+        if minval is None:
+            # if no minimum value was passed to the method, assign the current minimum value
+            minval = self.get_yaxis_min()
+        else:
+            # otherwise assign the value passed to the method as the minimum
+            self.set_yaxis_min(minval)
+
+        # maximum value used for yaxis
+        if maxval is None:
+            # if no maximum value was passed to the method, assign the current maximum value
+            maxval = self.get_yaxis_max()
+        else:
+            # if a maximum value as passed to the method, assign the maximum value as the max for the axis
+            self.set_yaxis_max(maxval)
+
+        if self.yaxis_is_logscale():
+            # if the yaxis is logscale, determine the tick marks along a logscale
+            pass
+        else:
+            # otherwise, determine the tick marks along a linearscale
+            pass
+
     ## DPI ##
 
     # sets the figure dpi
@@ -486,7 +705,31 @@ class Figure (object):
     def get_dpi (self):
         return self.dpi
 
+    ## LINEAR OR LOG SCALE ##
 
+    # sets scale for all axis to be linear
+    """ method sets the scale for x, y, and c axis to be linear. """
+    def set_linscale (self):
+
+        # set x scale to be linear
+        self.set_xaxis_scale(linear = True)
+
+        # set y scale to be linear
+        self.set_yaxis_scale(linear = True)
+
+        # set c scale to be linear
+        # self.set_caxis_scale(linear = True)
+
+    def set_logscale (self, base = default_logscale_base):
+
+        # set the xaxis scale to be log
+        self.set_xaxis_scale(log = True, logscale_base = base)
+
+        # set the yaxis scale to be log
+        self.set_yaxis_scale(log = True, logscale_base = base)
+
+        # set the xaxis scale to be log
+        # self.set_caxis_scale(log = True, logscale_base = base)
 
 ############
 ## SCRIPT ##

@@ -1347,12 +1347,10 @@ def plot_bendingpot_bbc (df = None, k = None, max_s = 10, plot_fit = False, save
             ax.plot(x_fit, y_fit, 'k--')
     # Shrink current axis's height by 10% on the bottom
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0,
-        box.width, box.height * 0.9])
+    ax.set_position([box.x0, box.y0, box.width, box.height * 0.9])
 
     # Put a legend below current axis
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
-          fancybox=True, shadow=True, ncol=4)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), fancybox=True, shadow=True, ncol=4)
     ax.set_xlim(0, max_s)
     ax.set_ylim(.01, 1.)
     if logscale_y:
@@ -1720,19 +1718,28 @@ if figure or fig1: ## generate figure one
     ## grab data from folder
     df = pd.read_csv("./03_figures/fig1/bendingPARM.csv")
 
-    # first plot compares bending parameter to persistence length for either beinding potential
+    ## first plot compares bending parameter to persistence length for either beinding potential
     # load data and establish figure parameters
     fig1a = Figure()
     fig1a.load_data(d = df, xcol = 'k', ycol = 'lp_d_M1', ccol = 'k', icol = 'pot')
     fig1a.set_xaxis_label("Bending Constant ($\kappa_{{\\theta}}$)")
     fig1a.set_yaxis_label("Persistence Length ($\ell_{{p}}$)")
-    # TODO adjust existing figure labels and markers, including adding custom list
+    fig1a.set_logscale() # assign all axis to be logscale
+    fig1a.set_yaxis_ticks(minval = 1., maxval = 100., nmajorticks = 3, nminorticks = 2)
+    fig1a.set_label(ival = "CSA", label = "Cosine Square Angle (CSA) Potential")
+    fig1a.set_label(ival = "CA", label = "Cosine Angle (CA) Potential")
+    fig1a.reset_markers(['D', 'o'])
+    fig1a.set_saveas(savedir = './03_figures/fig1/', filename = 'fig1a')
     # TODO add publication and poster settings
-    # TODO add log scale adjustments
-    # TODO add ticks
+    # TODO add ticks, tick size
 
-    gen_scatter(fig = fig1a, legendloc = 'lower right', markersize = 60)
-    # second plot compares the measured persistence length to the cross-over regime
+    # regular plot
+    gen_scatter(fig = fig1a, legendloc = 'upper left', markersize = 60, show = False, save = True)
+    # publication plot
+    fig1a.set_publication()
+    gen_scatter(fig = fig1a, legendloc = 'upper left', markersize = 60, show = False, save = True)
+
+    ## second plot compares the measured persistence length to the cross-over regime
     # gen_scatter(df)
     exit()
 

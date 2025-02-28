@@ -29,12 +29,12 @@ default_legendloc = 'best'
 #############
 
 # generate scatter plot
-def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_markersize, legendloc = default_legendloc):
+def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_markersize, legendloc = default_legendloc, show = True, save = True):
 
     # if no figure was provided ..
     if fig is None:
-        # if a figure has not been specified, we have a problem
-        # if figure and data are seperate objects, then maybe figure can be a deafult
+        # if a figure has not been specified, we have a problem: cannot generate a default
+        # if figure and data are seperate objects, then maybe figure can be default while data would be mandatory
         exit()
 
     ## CHECK FIGURE
@@ -54,13 +54,21 @@ def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_
 
     # add min and max, labels
     plt.legend(handles = leg, loc = legendloc) # TODO increase size of legend labels
+    # ax.set_xlim(fig.get_yaxis_min(), fig.get_xaxis_min())
+    plt.ylim(fig.get_yaxis_min(), fig.get_yaxis_max())
     plt.xlabel(fig.get_xaxis_label().get_label(), fontsize = fig.get_xaxis_label().get_size())
     plt.ylabel(fig.get_yaxis_label().get_label(), fontsize = fig.get_yaxis_label().get_size())
 
-    plt.show()
-    # fig, ax = plt.subplots()
-    # ax.set_xlim(fig.get_yaxis_min(), fig.get_xaxis_min())
-    # ax.set_ylim(fig.get_yaxis_min(), fig.get_yaxis_max())
+    # add logscale
+    if fig.xaxis_is_logscale():
+        plt.xscale(fig.get_xaxis_scale(), base = fig.get_xaxis_scale_base())
+    if fig.yaxis_is_logscale():
+        plt.yscale(fig.get_yaxis_scale(), base = fig.get_yaxis_scale_base())
+
+    if save:
+        plt.savefig(fig.get_saveas(), dpi = fig.get_dpi(), bbox_inches='tight')
+    if show:
+        plt.show()
 
 
 #############
