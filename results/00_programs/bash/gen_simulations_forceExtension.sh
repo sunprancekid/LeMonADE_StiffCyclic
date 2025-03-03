@@ -156,7 +156,7 @@ gen_simparm() {
 	# file to write simulation parameters to
 	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
 	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,pot,R,N,K,F,FV"
+	HEADER_SIMPARM="id,path,pot,mcs_run,mcs_equil,mcs_si,R,N,K,F,FV"
 
 	## ARGUMENTS
 	# none
@@ -288,11 +288,11 @@ gen_simparm() {
                             echo -e "\t\tdone" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-#                             echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-#                             echo "\${PATH}simulateRealPolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            # echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            # echo "\${PATH}simulateRealPolymerBFM ${SIMFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             chmod u+x ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             # add parameters to parm file
-                            echo "${SIMID},${SIMDIR},${C},${r},${n},${k},${FORCE_VAL},${fv}" >> $FILE_SIMPARM
+                            echo "${SIMID},${SIMDIR},${C},${N_MCS},${t_equilibrium},${save_interval},${r},${n},${k},${FORCE_VAL},${fv}" >> $FILE_SIMPARM
                         done
                     done
                 done
