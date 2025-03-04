@@ -331,6 +331,11 @@ done
 # generate parameters save to file
 if [ $BOOL_GEN -eq 1 ]; then
 
+    # if the subdirectory does not exist, create it
+    if [[ ! -d "01_raw_data" ]]; then
+        mkdir "01_raw_data"
+    fi
+
 	# differentiate jobs with lin and log tags
 	if [[ $BOOL_LOGSCALE -eq 1 ]]; then
         log_tag="log"

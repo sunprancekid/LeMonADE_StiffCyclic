@@ -53,7 +53,8 @@ help() {
 	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -h           | display script options, exit 0."
 	echo -e " -v           | execute script verbosely."
-	echo -e " -s           | submit job to SLURM via remote linux cluster (otherwise run locally in serial)."
+	echo -e " -s           | submit job to SLURM via remote linux cluster."
+    echo -e " -z           | submit job on CHTC cluster (most be logged in)."
 	echo -e " -t           | submit one job as test in order to make sure everthing works properly."
     # echo -e " -u           | upload local default directory to linux cluster."
     # echo -e " -d           | sync local default directory with linux cluster."
@@ -212,6 +213,8 @@ while getopts "hvstj:p:f:l:e:c:" option; do
         c) # specify checkfile
             declare -i BOOL_CHECKFILE=1
             OPTCHECKFILE="${OPTARG}";;
+        z) # submit simulaitons on chtc
+            declare -i BOOL_SUBMIT_CHTC=1 ;;
         \?) # sonstiges
             help $NONZERO_EXITCODE
     esac
