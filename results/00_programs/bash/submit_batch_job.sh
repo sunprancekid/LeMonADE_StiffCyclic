@@ -391,7 +391,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${D}${SIMDIR}" >> $DAG
+        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}" >> $DAG
         gen_chtc_scripts
         exit 0
     done
