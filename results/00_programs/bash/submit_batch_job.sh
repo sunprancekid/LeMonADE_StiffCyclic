@@ -31,6 +31,8 @@ declare -i BOOL_TEST=0
 LINUXSERV="gandalf"
 # default path to parameterized linux executables for job
 EXECDIR="00_programs/build/bin/"
+# default singularity image used with chtc jobs
+DEFAULT_SINGULARITY="l.sif"
 ## PARAMETERS -- SLURM
 # string represnting the maximum job time length
 MAX_SLURM_TIME="05:00"
@@ -186,6 +188,101 @@ gen_slurm_script () {
     echo "cp ../sub/${JOB}/${SIMID}.*.out $(pwd)/${JOBDIR}${SIMDIR} " >> $FILEPATH$FILENAME
 }
 
+# method for generating standardized chtc scripts for bfm jobs
+gen_chtc_scripts () {
+
+    ## PARAMETERS
+    # list of sub directories to generate inside the main directory
+    SUBDIR=( "node" "node/init" "out" "sub" "sub/exec" "anal" )
+
+    ## ARGUMENTS
+    # none
+
+    ## SCRIPT
+
+    # establish the subdag path
+    SUBDAG="${SIMID}.spl"
+    SUBDAG_PATH="${SIMDIR}${SUBDAG}"
+    if [[ -f "$SUBDAG_PATH" ]]; then 
+        # if the subdag already exists, remove it
+        rm "$SUBDAG_PATH"
+    fi
+
+    # generate subdirectories
+    for sd in "${SUBDIR[@]}"; do 
+        mkdir -p "${SIMDIR}${sd}/"
+    done
+
+    # establish the initialization node
+    gen_chtc_init
+
+}
+
+# method for generating initialization node
+gen_chtc_init () {
+
+    ## PARAMETERS
+    # name of file containing submission instructions
+    local SUB_NAME="sub/init.sub"
+    # path to file containing submission instructions
+    local SUB_PATH="${SIMDIR}${SUB_NAME}"
+
+    ## PARAMETERS - FILES
+    # configuration file
+    local SIM_CONFIG="congif.bfm"
+
+    ## PARAMETERS - SUBMISSION INTRUCTIONS
+    # memory to request
+    local REQUEST_MEMORY="500MB"
+    # disk space to request
+    local REQUEST_DISK="1GB"
+    # directory that output files are remapped to
+    local REMAP="node/init/"
+    # list of files with remapping instructions
+    local RMP_SIM_CONFIG="${SIM_MOV}=${REMAP}${SIM_MOV}"
+    # list of files that should be transfered to the execute node
+    local TRANSFER_INPUT_FILES="sub/exec/${SIMID}.sh"
+    # list of files that should be transfered from the execute node
+    local TRANSFER_OUTPUT_FILES="${SIM_CONFIG}"
+    # list of remap instructions for each output file
+    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG}"
+
+    ## ARGUMENTS
+    # none
+
+    # SCRIPT
+    # write submission script
+    echo "executable = ${EXEC_NAME}" > $SUB_PATH
+    echo "arguments = -i -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "should_transfer_files = YES" >> $SUB_PATH
+    echo "transfer_input_files = ${TRANSFER_INPUT_FILES}" >> $SUB_PATH
+    echo "transfer_output_files = ${TRANSFER_OUTPUT_FILES}" >> $SUB_PATH
+    echo "transfer_output_remaps = \"${TRANSFER_OUTPUT_REMAPS}\"" >> $SUB_PATH
+    echo "when_to_transfer_output = ON_SUCCESS" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "log = out/init.log" >> $SUB_PATH
+    echo "error = out/init.err" >> $SUB_PATH
+    echo "output = out/init.out" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "request_cpus = 1" >> $SUB_PATH
+    echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
+    echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
+    # echo "requirements = HasSingularity" >> $SUB_PATH
+    echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "queue" >> $SUB_PATH
+
+    # add node to subdag
+    echo "JOB ${SIMID}_init ${SUB_NAME}" >> $SUBDAG_PATH
+
+}
+
 ## OPTIONS
 while getopts "hzvstj:p:f:l:e:c:" option; do
 	case $option in
@@ -284,7 +381,8 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}\n" >> $DAG
+        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}" >> $DAG
+        gen_chtc_scripts
     done
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
