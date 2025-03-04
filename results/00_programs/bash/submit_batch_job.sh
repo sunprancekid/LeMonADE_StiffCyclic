@@ -192,6 +192,8 @@ gen_slurm_script () {
 gen_chtc_scripts () {
 
     ## PARAMETERS
+    # path from current working directory to simulation directory
+    D="${JOBDIR}${SIMDIR}"
     # list of sub directories to generate inside the main directory
     SUBDIR=( "node" "node/init" "out" "sub" "sub/exec" "anal" )
 
@@ -202,7 +204,7 @@ gen_chtc_scripts () {
 
     # establish the subdag path
     SUBDAG="${SIMID}.spl"
-    SUBDAG_PATH="${SIMDIR}${SUBDAG}"
+    SUBDAG_PATH="${D}${SUBDAG}"
     if [[ -f "$SUBDAG_PATH" ]]; then 
         # if the subdag already exists, remove it
         rm "$SUBDAG_PATH"
@@ -210,7 +212,7 @@ gen_chtc_scripts () {
 
     # generate subdirectories
     for sd in "${SUBDIR[@]}"; do 
-        mkdir -p "${SIMDIR}${sd}/"
+        mkdir -p "${D}${sd}/"
     done
 
     # establish the initialization node
@@ -225,7 +227,7 @@ gen_chtc_init () {
     # name of file containing submission instructions
     local SUB_NAME="sub/init.sub"
     # path to file containing submission instructions
-    local SUB_PATH="${SIMDIR}${SUB_NAME}"
+    local SUB_PATH="${D}${SUB_NAME}"
 
     ## PARAMETERS - FILES
     # configuration file
