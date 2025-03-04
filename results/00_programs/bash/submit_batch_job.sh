@@ -239,7 +239,7 @@ gen_chtc_init () {
 
     ## PARAMETERS - FILES
     # configuration file
-    local SIM_CONFIG="config_gen.bfm"
+    local SIM_CONFIG="config_gen.dat"
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
