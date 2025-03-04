@@ -247,7 +247,7 @@ gen_chtc_init () {
     # list of files with remapping instructions
     local RMP_SIM_CONFIG="${SIM_CONFIG}=${REMAP}${SIM_MOV}"
     # list of files that should be transfered to the execute node
-    local TRANSFER_INPUT_FILES="sub/exec/${SIMID}.sh"
+    local TRANSFER_INPUT_FILES="${EXEC_NAME}"
     # list of files that should be transfered from the execute node
     local TRANSFER_OUTPUT_FILES="${SIM_CONFIG}"
     # list of remap instructions for each output file
