@@ -196,6 +196,8 @@ gen_chtc_scripts () {
     D="${JOBDIR}${SIMDIR}"
     # list of sub directories to generate inside the main directory
     SUBDIR=( "node" "node/init" "out" "sub" "sub/exec" "anal" )
+    # name of the executable file
+    EXEC_NAME="sub/exec/conH.sh"
 
     ## ARGUMENTS
     # none
@@ -228,10 +230,12 @@ gen_chtc_init () {
     local SUB_NAME="sub/init.sub"
     # path to file containing submission instructions
     local SUB_PATH="${D}${SUB_NAME}"
+    # name of the executable file
+    # EXEC_NAME="sub/exec/${SIMDIR}.sh"
 
     ## PARAMETERS - FILES
     # configuration file
-    local SIM_CONFIG="congif.bfm"
+    local SIM_CONFIG="config_gen.bfm"
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
@@ -241,7 +245,7 @@ gen_chtc_init () {
     # directory that output files are remapped to
     local REMAP="node/init/"
     # list of files with remapping instructions
-    local RMP_SIM_CONFIG="${SIM_MOV}=${REMAP}${SIM_MOV}"
+    local RMP_SIM_CONFIG="${SIM_CONFIG}=${REMAP}${SIM_MOV}"
     # list of files that should be transfered to the execute node
     local TRANSFER_INPUT_FILES="sub/exec/${SIMID}.sh"
     # list of files that should be transfered from the execute node
@@ -262,7 +266,7 @@ gen_chtc_init () {
     echo "should_transfer_files = YES" >> $SUB_PATH
     echo "transfer_input_files = ${TRANSFER_INPUT_FILES}" >> $SUB_PATH
     echo "transfer_output_files = ${TRANSFER_OUTPUT_FILES}" >> $SUB_PATH
-    echo "transfer_output_remaps = \"${TRANSFER_OUTPUT_REMAPS}\"" >> $SUB_PATH
+    # echo "transfer_output_remaps = \"${TRANSFER_OUTPUT_REMAPS}\"" >> $SUB_PATH
     echo "when_to_transfer_output = ON_SUCCESS" >> $SUB_PATH
     echo "" >> $SUB_PATH
     echo "log = out/init.log" >> $SUB_PATH
@@ -385,6 +389,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
         # write splce to dag
         echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}" >> $DAG
         gen_chtc_scripts
+        exit 0
     done
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
