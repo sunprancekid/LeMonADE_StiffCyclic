@@ -377,7 +377,7 @@ if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
 elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then 
     # else if submitting jobs on CHTC
     # generate dagman file
-    DAG="${JOBDIR}/${JOB}.dag"
+    DAG="${JOB}.dag"
     echo "" > $DAG # overwrite / initialize dag
     # loop through simulation parameters, add splice subdags into main dagman header
     declare -i N_LINES=$(wc -l < $PARMFILE)
