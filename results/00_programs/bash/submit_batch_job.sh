@@ -21,6 +21,8 @@ declare -i BOOL_PATH=0
 declare -i BOOL_JOB=0
 # boolean that determines if the job should be submitted on a remote linux cluster
 declare -i BOOL_SUBMIT_SLURM=0
+# boolean that determintes if the job is being submitted on a chtc cluster
+declare -i BOOL_SUBMIT_CHTC=0
 # boolean that determines if a checkfile has been specified
 declare -i BOOL_CHECKFILE=0
 # boolean that determines test status of script execution
@@ -53,8 +55,8 @@ help() {
 	echo -e " -v           | execute script verbosely."
 	echo -e " -s           | submit job to SLURM via remote linux cluster (otherwise run locally in serial)."
 	echo -e " -t           | submit one job as test in order to make sure everthing works properly."
-# 	echo -e " -u           | upload local default directory to linux cluster."
-# 	echo -e " -d           | sync local default directory with linux cluster."
+    # echo -e " -u           | upload local default directory to linux cluster."
+    # echo -e " -d           | sync local default directory with linux cluster."
 	echo -e "\n"
 	echo -e " ## SCRIPT PARAMETERS ##"
 	echo -e " -j << ARG >> | MANDATORY: specify job title."
@@ -261,6 +263,20 @@ if [[ $BOOL_SUBMIT_SLURM -eq 1 ]]; then
             # if testing the script, exit the program
             exit
         fi
+    done
+elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then 
+    # else if submitting jobs on CHTC
+    # generate dagman file
+    DAG="${JOBDIR}/${JOB}.dag"
+    echo "" > $DAG # overwrite / initialize dag
+    # loop through simulation parameters, add splice subdags into main dagman header
+    declare -i N_LINES=$(wc -l < $PARMFILE)
+    for i in $(seq 2 $N_LINES); do
+        # get the simulation id (file column in file)
+        SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
+        # get the simulation directory (second column in file)
+        SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
+        echo "SPLICE ${JOB} ${JOB}.spl DIR ${SIMDIR}"
     done
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
