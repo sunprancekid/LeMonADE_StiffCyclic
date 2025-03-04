@@ -284,7 +284,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}\n" > $DAG
+        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}\n" >> $DAG
     done
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
