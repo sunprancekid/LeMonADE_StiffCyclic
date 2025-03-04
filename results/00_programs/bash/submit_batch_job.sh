@@ -279,7 +279,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
         SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
         # get the simulation directory (second column in file)
         SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
-        echo "SPLICE ${JOB} ${JOB}.spl DIR ${SIMDIR}"
+        echo "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}" > $DAG
     done
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
