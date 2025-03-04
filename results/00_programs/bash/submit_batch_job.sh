@@ -197,7 +197,7 @@ gen_chtc_scripts () {
     # list of sub directories to generate inside the main directory
     SUBDIR=( "node" "node/init" "out" "sub" "sub/exec" "anal" )
     # name of the executable file
-    EXEC_NAME="sub/exec/conH.sh"
+    EXEC_NAME="${SIMID}.sh"
 
     ## ARGUMENTS
     # none
