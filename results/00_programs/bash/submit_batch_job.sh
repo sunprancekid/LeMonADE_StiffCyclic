@@ -214,6 +214,10 @@ gen_chtc_scripts () {
 
     # generate subdirectories
     for sd in "${SUBDIR[@]}"; do 
+        if [[ -d ${D}${sd} ]]; then
+            # if the directory already exists, remove it
+            rm -r ${D}${sd}
+        fi
         mkdir -p "${D}${sd}/"
     done
 
@@ -259,7 +263,7 @@ gen_chtc_init () {
     # SCRIPT
     # write submission script
     echo "executable = ${EXEC_NAME}" > $SUB_PATH
-    echo "arguments = -i -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "arguments = -g -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
     echo "" >> $SUB_PATH
     echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
     echo "" >> $SUB_PATH
@@ -387,7 +391,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${SIMDIR}" >> $DAG
+        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${D}${SIMDIR}" >> $DAG
         gen_chtc_scripts
         exit 0
     done
