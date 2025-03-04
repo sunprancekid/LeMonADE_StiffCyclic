@@ -187,7 +187,7 @@ gen_slurm_script () {
 }
 
 ## OPTIONS
-while getopts "hvstj:p:f:l:e:c:" option; do
+while getopts "hzvstj:p:f:l:e:c:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help 0 ;;
