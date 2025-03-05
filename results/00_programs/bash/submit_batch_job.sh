@@ -374,7 +374,8 @@ gen_chtc_equil () {
     echo "" >> $SUB_PATH
     echo "queue" >> $SUB_PATH
 
-    # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
+    # if overwrite is off and the generation config file already exists
+    # can skip adding this node to the subdag
     if [[ $BOOL_OVERWRITE -eq 0 ]]; then
         if [[ -f ${D}${SIM_CONFIG_EQUIL} ]]; then
             # skip to next node without adding to subdag
@@ -385,6 +386,15 @@ gen_chtc_equil () {
     # add node to subdag
     echo "JOB ${SIMID}_equil ${SUB_NAME}" >> $SUBDAG_PATH
     echo "RETRY ${SIMID}_equil ${NUM_RETRY}" >> $SUBDAG_PATH
+
+    # if overwrite is off and the previous config file exists
+    if [[ $BOOL_OVERWRITE -eq 0 && -f ${D}${SIM_CONFIG_GEN} ]]; then
+        # init node is not running, do not need to establish parent chile relationship
+        return
+    else
+        # establish parent child relationship
+        echo "PARENT ${SIMID}_init CHILD ${SIMID}_equil" >> ${SUBDAG_PATH}
+    fi
 }
 
 ## OPTIONS
