@@ -249,7 +249,12 @@ gen_simparm() {
                             echo "declare -i GEN_BOOL=0" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo "declare -i EQUIL_BOOL=0" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo "declare -i RUN_BOOL=0" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo "while getopts \"gerp:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "declare -i MAX_MCS_BOOL=0" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "declare -i SAVE_MCS=${save_interval}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "declare -i EQUIL_MCS=${t_equilibrium}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "declare -i RUN_MCS=${N_MCS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "declare -i MAX_MCS=100000000000" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo "while getopts \"gerp:n:\" option; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tcase \$option in " >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tp)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t\tPATH=\${OPTARG};;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -259,9 +264,24 @@ gen_simparm() {
                             echo -e "\t\t\tdeclare -i EQUIL_BOOL=1;;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tr)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t\tdeclare -i RUN_BOOL=1;;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tn)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i MAX_MCS_BOOL=1" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i MAX_MCS=${OPTARG};;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo "if [ \$GEN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "if [ \$MAX_MCS_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tif [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tif [ \$EQUIL_MCS -gt \$MAX_MCS ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i EQUIL_BOOL=\$MAX_MCS" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tif [ \$RUN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tif [ \$RUN_MCS -gt \$MAX_MCS ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i RUN_MCS=\$MAX_MCS" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "if [ \$GEN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \$CHECKFILE_GEN ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the inital state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t\${PATH}generatePolymerBFM -n ${n} -f ${FORCE_VAL} -v ${fv} -b 512 -o \${CHECKFILE_GEN}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -270,7 +290,7 @@ gen_simparm() {
                             echo -e "if [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \${CHECKFILE_EQUIL} ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the equilibrium state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -e ${t_equilibrium} -n ${t_equilibrium} -s ${t_equilibrium} -a -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -e \${EQUIL_MCS} -n \${EQUIL_MCS} -s \${EQUIL_MCS} -a -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$RUN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -280,9 +300,7 @@ gen_simparm() {
                             echo -e "\t\texit 1" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\telse" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# iterate through run calls, accumulate properties" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\tfor n in {1..10}; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\t\${PATH}simulateRealPolymerBFM -n ${N_MCS} -s ${save_interval} -a -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\tdone" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -n \${RUN_MCS} -s \${SAVE_MCS} -a -m -f \${CHECKFILE_EQUIL} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             # echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
