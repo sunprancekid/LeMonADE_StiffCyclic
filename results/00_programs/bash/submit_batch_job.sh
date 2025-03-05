@@ -35,8 +35,10 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 # default singularity image used with chtc jobs
 DEFAULT_SINGULARITY="l.sif"
-# maximum MCS steps on CHTC systems
-declare -i MAX_MCS=1000000000 # 1 billion
+# maximum MCS steps for equilibriation period on CHTC systems
+declare -i MAX_MCS_EQUIL=1000000000 # 1 billion
+# maximum MCS steps for running loop on CHTC systems
+declare -i MAX_MCS_RUN=500000000 # 500 million
 ## PARAMETERS -- SLURM
 # string represnting the maximum job time length
 MAX_SLURM_TIME="05:00"
@@ -233,7 +235,7 @@ gen_chtc_scripts () {
     gen_chtc_equil
 
     # establish the running node
-    gen_chtc_run
+    # gen_chtc_run
 
 }
 
@@ -357,7 +359,7 @@ gen_chtc_equil () {
     ## SCRIPT
     # write submission script
     echo "executable = ${EXEC_NAME}" > $SUB_PATH
-    echo "arguments = -e -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "arguments = -e -p /LeMonADE_StiffCyclic/build/bin/ -n ${MAX_MCS_EQUIL}" >> $SUB_PATH
     echo "" >> $SUB_PATH
     echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
     echo "" >> $SUB_PATH
