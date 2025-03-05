@@ -334,7 +334,7 @@ gen_chtc_equil () {
     local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
     local SIM_CONFIG_GEN="config_gen.dat" # initial configuration, from previous node
     # contains end-to-end instructions
-    local SIM_E2E="RE2E.dat"
+    local SIM_RE2E="RE2E.dat"
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
@@ -351,7 +351,7 @@ gen_chtc_equil () {
     # list of files that should be transfered from the execute node
     local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}, ${SIM_RE2E}"
     # list of remap instructions for each output file
-    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}"
+    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}, ${RMP_SIM_RE2E}"
 
     ## ARGUMENTS
     # none
