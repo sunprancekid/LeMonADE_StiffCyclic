@@ -227,6 +227,9 @@ gen_chtc_scripts () {
     # establish the initialization node
     gen_chtc_init
 
+    # establish the equilibriation node
+    gen_chtc_equil
+
 }
 
 # method for generating initialization node
@@ -237,6 +240,8 @@ gen_chtc_init () {
     local SUB_NAME="sub/init.sub"
     # path to file containing submission instructions
     local SUB_PATH="${D}${SUB_NAME}"
+    # number of retries attempted by init node
+    declare -i NUM_RETRY=5
     # name of the executable file
     # EXEC_NAME="sub/exec/${SIMDIR}.sh"
 
@@ -252,7 +257,7 @@ gen_chtc_init () {
     # directory that output files are remapped to
     local REMAP="node/init/"
     # list of files with remapping instructions
-    local RMP_SIM_CONFIG="${SIM_CONFIG}=${REMAP}${SIM_MOV}"
+    local RMP_SIM_CONFIG="${SIM_CONFIG}=${REMAP}${SIM_CONFIG}"
     # list of files that should be transfered to the execute node
     local TRANSFER_INPUT_FILES="${EXEC_NAME}"
     # list of files that should be transfered from the execute node
@@ -301,8 +306,85 @@ gen_chtc_init () {
 
     # add node to subdag
     echo "JOB ${SIMID}_init ${SUB_NAME}" >> $SUBDAG_PATH
-    echo "RETRY ${SIMID}_init 5"
+    echo "RETRY ${SIMID}_init ${NUM_RETRY}" >> $SUBDAG_PATH
+}
 
+# method for generation equilibriation node
+gen_chtc_equil () {
+
+    ## PARAMETERS
+    # name of file containing submission instructions
+    local SUB_NAME="sub/equil.sub"
+    # path to file containing submission instructions
+    local SUB_PATH="${D}${SUB_NAME}"
+    # number of retries attempted by init node
+    declare -i NUM_RETRY=5
+    # name of the executable file
+    # EXEC_NAME="sub/exec/${SIMDIR}.sh"
+
+    ## PARAMETERS - FILES
+    # configuration files
+    local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
+    local SIM_CONFIG_GEN="config_gen.dat" # initial configuration, from previous node
+
+    ## PARAMETERS - SUBMISSION INTRUCTIONS
+    # memory to request
+    local REQUEST_MEMORY="500MB"
+    # disk space to request
+    local REQUEST_DISK="1GB"
+    # directory that output files are remapped to
+    local REMAP="node/init/"
+    # list of files with remapping instructions
+    local RMP_SIM_CONFIG_EQUIL="${SIM_CONFIG_EQUIL}=${REMAP}${SIM_CONFIG_EQUIL}"
+    # list of files that should be transfered to the execute node
+    local TRANSFER_INPUT_FILES="${EXEC_NAME}, ${SIM_CONFIG_GEN}"
+    # list of files that should be transfered from the execute node
+    local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}"
+    # list of remap instructions for each output file
+    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}"
+
+    ## ARGUMENTS
+    # none
+
+    ## SCRIPT
+    # write submission script
+    echo "executable = ${EXEC_NAME}" > $SUB_PATH
+    echo "arguments = -e -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "should_transfer_files = YES" >> $SUB_PATH
+    echo "transfer_input_files = ${TRANSFER_INPUT_FILES}" >> $SUB_PATH
+    echo "transfer_output_files = ${TRANSFER_OUTPUT_FILES}" >> $SUB_PATH
+    # echo "transfer_output_remaps = \"${TRANSFER_OUTPUT_REMAPS}\"" >> $SUB_PATH
+    echo "when_to_transfer_output = ON_SUCCESS" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "log = out/equil.log" >> $SUB_PATH
+    echo "error = out/equil.err" >> $SUB_PATH
+    echo "output = out/equil.out" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "request_cpus = 1" >> $SUB_PATH
+    echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
+    echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
+    # echo "requirements = HasSingularity" >> $SUB_PATH
+    echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "queue" >> $SUB_PATH
+
+    # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
+    if [[ $BOOL_OVERWRITE -eq 0 ]]; then
+        if [[ -f $SIM_CONFIG_EQUIL ]]; then
+            # skip to next node without adding to subdag
+            return
+        fi
+    fi
+
+    # add node to subdag
+    echo "JOB ${SIMID}_equil ${SUB_NAME}" >> $SUBDAG_PATH
+    echo "RETRY ${SIMID}_equil ${NUM_RETRY}" >> $SUBDAG_PATH
 }
 
 ## OPTIONS
