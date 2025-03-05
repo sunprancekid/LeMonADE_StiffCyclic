@@ -297,7 +297,7 @@ gen_chtc_init () {
     echo "queue" >> $SUB_PATH
 
     # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
-    if [[ $BOOL_OVERWRITE -eq 1 ]]; then
+    if [[ $BOOL_OVERWRITE -eq 0 ]]; then
         if [[ -f $SIM_CONFIG ]]; then
             # skip to next node without adding to subdag
             return
