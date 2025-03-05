@@ -425,7 +425,7 @@ gen_chtc_run () {
     # configuration files
     local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
     # contains end-to-end instructions
-    local SIM_E2E="RE2E.dat"
+    local SIM_RE2E="RE2E.dat"
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
