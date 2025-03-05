@@ -54,7 +54,7 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 ## PARAMETERS -- SIMULATION
 # number of MCSs between each property calculation
-declare -i N_MCS=100000000000 # 100 billion
+declare -i N_MCS=10000000000 # 10 billion
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
@@ -266,13 +266,13 @@ gen_simparm() {
                             echo -e "\t\t\tdeclare -i RUN_BOOL=1;;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tn)" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t\tdeclare -i MAX_MCS_BOOL=1" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\tdeclare -i MAX_MCS=${OPTARG};;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i MAX_MCS=\${OPTARG};;" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tesac" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "done" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$MAX_MCS_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tif [ \$EQUIL_MCS -gt \$MAX_MCS ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\tdeclare -i EQUIL_BOOL=\$MAX_MCS" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\tdeclare -i EQUIL_MCS=\$MAX_MCS" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ \$RUN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
