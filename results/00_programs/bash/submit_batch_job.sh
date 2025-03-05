@@ -230,6 +230,9 @@ gen_chtc_scripts () {
     # establish the equilibriation node
     gen_chtc_equil
 
+    # establish the running node
+    gen_chtc_run
+
 }
 
 # method for generating initialization node
@@ -326,6 +329,8 @@ gen_chtc_equil () {
     # configuration files
     local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
     local SIM_CONFIG_GEN="config_gen.dat" # initial configuration, from previous node
+    # contains end-to-end instructions
+    local SIM_E2E="RE2E.dat"
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
@@ -333,13 +338,14 @@ gen_chtc_equil () {
     # disk space to request
     local REQUEST_DISK="1GB"
     # directory that output files are remapped to
-    local REMAP="node/init/"
+    local REMAP="node/equil/"
     # list of files with remapping instructions
     local RMP_SIM_CONFIG_EQUIL="${SIM_CONFIG_EQUIL}=${REMAP}${SIM_CONFIG_EQUIL}"
+    local RMP_SIM_RE2E="${SIM_RE2E}=${REMAP}${SIM_RE2E}"
     # list of files that should be transfered to the execute node
     local TRANSFER_INPUT_FILES="${EXEC_NAME}, ${SIM_CONFIG_GEN}"
     # list of files that should be transfered from the execute node
-    local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}"
+    local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}, ${SIM_RE2E}"
     # list of remap instructions for each output file
     local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}"
 
