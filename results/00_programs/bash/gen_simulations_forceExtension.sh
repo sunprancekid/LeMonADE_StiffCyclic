@@ -58,7 +58,7 @@ declare -i N_MCS=100000000000 # 100 billion
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
-declare -i t_equilibrium=10000000 # 1 billion
+declare -i t_equilibrium=1000000000 # 1 billion
 
 
 ## FUNCTIONS
