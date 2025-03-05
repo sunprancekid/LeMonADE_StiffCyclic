@@ -27,6 +27,8 @@ declare -i BOOL_SUBMIT_CHTC=0
 declare -i BOOL_CHECKFILE=0
 # boolean that determines test status of script execution
 declare -i BOOL_TEST=0
+# boolean that determines if simulation state should be overwritten
+declare -i BOOL_OVERWRITE=0
 # default linux server used for remote jobs
 LINUXSERV="gandalf"
 # default path to parameterized linux executables for job
@@ -55,6 +57,7 @@ help() {
 	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -h           | display script options, exit 0."
 	echo -e " -v           | execute script verbosely."
+    echo -e " -o           | restart simulations from beginning; otherwise actual state of simulations are saved, if they exists."
 	echo -e " -s           | submit job to SLURM via remote linux cluster."
     echo -e " -z           | submit job on CHTC cluster (most be logged in)."
 	echo -e " -t           | submit one job as test in order to make sure everthing works properly."
@@ -288,13 +291,22 @@ gen_chtc_init () {
     echo "" >> $SUB_PATH
     echo "queue" >> $SUB_PATH
 
+    # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
+    if [[ $BOOL_OVERWRITE -eq 1 ]]; then
+        if [[ -f $SIM_CONFIG ]]; then
+            # skip to next node without adding to subdag
+            return
+        fi
+    fi
+
     # add node to subdag
     echo "JOB ${SIMID}_init ${SUB_NAME}" >> $SUBDAG_PATH
+    echo "RETRY ${SIMID}_init 5"
 
 }
 
 ## OPTIONS
-while getopts "hzvstj:p:f:l:e:c:" option; do
+while getopts "hzvstoj:p:f:l:e:c:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help 0 ;;
@@ -317,6 +329,8 @@ while getopts "hzvstj:p:f:l:e:c:" option; do
 			LINUXSERV="${OPTARG}" ;;
         e) # update LeMonADE executables directory
             EXECDIR="${OPTARG}";;
+        o) # overwrite simulation state
+            BOOL_OVERWRITE=1;;
         c) # specify checkfile
             declare -i BOOL_CHECKFILE=1
             OPTCHECKFILE="${OPTARG}";;
@@ -393,8 +407,12 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
         # write splce to dag
         echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}" >> $DAG
         gen_chtc_scripts
-        exit 0
+        # if test bool, just run one simulation
+        if [[ $TEST_BOOL -eq 1 ]]; then
+            exit 0
+        fi
     done
+    # TODO add job load maximum ..
 else
     ## TODO :: compile executables locally, copy to local directory and delete after job finishes
     # execute jobs locally
