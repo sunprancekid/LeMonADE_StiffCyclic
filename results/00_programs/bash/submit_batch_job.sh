@@ -490,7 +490,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
         echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}" >> $DAG
         gen_chtc_scripts
         # if test bool, just run one simulation
-        if [[ $TEST_BOOL -eq 1 ]]; then
+        if [[ $BOOL_TEST -eq 1 ]]; then
             exit 0
         fi
     done
