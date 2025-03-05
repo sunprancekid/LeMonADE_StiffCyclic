@@ -35,6 +35,8 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 # default singularity image used with chtc jobs
 DEFAULT_SINGULARITY="l.sif"
+# maximum MCS steps on CHTC systems
+declare -i MAX_MCS=1000000000 # 1 billion
 ## PARAMETERS -- SLURM
 # string represnting the maximum job time length
 MAX_SLURM_TIME="05:00"
@@ -401,6 +403,77 @@ gen_chtc_equil () {
         # establish parent child relationship
         echo "PARENT ${SIMID}_init CHILD ${SIMID}_equil" >> ${SUBDAG_PATH}
     fi
+}
+
+# node for running bfm model, generating statistics
+gen_chtc_run () {
+
+    ## PARAMETERS
+    # name of file containing submission instructions
+    local SUB_NAME="sub/run.sub"
+    # path to file containing submission instructions
+    local SUB_PATH="${D}${SUB_NAME}"
+    # number of retries attempted by init node
+    declare -i NUM_RETRY=500
+    # name of the executable file
+    # EXEC_NAME="sub/exec/${SIMDIR}.sh"
+
+
+    ## PARAMETERS - FILES
+    # configuration files
+    local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
+    # contains end-to-end instructions
+    local SIM_E2E="RE2E.dat"
+
+    ## PARAMETERS - SUBMISSION INTRUCTIONS
+    # memory to request
+    local REQUEST_MEMORY="500MB"
+    # disk space to request
+    local REQUEST_DISK="1GB"
+    # directory that output files are remapped to
+    local REMAP="node/run/"
+    # list of files with remapping instructions
+    local RMP_SIM_CONFIG_EQUIL="${SIM_CONFIG_EQUIL}=${REMAP}${SIM_CONFIG_EQUIL}"
+    local RMP_SIM_RE2E="${SIM_RE2E}=${REMAP}${SIM_RE2E}"
+    # list of files that should be transfered to the execute node
+    local TRANSFER_INPUT_FILES="${SIM_CONFIG_EQUIL}, ${SIM_RE2E}"
+    # list of files that should be transfered from the execute node
+    local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}, ${SIM_RE2E}"
+    # list of remap instructions for each output file
+    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}"
+
+
+    ## ARGUMENTS
+    # none
+
+
+    ## SCRIPT
+    # write submission script
+    echo "executable = ${EXEC_NAME}" > $SUB_PATH
+    echo "arguments = -r -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "should_transfer_files = YES" >> $SUB_PATH
+    echo "transfer_input_files = ${TRANSFER_INPUT_FILES}" >> $SUB_PATH
+    echo "transfer_output_files = ${TRANSFER_OUTPUT_FILES}" >> $SUB_PATH
+    # echo "transfer_output_remaps = \"${TRANSFER_OUTPUT_REMAPS}\"" >> $SUB_PATH
+    echo "when_to_transfer_output = ON_SUCCESS" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "log = out/run.log" >> $SUB_PATH
+    echo "error = out/run.err" >> $SUB_PATH
+    echo "output = out/run.out" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "request_cpus = 1" >> $SUB_PATH
+    echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
+    echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
+    # echo "requirements = HasSingularity" >> $SUB_PATH
+    echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
+    echo "" >> $SUB_PATH
+    echo "queue" >> $SUB_PATH
 }
 
 ## OPTIONS
