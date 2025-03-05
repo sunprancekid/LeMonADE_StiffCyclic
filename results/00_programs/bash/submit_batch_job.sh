@@ -298,7 +298,7 @@ gen_chtc_init () {
 
     # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
     if [[ $BOOL_OVERWRITE -eq 0 ]]; then
-        if [[ -f ${D}$SIM_CONFIG ]]; then
+        if [[ -f ${D}${SIM_CONFIG} ]]; then
             # skip to next node without adding to subdag
             return
         fi
@@ -376,7 +376,7 @@ gen_chtc_equil () {
 
     # if overwrite is off and the generation config file already exists, can skip adding this node to the subdag
     if [[ $BOOL_OVERWRITE -eq 0 ]]; then
-        if [[ -f $SIM_CONFIG_EQUIL ]]; then
+        if [[ -f ${D}${SIM_CONFIG_EQUIL} ]]; then
             # skip to next node without adding to subdag
             return
         fi

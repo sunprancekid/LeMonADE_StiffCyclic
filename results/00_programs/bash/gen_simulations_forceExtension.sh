@@ -237,10 +237,7 @@ gen_simparm() {
                             elif [ $r -eq 2 ]; then
                                 GENFLAGS="${GENFLAGS} -r -m 2"
                             fi
-
-                            ## TODO :: add gen flags
-                            ## TODO :: add equil flags
-                            ## TODO :: add run flags
+                            
                             ## TODO :: add loop int
 
                             # write files directory, generate simulation executables
@@ -267,13 +264,13 @@ gen_simparm() {
                             echo "if [ \$GEN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \$CHECKFILE_GEN ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the inital state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}generatePolymerBFM -n 100 -f 0.98850 -v 100 -b 512 -o \${CHECKFILE_GEN}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}generatePolymerBFM -n ${n} -f ${FORCE_VAL} -v ${fv} -b 512 -o \${CHECKFILE_GEN}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \${CHECKFILE_EQUIL} ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the equilibrium state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -e 10000000 -n 10000000 -s 10000000 -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -e ${t_equilibrium} -n ${t_equilibrium} -s ${t_equilibrium} -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$RUN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -284,7 +281,7 @@ gen_simparm() {
                             echo -e "\telse" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# iterate through run calls, accumulate properties" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tfor n in {1..10}; do" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\t\${PATH}simulateRealPolymerBFM -n 1000000 -s 1000000 -a -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\t\${PATH}simulateRealPolymerBFM -n ${N_MCS} -s ${save_interval} -a -m" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\tdone" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
