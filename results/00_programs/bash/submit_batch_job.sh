@@ -38,7 +38,7 @@ DEFAULT_SINGULARITY="l.sif"
 # maximum MCS steps for equilibriation period on CHTC systems
 declare -i MAX_MCS_EQUIL=1000000000 # 1 billion
 # maximum MCS steps for running loop on CHTC systems
-declare -i MAX_MCS_RUN=500000000 # 500 million
+declare -i MAX_MCS_RUN=5000000 # 500 million
 ## PARAMETERS -- SLURM
 # string represnting the maximum job time length
 MAX_SLURM_TIME="05:00"
@@ -598,7 +598,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}" >> $DAG
+        echo "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}\n" >> $DAG
         gen_chtc_scripts
         # if test bool, just run one simulation
         if [[ $BOOL_TEST -eq 1 ]]; then
