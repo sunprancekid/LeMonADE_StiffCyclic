@@ -7,6 +7,14 @@ set -e
 # if they do the script exists successfully, otherwise the script exits with an error code.
 
 ## PARAMETERS
+# current date and time 
+CURRENTTIME=$(date '+%Y-%m-%d %H:%M:%S')
+CURRENTTIME="postscript @ ${CURRENTTIME}"
+# non-zero exit code that tells CHTC to loop
+declare -i NONZERO_EXITCODE=1
+# exit code that idicates to CHTC scheduler that 
+# the job should be put on hold
+declare -i HOLD_EXITCODE=95
 # boolean determining if a file name has been passed to the script
 declare -i BOOL_FILE=0
 # file name passed to method
@@ -112,10 +120,50 @@ get_line() {
 }
 
 
+# function that gets a particular element in a line
+get_element_col_line(){
+	
+	## PARAMETERS
+	# none
+
+	## OPTIONS
+	# none
+
+	## ARGUMENTS
+	# name of file to parse lines from
+	local filename=$1
+	# line number of parse from file
+	declare -i line_no=$2
+	# column number to parse from file
+	declare -i col_no=$3
+
+	## SCRIPT
+	# parse the line from the csv file
+	local line=$(get_line $filename $line_no)
+
+	# determine the number of times the delimiter occurs in the line
+	element=$(echo $line | cut -d ' ' -f $col_no )
+
+	# return the value to the user
+	echo $element
+}
+
+
 ## SCRIPT
 # TODO add check
 # check
 
 # parse the final line from the column
-declare -i N=$(get_lines ${CHECKFILE})
-get_lines ${CHECKFILE} ${N}
+declare -i N=$(get_lines ${CHECKFILE}) # get number of lines in column
+# l=$(get_line ${CHECKFILE} ${N}) # get the line
+v=$(get_element_col_line ${CHECKFILE} ${N} ${CHECK_COL}) # get the value in the column
+# check if the value is greater than the minimum
+if (( $( echo "$v > ${MIN_VAL}.0" | bc -l ) )); then
+	# the parse value is greater than the expected value, exit zero
+	echo "${CURRENTTIME}: ${v} is greater than ${MIN_VAL}. Exiting with zero exit code. "
+	exit 0
+else
+	# else the prase value is less than the expected value, exit nonzero
+	echo "${CURRENTTIME}: ${MIN_VAL} is greater than ${v}. Exiting with nonzero exit code."
+	exit $NONZERO_EXITCODE
+fi

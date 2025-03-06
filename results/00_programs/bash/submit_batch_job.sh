@@ -210,7 +210,6 @@ gen_chtc_scripts () {
     # none
 
     ## SCRIPT
-
     # establish the subdag path
     SUBDAG="${SIMID}.spl"
     SUBDAG_PATH="${D}${SUBDAG}"
@@ -227,6 +226,14 @@ gen_chtc_scripts () {
         fi
         mkdir -p "${D}${sd}/"
     done
+
+    # copy programs to exec dir 
+    cp ./00_programs/bash/chtc_wrappers/* $D/
+    chmod u+x $D/postscript-wrapper.sh
+    chmod u+x $D/check_value.sh
+    if [[ -f "${D}/postscript_stdout.txt" ]]; then
+        rm "$D/postscript_stdout.txt"
+    fi
 
     # establish the initialization node
     gen_chtc_init
@@ -296,7 +303,7 @@ gen_chtc_init () {
     echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
     echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
     echo "" >> $SUB_PATH
-    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode == 95)" >> $SUB_PATH
     echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
     # echo "requirements = HasSingularity" >> $SUB_PATH
     echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
@@ -377,7 +384,7 @@ gen_chtc_equil () {
     echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
     echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
     echo "" >> $SUB_PATH
-    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode == 95)" >> $SUB_PATH
     echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
     # echo "requirements = HasSingularity" >> $SUB_PATH
     echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
@@ -396,7 +403,6 @@ gen_chtc_equil () {
     # add node to subdag
     echo "JOB ${SIMID}_equil ${SUB_NAME}" >> $SUBDAG_PATH
     echo "RETRY ${SIMID}_equil ${NUM_RETRY}" >> $SUBDAG_PATH
-    echo "SCRIPT POST postscript-wrapper.sh ${SIMID} \$RETURN \$RETRY" >> $SUBDAG_PATH
 
     # if overwrite is off and the previous config file exists
     if [[ $BOOL_OVERWRITE -eq 0 && -f ${D}${SIM_CONFIG_GEN} ]]; then
@@ -473,7 +479,7 @@ gen_chtc_run () {
     echo "request_disk = ${REQUEST_DISK}" >> $SUB_PATH
     echo "request_memory = ${REQUEST_MEMORY}" >> $SUB_PATH
     echo "" >> $SUB_PATH
-    echo "on_exit_hold = (ExitCode != 0)" >> $SUB_PATH
+    echo "on_exit_hold = (ExitCode == 95)" >> $SUB_PATH
     echo "requirements = (HAS_GCC == true) && (Mips > 30000)" >> $SUB_PATH
     # echo "requirements = HasSingularity" >> $SUB_PATH
     echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
@@ -483,7 +489,7 @@ gen_chtc_run () {
     # add node to subdag
     echo "JOB ${SIMID}_run ${SUB_NAME}" >> $SUBDAG_PATH
     echo "RETRY ${SIMID}_run ${NUM_RETRY}" >> $SUBDAG_PATH
-    # TODO add post_script wrapper
+    echo "SCRIPT POST ${SIMID}_run postscript-wrapper.sh -t ${TOTAL_MCS} ${SIMID} \$RETURN \$RETRY" >> $SUBDAG_PATH
 
     # if equilibrium file does not exist, must wait for equilibriuation node to restart
     if [[ $BOOL_OVERWRITE -eq 0 && -f ${D}${SIM_CONFIG_EQUIL} ]]; then
@@ -597,6 +603,8 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
         SIMID=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 1)
         # get the simulation directory (second column in file)
         SIMDIR=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 2)
+        # total MCS steps
+        TOTAL_MCS=$(head -n ${i} ${PARMFILE} | tail -n 1 | cut -d , -f 4)
         # inform user
         if [[ $BOOL_VERB -eq 1 ]]; then 
             echo "Generating CHTC files for: ${SIMID} .."

@@ -22,7 +22,7 @@ declare -i MAX_VAR=0
 ## OPTIONS
 # determine exit criteria
 # flags are used for specifying exit criteria 
-while getopts "t:v" option; do
+while getopts "t:v:" option; do
     case $option in
     	t) # flag for checking the length of the simulation
 			
@@ -59,11 +59,11 @@ RETRY_VAL=$3
 # SCRIPT
 # establish the name used to write standard out and error from
 # the pre and post processing scripts
-OUTNAME="${SIMID}_stdout.txt"
+OUTNAME="postscript_stdout.txt"
 
 # determine the operation to perform
-if [[ $BOOL_TIME -eq 1 ]]; then 
-	./check_value.sh $SIMID $EXIT_VAL $RETRY_VAL -f RE2E.dat -c 1 -m ${MIN_MCS} >> ${OUTNAME} 2>&1
+if [[ $BOOL_MCS -eq 1 ]]; then 
+	./check_value.sh -f RE2E.dat -c 1 -m ${MIN_MCS} $SIMID $EXIT_VAL $RETRY_VAL >> ${OUTNAME} 2>&1
 fi
 
 exit 0
