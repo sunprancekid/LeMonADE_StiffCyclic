@@ -396,6 +396,7 @@ gen_chtc_equil () {
     # add node to subdag
     echo "JOB ${SIMID}_equil ${SUB_NAME}" >> $SUBDAG_PATH
     echo "RETRY ${SIMID}_equil ${NUM_RETRY}" >> $SUBDAG_PATH
+    echo "SCRIPT POST postscript-wrapper.sh ${SIMID} \$RETURN \$RETRY" >> $SUBDAG_PATH
 
     # if overwrite is off and the previous config file exists
     if [[ $BOOL_OVERWRITE -eq 0 && -f ${D}${SIM_CONFIG_GEN} ]]; then
