@@ -160,10 +160,10 @@ v=$(get_element_col_line ${CHECKFILE} ${N} ${CHECK_COL}) # get the value in the 
 # check if the value is greater than the minimum
 if (( $( echo "$v > ${MIN_VAL}.0" | bc -l ) )); then
 	# the parse value is greater than the expected value, exit zero
-	echo "${CURRENTTIME}: ${v} is greater than ${MIN_VAL}. Exiting with zero exit code. "
+	echo "${CURRENTTIME}: The property value (${v}) is greater than the minimum value (${MIN_VAL}). Exiting with zero exit code, end of simulation. "
 	exit 0
 else
 	# else the prase value is less than the expected value, exit nonzero
-	echo "${CURRENTTIME}: ${MIN_VAL} is greater than ${v}. Exiting with nonzero exit code."
+	echo "${CURRENTTIME}: The minimum value (${MIN_VAL}) is greater than the current property value (${v}). Exiting with nonzero exit code, restarting."
 	exit $NONZERO_EXITCODE
 fi
