@@ -277,7 +277,7 @@ void AnalyzerEndToEndDistance<IngredientsType>::dumpTimeSeries()
         appendfile.open(outputFile, std::ios_base::app);
         // loop through each sample
         for (int n = 0; n < MCSTimes.size(); n++) {
-            char buffer[100]; // buffer contains results
+            char buffer[200] = {0}; // buffer contains results
             sprintf(buffer, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f", MCSTimes[n], Re2eTimeSeries[0][n], Re2eTimeSeries[1][n],Re2eTimeSeries[2][n],Re2eTimeSeries[3][n],Re2eTimeSeries[4][n],Re2eTimeSeries[5][n],Re2eTimeSeries[6][n],Re2eTimeSeries[7][n],Re2eTimeSeries[8][n]); // formatted string
             // if (calcProjVec) {
             // } else {
