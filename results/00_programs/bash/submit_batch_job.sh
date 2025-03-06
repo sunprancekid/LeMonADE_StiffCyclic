@@ -585,7 +585,10 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
     # else if submitting jobs on CHTC
     # generate dagman file
     DAG="${JOB}.dag"
-    echo "" > $DAG # overwrite / initialize dag
+    if [[ -f ${DAG} ]]; then
+        # remove the dag file if it already exists
+        rm $DAG
+    fi
     # loop through simulation parameters, add splice subdags into main dagman header
     declare -i N_LINES=$(wc -l < $PARMFILE)
     for i in $(seq 2 $N_LINES); do
@@ -598,7 +601,7 @@ elif [[ $BOOL_SUBMIT_CHTC -eq 1 ]]; then
             echo "Generating CHTC files for: ${SIMID} .."
         fi
         # write splce to dag
-        echo "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}\n" >> $DAG
+        echo -e "SPLICE ${SIMID} ${SIMID}.spl DIR ${JOBDIR}${SIMDIR}" >> $DAG
         gen_chtc_scripts
         # if test bool, just run one simulation
         if [[ $BOOL_TEST -eq 1 ]]; then
