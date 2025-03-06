@@ -38,7 +38,7 @@ DEFAULT_SINGULARITY="l.sif"
 # maximum MCS steps for equilibriation period on CHTC systems
 declare -i MAX_MCS_EQUIL=1000000000 # 1 billion
 # maximum MCS steps for running loop on CHTC systems
-declare -i MAX_MCS_RUN=50000000 # 500 million
+declare -i MAX_MCS_RUN=500000000 # 500 million
 ## PARAMETERS -- SLURM
 # string represnting the maximum job time length
 MAX_SLURM_TIME="05:00"
