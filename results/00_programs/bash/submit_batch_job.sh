@@ -235,7 +235,7 @@ gen_chtc_scripts () {
     gen_chtc_equil
 
     # establish the running node
-    # gen_chtc_run
+    gen_chtc_run
 
 }
 
@@ -426,6 +426,8 @@ gen_chtc_run () {
     local SIM_CONFIG_EQUIL="config_equil.dat" # equilibrium configuration
     # contains end-to-end instructions
     local SIM_RE2E="RE2E.dat"
+    # post script wrapper
+    # TODO transfer postscript wrappers to CHTC execute node
 
     ## PARAMETERS - SUBMISSION INTRUCTIONS
     # memory to request
@@ -442,7 +444,7 @@ gen_chtc_run () {
     # list of files that should be transfered from the execute node
     local TRANSFER_OUTPUT_FILES="${SIM_CONFIG_EQUIL}, ${SIM_RE2E}"
     # list of remap instructions for each output file
-    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}"
+    local TRANSFER_OUTPUT_REMAPS="${RMP_SIM_CONFIG_EQUIL}, ${RMP_SIM_RE2E}"
 
 
     ## ARGUMENTS
@@ -452,7 +454,7 @@ gen_chtc_run () {
     ## SCRIPT
     # write submission script
     echo "executable = ${EXEC_NAME}" > $SUB_PATH
-    echo "arguments = -r -p /LeMonADE_StiffCyclic/build/bin/" >> $SUB_PATH
+    echo "arguments = -r -p /LeMonADE_StiffCyclic/build/bin/ -n ${MAX_MCS_RUN}" >> $SUB_PATH
     echo "" >> $SUB_PATH
     echo "+SingularityImage = \"/home/mad/tmp/${DEFAULT_SINGULARITY}\"" >> $SUB_PATH
     echo "" >> $SUB_PATH
@@ -476,6 +478,24 @@ gen_chtc_run () {
     echo "+ProjectName=\"NCSU_Hall\"" >> $SUB_PATH
     echo "" >> $SUB_PATH
     echo "queue" >> $SUB_PATH
+
+    # add node to subdag
+    echo "JOB ${SIMID}_run ${SUB_NAME}" >> $SUBDAG_PATH
+    echo "RETRY ${SIMID}_run ${NUM_RETRY}" >> $SUBDAG_PATH
+    # TODO add post_script wrapper
+
+    # if equilibrium file does not exist, must wait for equilibriuation node to restart
+    if [[ $BOOL_OVERWRITE -eq 0 && -f ${D}${SIM_CONFIG_EQUIL} ]]; then
+        # if not overwriting and the equilibrium file already exists, 
+        # do not need to establish parent chile relationship, run node is ready to exectue
+        return
+    else
+        # the equilibrium file does not exists OR overwriting existing files
+        # establish parent child relationship, run node must wait for the equilibrium configuration
+        echo "PARENT ${SIMID}_equil CHILD ${SIMID}_run" >> ${SUBDAG_PATH}
+    fi
+
+
 }
 
 ## OPTIONS
