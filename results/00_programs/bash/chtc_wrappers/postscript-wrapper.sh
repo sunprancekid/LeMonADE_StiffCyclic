@@ -63,7 +63,7 @@ OUTNAME="${SIMID}_stdout.txt"
 
 # determine the operation to perform
 if [[ $BOOL_TIME -eq 1 ]]; then 
-	./check_time.sh -c 1 -m ${MIN_MCS} 2>&1
+	./check_value.sh $SIMID $EXIT_VAL $RETRY_VAL -f RE2E.dat -c 1 -m ${MIN_MCS} >> ${OUTNAME} 2>&1
 fi
 
 exit 0
