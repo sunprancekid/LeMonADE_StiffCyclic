@@ -227,7 +227,7 @@ bool AnalyzerEndToEndDistance<IngredientsType>::execute()
         } else {
             // projection vector has not been specified, projection calculations cannot be performed
             // add NA to time series to signify that no data is provided
-            Re2eTimeSeries[4].push_back(0.);
+            Re2eTimeSeries[4].push_back(dist);
             Re2eTimeSeries[5].push_back(0.);
             Re2eTimeSeries[6].push_back(0.);
             Re2eTimeSeries[7].push_back(0.);
