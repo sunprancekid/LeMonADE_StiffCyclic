@@ -218,24 +218,27 @@ gen_simparm() {
                             # generate flags for simulation executables
                             GENFLAGS="-n ${n}${FORCE_FLAG}-v ${fv} -b 512"
                             SIMFLAGS="-e ${t_equilibrium} -n ${N_MCS} -s ${save_interval} -a"
+                            BENDFLAG=""
                             if [ $l != 0 ]; then
                                 # calculate the bending parameter constant from the assigned persistence length
                                 # according to the type of potential assigned to the simulation
                                 if [ "${C}" == "CA" ]; then
-                                    GENFLAGS="${GENFLAGS} -c"
+                                    BENDFLAG=" -c"
                                     k="${l}"
                                 else
                                     k=$( echo "(${l} ^ 2) / ${PI_CON}" | bc -l )
                                 fi
-                                GENFLAGS="${GENFLAGS} -k ${k}"
+                                BENDFLAG="${BENDFLAG} -k ${k}"
                             else
                                 k="0."
                             fi
 
+                            # topology flag
+                            TOPFLAG=""
                             if [ $r -eq 1 ]; then
-                                GENFLAGS="${GENFLAGS} -r"
+                                TOPFLAG="-r"
                             elif [ $r -eq 2 ]; then
-                                GENFLAGS="${GENFLAGS} -r -m 2"
+                                TOPFLAG="-r -m 2"
                             fi
 
                             ## TODO :: add loop int
@@ -284,7 +287,7 @@ gen_simparm() {
                             echo -e "if [ \$GEN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \$CHECKFILE_GEN ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the inital state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}generatePolymerBFM -n ${n} -f ${FORCE_VAL} -v ${fv} -b 512 -o \${CHECKFILE_GEN}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}generatePolymerBFM -n ${n} -f ${FORCE_VAL} -v ${fv} -b 512 -o \${CHECKFILE_GEN} ${BENDFLAG} ${TOPFLAG}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
