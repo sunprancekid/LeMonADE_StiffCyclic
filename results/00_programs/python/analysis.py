@@ -284,7 +284,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
             xmin, xmax = plt.xlim()
             if bootstrapping:
                 x = np.linspace(xmin, xmax, 100)
-                p = norm.pdf(x, mu, std)
+                p = norm.pdf(x, avg, std)
                 plt.plot(x, p, 'k', linewidth=2, label = "Normal Distribution")
             plt.plot([], [], ' ', label = "$\mu$ = %.3f,  $\sigma$ = %.3f" % (avg, std))
             plt.title("Distribution of " + title + " Values ($n_{{bins}}$ = {:d})".format(n_bins))
@@ -1039,6 +1039,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         x = iso_df[X_col].tolist()
         y = iso_df[y_col_m].tolist()
+        y_norm = iso_df['E2Etot_M1'].tolist()
         if norm and hys:
             # if the normalization is true
             # find the zero force extension value
@@ -1063,7 +1064,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         elif norm and not hys:
             # get the no-force chain extension
             idx = x.index(0.)
-            norm_val = y[idx]
+            norm_val = y_norm[idx]
             # remove from the list
             del x[idx]
             del y[idx]
