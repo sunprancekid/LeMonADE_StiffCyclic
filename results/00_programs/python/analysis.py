@@ -205,7 +205,7 @@ def parse_data(filepath, avgcol = None, avgrow = None, header = None, tab = Fals
         return []
 
 # method for getting simulation results from files
-def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False):
+def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False, plot = False):
 
     # make sure required information has been provided
     if title is None:
@@ -246,48 +246,54 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
         nvals = len(vals)
         if bootstrapping and (nvals > 50):
             # fit data to normal distribution, determine average
-            n_bins = 50
-            mu, std = norm.fit(vals)
-            avg = mu
-            fig, ax = plt.subplots()
-            ax.hist(vals, bins=n_bins, density=True, label = "Simulation Data")
-            xmin, xmax = plt.xlim()
-            x = np.linspace(xmin, xmax, 100)
-            p = norm.pdf(x, mu, std)
-            plt.plot(x, p, 'k', linewidth=2, label = "Normal Distribution")
-            plt.plot([], [], ' ', label = "$\mu$ = %.3f,  $\sigma$ = %.3f" % (mu, std))
-            plt.title("Distribution of " + title + " Values ($n_{{bins}}$ = {:d})".format(n_bins))
-            plt.legend()
-            plt.xlabel("Property Value")
-            plt.ylabel("Distribution")
-            plt.savefig(dir + r['path'] + "propdist_" + title + ".png", dpi = 200)
-            plt.close()
+            avg, std = norm.fit(vals)
+            # avg = mu
         else:
             # calculate using the formula
             for i in vals:
                 avg += i
             avg = avg / nvals
+
+        # append average if requested
         if M1:
-            # if specified, append to array
             M1_arr.append(avg)
 
-        # calculate the second moment, if specified
+        # calculate the second moment of average, if requested
         if M2 and (nvals > 2):
-            avg2 = 0
+            avg2 = 0.
             for i in vals:
                 avg2 += pow(i,2)
             avg2 = avg2 / len(vals)
             M2_arr.append(math.sqrt(avg2))
 
-        # calculate the variance, if specified
+        # calculate the variance, if requested
         if var and (nvals > 2):
             if not bootstrapping:
-                # if boot strapping was not used
+                # if boot strapping was not used calculate using formula
                 std = 0
                 for i in vals:
                     std += pow(i - avg, 2)
                 std = std / (len(vals) - 1)
-            var_arr.append(std)
+            var_arr.append(math.sqrt(std)) # variance is sqrt of std
+
+        # plot distribution if requested
+        if plot:
+            n_bins = 50
+            fig, ax = plt.subplots()
+            ax.hist(vals, bins=n_bins, density=True, label = "Simulation Data")
+            xmin, xmax = plt.xlim()
+            if bootstrapping:
+                x = np.linspace(xmin, xmax, 100)
+                p = norm.pdf(x, mu, std)
+                plt.plot(x, p, 'k', linewidth=2, label = "Normal Distribution")
+            plt.plot([], [], ' ', label = "$\mu$ = %.3f,  $\sigma$ = %.3f" % (avg, std))
+            plt.title("Distribution of " + title + " Values ($n_{{bins}}$ = {:d})".format(n_bins))
+            plt.legend()
+            plt.xlabel("Property Value")
+            plt.ylabel("Distribution")
+            plt.savefig(dir + r['path'] + "propdist_" + title + ".png", dpi = 100)
+            plt.close()
+
 
     # add to parameters data frame and return to user
     if M1: parms[title + "_M1"] = M1_arr
