@@ -224,14 +224,22 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
 
     # loop through all simulation directories
     for i, r in parms.iterrows():
-        if not os.path.exists(dir + r['path'] + simfile):
-            # if the path does not exists, add NaN to each array
+        if not os.path.exists(dir + r['path'] + simfile) or os.stat(dir + r['path'] + simfile).st_size < 1:
+            # if the path does not exists or the file is empty, add NaN to each array
             M1_arr.append(np.nan)
             M2_arr.append(np.nan)
             var_arr.append(np.nan)
             # skip to next entry
             continue
         clean_file(dir + r['path'] + simfile)
+        if os.stat(dir + r['path'] + simfile).st_size < 1:
+            # the file is empty after cleaning, add NaN to each array
+            M1_arr.append(np.nan)
+            M2_arr.append(np.nan)
+            var_arr.append(np.nan)
+            # skip to next entry
+            continue
+        print(dir + r['path'] + simfile)
         if col is not None:
             vals = parse_data(dir + r['path'] + simfile, avgcol = col, tab = tabsep)
         elif row is not None:
