@@ -9,6 +9,7 @@ import pandas as pd
 from fig.Figure import Figure
 from fig.scatter_plot import gen_scatter
 from analysis import parse_results, plot_force_extension
+from fig.scatter_plot import gen_scatter
 
 
 ## PARAMETERS
@@ -16,14 +17,14 @@ from analysis import parse_results, plot_force_extension
 
 ## METHODS
 # calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
-def plot_elasticity_bondop (df = None, F_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None):
+def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, log = True, show = True, save = False):
 	
 	# check that the correct parameters were passed to the method
 	if df is None:
 		# must pass dataframe to the method
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must pass dataframe to method as 'df'.")
 
-	if F_col is None:
+	if F_col is None and R_col is None:
 		# must specifcy column containing force
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specifiy column in 'df' containing force values as 'F_col'.")
 	
@@ -32,23 +33,84 @@ def plot_elasticity_bondop (df = None, F_col = None, K_parallel_col = None, K_pe
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specify either column containing parallel bond order parameter (as 'K_parallel_col') or column containing perpendicular bond order parameter (as 'K_parallel_col'), or both.")
 
 	# loop through the each line in the df, process the data
-	f = [] 			# force associated with chain extension
-	k_parallel = [] # linear elastic constant in parallel direction
-	k_perp = [] 	# linear elastic constant in perpendicular direction
-	i = [] 			# from isloation column
-	for i, r in df.iterrows():
-		f.append(r[F_col])
+	f = [] # force associated with chain extension
+	r = [] # chain extension
+	k = [] # linear elastic constant from bond order paramemer fluctuation
+	l = [] # label determines if elastic constant is either parallel or perpendicular
+	for i, row in df.iterrows():
+
+		if (F_col is not None and row[F_col] < 0.000001) or (R_col is not None and row[R_col] < 0.000001):
+			## TODO :: opportunity to pull normalizing values here
+			# skip if the minimum force or chain extension has not been surpased
+			# (this is challenging for log log plots when there are negative values, etc.)
+			continue
+
 		# determine the parallel linear elastic constant
 		if K_parallel_col is not None:
-			k_parallel.append(1. / r[K_parallel_col + "_var"])
+			if F_col is not None:
+				f.append(row[F_col])
+			if R_col is not None:
+				r.append(row[R_col])
+			k.append(1. / row[K_parallel_col + "_var"])
+			l.append('parallel')
+
 		# determine the perpendicular elastic constant
 		if K_perp_col is not None:
-			k_perp.append(1. / r[K_perp_col + "_var"])
-		# pull  the isolation tag
-		if iso_col is not None:
-			i.append(r[iso_col])
+			if F_col is not None:
+				f.append(row[F_col])
+			if R_col is not None:
+				r.append(row[R_col])
+			k.append(1. / row[K_perp_col + "_var"])
+			l.append('perp')
 
-	# plot the data
+	# plot the elasticity constants against the force
+	if F_col:
+		df = pd.DataFrame.from_dict({'x': f, 'y': k, 'i': l})
+		fig = Figure()
+		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
+		fig.set_xaxis_label("Force ($F$)")
+		fig.set_yaxis_label("Linear Elastic Constant ($K$)")
+		fig.set_title_label("Non-Linear Elasicity against Force")
+		fig.set_subtitle_label(label)
+		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
+		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\parallel}$)")
+		if log is True:
+			fig.set_logscale()
+		if save:
+			if label is None:
+				fig.set_saveas(savedir = ".", filename = f"elasticity_v_force")
+			else:
+				fig.set_saveas(savedir = f"{path:s}{label:s}/", filename = f"elasticity_v_force")
+			# save data
+			fig.save_data()
+
+		# plot
+		gen_scatter(fig = fig, show = show, save = save, markersize = 36)
+
+	# plot the elasticity constants against the chain extension
+	if R_col:
+		df = pd.DataFrame.from_dict({'x': r, 'y': k, 'i': l})
+		fig = Figure()
+		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
+		fig.set_xaxis_label("Chain Extension ($R_{E2E}$)")
+		fig.set_yaxis_label("Linear Elastic Constat ($K$)")
+		fig.set_title_label("Non-Linear Elasticity againt Chain Extension")
+		fig.set_subtitle_label(label)
+		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
+		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\parallel}$)")
+		if log is True:
+			fig.set_logscale()
+		if save:
+			if label is None:
+				fig.set_saveas(savedir = ".", filename = f"elasticity_v_extension")
+			else:
+				fig.set_saveas(savedir = f"{path:s}{label:s}/", filename = f"elasticity_v_extension")
+			# save data
+			fig.save_data()
+
+		# plot
+		gen_scatter(fig = fig, show = show, save = save, markersize = 36)
+
 
 # calculate elasticity numerically from force extension curve
 def plot_elasticity_numerically ():
@@ -90,7 +152,7 @@ for l in lin:
 				exit()
 		FE_parms['top'] = top
 		# average simulation properties
-		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True, plot = False)
+		# FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True, plot = False)
 		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 5, title = 'E2Eproj', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True, plot = False)
 		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 8, title = 'cos_theta_parallel', M1 = True, M2 = True, var = True, bootstrapping = False, tabsep = True, plot = False)
 		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 9, title = 'cos_theta_perp', M1 = True, M2 = True, var = True, bootstrapping = False, tabsep = True, plot = False)
@@ -136,12 +198,12 @@ for l in lin:
 	for top in FE_parms['top'].unique(): # unique topology
 		for k in FE_parms['K'].unique(): # strength of bending potential
 			# for each, create a unique directory
-			d = f"{t}_k{k:0.2f}"
+			d = f"{top}_k{k:0.2f}"
 			## PARALLEL AND PERPENDICULAR ELASTICITY
-			# plot the parallel and perpendicular elasticity
-			plot_elasticity_bondop(df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp')
+			# plot the parallel and perpendicular elasticity against the applied force
+			plot_elasticity_bondop(show = show, save = True, path = f"./02_processed_data/forceExtension_{l:s}/", label = d, df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', R_col = 'E2Eproj_M1',K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp')
+			# plot the parallel and perpendicular elasticity against the chain extension
 			# plot the force extension curve along with the numerically calcualted elasticity
-			exit()
 
 	# parallel and perpendicular elasticity
 	# elasticity from force-extension curve

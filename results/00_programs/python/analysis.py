@@ -239,7 +239,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
             var_arr.append(np.nan)
             # skip to next entry
             continue
-        print(dir + r['path'] + simfile)
+        # print(dir + r['path'] + simfile)
         if col is not None:
             vals = parse_data(dir + r['path'] + simfile, avgcol = col, tab = tabsep)
         elif row is not None:
@@ -1047,7 +1047,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
 
         x = iso_df[X_col].tolist()
         y = iso_df[y_col_m].tolist()
-        y_norm = iso_df['E2Etot_M1'].tolist()
+        # y_norm = iso_df['E2Etot_M1'].tolist()
         if norm and hys:
             # if the normalization is true
             # find the zero force extension value
@@ -1072,7 +1072,7 @@ def plot_force_extension(parms, X_col = None, Y_col = None, iso_col = None, isov
         elif norm and not hys:
             # get the no-force chain extension
             idx = x.index(0.)
-            norm_val = y_norm[idx]
+            norm_val = y[idx]
             # remove from the list
             del x[idx]
             del y[idx]

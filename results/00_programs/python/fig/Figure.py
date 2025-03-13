@@ -203,12 +203,26 @@ class Figure (object):
 
         # set cbar limits
 
+    """ method sets fontsizes for labels, ticks, etc. to presets for figures in publications. """
+    def set_publication(self):
+        self.filename = self.filename + "_pub"
+        # adjust axis labels size
+        self.set_xaxis_label(s = pubdefault_label_size)
+        self.set_yaxis_label(s = pubdefault_label_size)
+        # self.set_caxis_label(s = pubdefault_label_size)
+        # adjust tick size
+        # adjust legend label size
+        # adjust dpi
+        self.set_dpi (d = pubdefault_dpi)
+
     """ assign location, name, and type of save file. """
     def set_saveas(self, savedir = default_file_location, filename = default_file_name, filetype = default_file_type):
 
         # check the save directory passed to the method
         if not os.path.exists(savedir):
-            self.savedir = default_file_location
+            # if the directory does not exist, make it
+            os.makedirs(savedir)
+            self.savedir = savedir
         else:
             self.savedir = savedir
 
@@ -224,22 +238,14 @@ class Figure (object):
         else:
             self.filetype = filetype
 
-    """ method sets fontsizes for labels, ticks, etc. to presets for figures in publications. """
-    def set_publication(self):
-        self.filename = self.filename + "_pub"
-        # adjust axis labels size
-        self.set_xaxis_label(s = pubdefault_label_size)
-        self.set_yaxis_label(s = pubdefault_label_size)
-        # self.set_caxis_label(s = pubdefault_label_size)
-        # adjust tick size
-        # adjust legend label size
-        # adjust dpi
-        self.set_dpi (d = pubdefault_dpi)
-
     """ return path to location of saved file. """
     def get_saveas(self):
         saveas = self.savedir + self.filename + self.filetype
         return saveas
+
+    """ save data frame data to directory and with name associated with object."""
+    def save_data(self):
+        self.df.to_csv(self.savedir + self.filename + ".csv")
 
     ## GETTERS AND SETTERS ##
 
@@ -394,7 +400,7 @@ class Figure (object):
     def get_title_label_str (self):
         return str(self.title_label)
 
-    ## TITLE ##
+    ## SUBTITLE ##
 
     # sets the subtitle label
     """ method for setting Figure subtitle label. """
@@ -536,6 +542,44 @@ class Figure (object):
     def get_xaxis_scale_base (self):
         return self.xaxis_scale
 
+    # method used to set the tick marks and tick labels for the major and minor xaxis
+    """ method sets the tick marks used for the xaxis."""
+    def set_xaxis_ticks(self, minval = None, maxval = None, nmajorticks = default_number_major_ticks, nminorticks = default_number_minor_ticks, format_string = default_major_format_string):
+
+        # check arguments passed to method
+        # minimum value used for x axis
+        if minval is None and self.get_xaxis_min() is None:
+            # if no minimum value was passed to the method
+            # and a minimum value has not already been assigned
+            # assign the minimum value in the xcol as the minimum value
+            self.set_xaxis_min(self.df[self.xcol].min())
+        elif minval is not None:
+            # otherwise a minimum value was passed to the method
+            # assign that value passed to the method as the minimum for the x axis
+            # overwrite the old minimum (if there was one)
+            self.set_xaxis_min(minval)
+
+        # maximum value used for xaxis
+        if maxval is None and self.get_xaxis_max() is None:
+            # if no maximum value was passed to the method
+            # and a minimum value has not already been assigned
+            # assign the maximum value in the x column as the max value
+            self.set_xaxis_max(self.df[self.xcol].max())
+        elif maxval is not None:
+            # other a maximum value was passed to the method
+            # assign the value passed to the method as the maximum for the y axis
+            # overwrite the old maximum, if one was assigned
+            self.set_xaxis_max(maxval)
+
+        if self.xaxis_is_logscale():
+            # if the yaxis is logscale, determine the tick marks along a logscale
+            pass
+        else:
+            # otherwise, determine the tick marks along a linearscale
+            pass
+
+    # assigns values to ticks used for
+
     ## YAXIS ##
 
     # initializes the yaxis label
@@ -662,23 +706,32 @@ class Figure (object):
         return self.yaxis_scale
 
     # method used to set the tick marks and tick labels for the major and minor yaxis
+    """ method sets the tick marks used for the yaxis."""
     def set_yaxis_ticks(self, minval = None, maxval = None, nmajorticks = default_number_major_ticks, nminorticks = default_number_minor_ticks, format_string = default_major_format_string):
 
         # check arguments passed to method
         # minimum value used for yaxis
-        if minval is None:
-            # if no minimum value was passed to the method, assign the current minimum value
-            minval = self.get_yaxis_min()
-        else:
-            # otherwise assign the value passed to the method as the minimum
+        if minval is None and self.get_yaxis_min() is None:
+            # if no minimum value was passed to the method
+            # and a minimum value has not already been assigned
+            # assign the value as the minimum for the y axis
+            self.set_yaxis_min(self.df[self.ycol].min())
+        elif minval is not None:
+            # otherwise a minimum value was passed to the method
+            # assign that value passed to the method as the minimum for the y axis
+            # overwrite the old minimum (if there was one)
             self.set_yaxis_min(minval)
 
         # maximum value used for yaxis
-        if maxval is None:
-            # if no maximum value was passed to the method, assign the current maximum value
-            maxval = self.get_yaxis_max()
-        else:
-            # if a maximum value as passed to the method, assign the maximum value as the max for the axis
+        if maxval is None and self.get_yaxis_max() is None:
+            # if no maximum value was passed to the method
+            # and a minimum value has not already been assigned
+            # assign the maximum value from the yaxis as the maximum value
+            self.set_yaxis_max(self.df[self.ycol].max())
+        elif maxval is not None:
+            # other a maximum value was passed to the method
+            # assign the value passed to the method as the maximum for the y axis
+            # overwrite the old maximum, if one was assigned
             self.set_yaxis_max(maxval)
 
         if self.yaxis_is_logscale():
@@ -724,9 +777,11 @@ class Figure (object):
 
         # set the xaxis scale to be log
         self.set_xaxis_scale(log = True, logscale_base = base)
+        self.set_xaxis_ticks()
 
         # set the yaxis scale to be log
         self.set_yaxis_scale(log = True, logscale_base = base)
+        self.set_yaxis_ticks()
 
         # set the xaxis scale to be log
         # self.set_caxis_scale(log = True, logscale_base = base)

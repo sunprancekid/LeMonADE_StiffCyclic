@@ -54,8 +54,12 @@ def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_
 
     # add min and max, labels
     plt.legend(handles = leg, loc = legendloc) # TODO increase size of legend labels
-    # ax.set_xlim(fig.get_yaxis_min(), fig.get_xaxis_min())
+    plt.xlim(fig.get_xaxis_min(), fig.get_xaxis_max())
     plt.ylim(fig.get_yaxis_min(), fig.get_yaxis_max())
+    if fig.get_title_label() is not None:
+        plt.suptitle(fig.get_title_label().get_label(), fontsize = fig.get_title_label().get_size())
+    if fig.get_subtitle_label() is not None:
+        plt.title(fig.get_subtitle_label().get_label(), fontsize = fig.get_subtitle_label().get_size())
     plt.xlabel(fig.get_xaxis_label().get_label(), fontsize = fig.get_xaxis_label().get_size())
     plt.ylabel(fig.get_yaxis_label().get_label(), fontsize = fig.get_yaxis_label().get_size())
 
@@ -69,6 +73,8 @@ def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_
         plt.savefig(fig.get_saveas(), dpi = fig.get_dpi(), bbox_inches='tight')
     if show:
         plt.show()
+
+    plt.close()
 
 
 #############
