@@ -15,7 +15,44 @@ from analysis import parse_results, plot_force_extension
 # none
 
 ## METHODS
-# none
+# calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
+def plot_elasticity_bondop (df = None, F_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None):
+	
+	# check that the correct parameters were passed to the method
+	if df is None:
+		# must pass dataframe to the method
+		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must pass dataframe to method as 'df'.")
+
+	if F_col is None:
+		# must specifcy column containing force
+		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specifiy column in 'df' containing force values as 'F_col'.")
+	
+	if K_parallel_col is None and K_perp_col is None:
+		# must specify at least the parallel or perpendicular columns containing the bond order parameter
+		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specify either column containing parallel bond order parameter (as 'K_parallel_col') or column containing perpendicular bond order parameter (as 'K_parallel_col'), or both.")
+
+	# loop through the each line in the df, process the data
+	f = [] 			# force associated with chain extension
+	k_parallel = [] # linear elastic constant in parallel direction
+	k_perp = [] 	# linear elastic constant in perpendicular direction
+	i = [] 			# from isloation column
+	for i, r in df.iterrows():
+		f.append(r[F_col])
+		# determine the parallel linear elastic constant
+		if K_parallel_col is not None:
+			k_parallel.append(1. / r[K_parallel_col + "_var"])
+		# determine the perpendicular elastic constant
+		if K_perp_col is not None:
+			k_perp.append(1. / r[K_perp_col + "_var"])
+		# pull  the isolation tag
+		if iso_col is not None:
+			i.append(r[iso_col])
+
+	# plot the data
+
+# calculate elasticity numerically from force extension curve
+def plot_elasticity_numerically ():
+	pass
 
 ## ARGUMENTS
 # update the simulation results, even if the simulation results file already exists
@@ -102,7 +139,7 @@ for l in lin:
 			d = f"{t}_k{k:0.2f}"
 			## PARALLEL AND PERPENDICULAR ELASTICITY
 			# plot the parallel and perpendicular elasticity
-			plot_elasticity_bondop(df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', k_parallel_col = 'cos_theta_parallel', k_perp_col = 'cos_theta_perp')
+			plot_elasticity_bondop(df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp')
 			# plot the force extension curve along with the numerically calcualted elasticity
 			exit()
 
