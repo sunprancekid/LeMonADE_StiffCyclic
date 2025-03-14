@@ -239,7 +239,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
             var_arr.append(np.nan)
             # skip to next entry
             continue
-        # print(dir + r['path'] + simfile)
+        print(dir + r['path'] + simfile)
         if col is not None:
             vals = parse_data(dir + r['path'] + simfile, avgcol = col, tab = tabsep)
         elif row is not None:
