@@ -4,8 +4,15 @@
 ## methods used to handle problems relating to derivatives
 
 ## PACKAGES
+# conda packages
 import sys, os, math
 import pandas as pd 
+import numpy as np
+from scipy.optimize import curve_fit
+from scipy.stats import norm
+from scipy import interpolate # spline for curve fitting
+from scipy import signal as sig # used for monotonic curve smoothing
+# local packages
 from analysis import monofit
 
 ## PARAMETERS
@@ -66,6 +73,10 @@ def monofit( y, Wn=0.1, verbose = False):
     return ymono, err, errstr
 
 ## METHODS
+# equation used for linear fits
+def linear_fit (x, m, b):
+    return (x * m) + b
+
 # converts linear scale to log scale
 def lin2log(x, base):
     return math.log(x) / math.log(base)
@@ -78,21 +89,27 @@ def log2lin (x, base):
 def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25):
 
 	# convert data to a log scale
+	x0 = []
+	y0 = []
 	if log:
 		for i in range(len(x)):
-			x[i] = lin2log(x[i], 10.)
-			y[i] = lin2log(x[i], 10.)
+			x0.append(lin2log(x[i], 10.))
+			y0.append(lin2log(y[i], 10.))
+	else:
+		for i in range(len(x)):
+			x0.append(x[i])
+			y0.append(y[i])
 
 	# use monotonic function to calculate slope
-	ymono, err, errstr = monofit (y, Wn = monotonic_parameter)
+	ymono, err, errstr = monofit (y0, Wn = monotonic_parameter)
 
 	# use smoothed function to calculate the slope
 	xder = []
 	yder = []
-	for i in range(len(x) - 1):
+	for i in range(len(x0) - 1):
 		# calculate slope
-		xder.append((x[i + 1] + x[i]) / 2.)
-		yder.append((ymono[i + 1] - ymono[i]) / (x[i + 1] - x[i]))
+		xder.append((x0[i + 1] + x0[i]) / 2.)
+		yder.append((ymono[i + 1] - ymono[i]) / (x0[i + 1] - x0[i]))
 
 	# if log was called, return the xder to the linear scale
 	if log:

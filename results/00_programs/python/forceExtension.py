@@ -135,14 +135,14 @@ def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = F
 
 	## determine the region where the relationship between the chain extension and the force is linear
 	# parse data
-	y = df[F_col]
-	x = df[R_col]
+	y = df[F_col].to_list()
+	x = df[R_col].to_list()
 	# calculate the slope
 	if monotonic:
 		# calculate the slope using a monotonic (smoothed function)
 		xder, yder = monotonic_slope(x = x, y = y, log = True)
 		for i in range(len(xder)):
-			print(x[i], y[i], xder[i], yder[i])
+			print(f"{x[i]:.02f}\t{y[i]:.04f}\t{xder[i]:.02f}\t{yder[i]:.02f}")
 		exit()
 	# calculate the slope using a spline function
 	# calculate the slope using a standard derivative
@@ -207,13 +207,18 @@ for l in lin:
 		for k in FE_parms['K'].unique(): # strength of bending potential
 			# for each, create a unique directory
 			d = f"{top}_k{k:0.2f}"
+			df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)]
+			# get the no force change extension and then remove it from the dataframe
+			df = df.drop(0)
+			# print(df['E2Eproj_M1'].to_list())
+			# exit()
 			## PARALLEL AND PERPENDICULAR ELASTICITY
 			# plot the parallel and perpendicular elasticity against the applied force
 			# plot the parallel and perpendicular elasticity against the chain extension
-			plot_elasticity_bondop(df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/forceExtension_{l:s}/", label = d)
+			plot_elasticity_bondop(df = df, F_col = 'F', R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/forceExtension_{l:s}/", label = d)
 			# plot the force extension curve along with the numerically calcualted elasticity
 			# determine the linear elastic constant
-			k_lin = calc_linear_elastic_constant(df= FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)], F_col = 'F', R_col = 'E2Eproj_M1')
+			k_lin = calc_linear_elastic_constant(df = df, F_col = 'F', R_col = 'E2Eproj_M1')
 
 	# force extension curve comparing topologies with constant elasticity
 	if not os.path.exists(anal_dir + "FE_top/"):
