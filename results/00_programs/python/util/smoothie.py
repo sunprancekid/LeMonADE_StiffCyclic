@@ -79,8 +79,9 @@ def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25
 
 	# convert data to a log scale
 	if log:
-		# TODO :: convert data to logscale if requested
-		pass
+		for i in range(len(x)):
+			x[i] = lin2log(x[i], 10.)
+			y[i] = lin2log(x[i], 10.)
 
 	# use monotonic function to calculate slope
 	ymono, err, errstr = monofit (y, Wn = monotonic_parameter)
@@ -92,6 +93,11 @@ def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25
 		# calculate slope
 		xder.append((x[i + 1] + x[i]) / 2.)
 		yder.append((ymono[i + 1] - ymono[i]) / (x[i + 1] - x[i]))
+
+	# if log was called, return the xder to the linear scale
+	if log:
+		for i in range(len(xder)):
+			xder[i] = log2lin(xder[i], 10.)
 
 	return xder, yder
 

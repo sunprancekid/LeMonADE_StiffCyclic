@@ -140,7 +140,7 @@ def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = F
 	# calculate the slope
 	if monotonic:
 		# calculate the slope using a monotonic (smoothed function)
-		xder, yder = monotonic_slope(x = x, y = y)
+		xder, yder = monotonic_slope(x = x, y = y, log = True)
 		for i in range(len(xder)):
 			print(x[i], y[i], xder[i], yder[i])
 		exit()
