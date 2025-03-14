@@ -23,6 +23,8 @@ declare -i BOOL_UPP=0
 declare -i BOOL_DWN=0
 # boolean determining if the script should generate force values along a log scale
 declare -i BOOL_LOGSCALE=0
+# boolean for ideal simulations
+declare -i BOOL_IDEAL=0
 ## PARAMETERS -- JOB
 # number of unique forces to test
 declare -i N_FORCE_VAL=200
@@ -69,6 +71,7 @@ help () {
 	echo -e " ## SCRIPT PROTOCOL ##"
 	echo -e " -g           | generate simulation parameters / directories ."
 	echo -e " -l           | generate simulation parameters according to logscale (no negatives)."
+    echo -e " -i           | simulate ideal chain (deafult is real)."
 	echo -e " -j << ARG >> | rename job."
 	echo -e " -n << ARG >> | number of simulation parameters to test (default is ${N_FORCE_VAL})."
 	echo -e " -m << ARG >> | maximum force to test (default is ${MAX_FORCE_VAL})."
@@ -166,6 +169,12 @@ gen_simparm() {
 	if [ ! -d $PATH_SIMPARM ]; then
 		mkdir $PATH_SIMPARM
 	fi
+
+    # determine flag used for simulating either a real or an ideal chain
+    EXCLUDED_VOLUME_FLAG="Real"
+    if [[ $BOOL_IDEAL -eq 1 ]]; then
+        EXCLUDED_VOLUME_FLAG="Ideal"
+    fi
 
 	# write head to file, write parameters to file
 	echo $HEADER_SIMPARM > $FILE_SIMPARM
@@ -293,7 +302,7 @@ gen_simparm() {
                             echo -e "if [ \$EQUIL_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tif [ ! -f \${CHECKFILE_EQUIL} ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# if the equilibrium state does not exist, create it" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -e \${EQUIL_MCS} -n \${EQUIL_MCS} -s \${EQUIL_MCS} -a -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}simulate${EXCLUDED_VOLUME_FLAG}PolymerBFM -e \${EQUIL_MCS} -n \${EQUIL_MCS} -s \${EQUIL_MCS} -a -m -f \${CHECKFILE_GEN} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "if [ \$RUN_BOOL -eq 1 ]; then" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -303,7 +312,7 @@ gen_simparm() {
                             echo -e "\t\texit 1" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\telse" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\t\t# iterate through run calls, accumulate properties" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
-                            echo -e "\t\t\${PATH}simulateRealPolymerBFM -n \${RUN_MCS} -s \${SAVE_MCS} -a -m -f \${CHECKFILE_EQUIL} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
+                            echo -e "\t\t\${PATH}simulate${EXCLUDED_VOLUME_FLAG}PolymerBFM -n \${RUN_MCS} -s \${SAVE_MCS} -a -m -f \${CHECKFILE_EQUIL} -o \${CHECKFILE_EQUIL}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "\tfi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             echo -e "fi" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
                             # echo "\${PATH}generatePolymerBFM ${GENFLAGS}" >> ${PATH_SIMPARM}${SIMDIR}${SIMID}.sh
@@ -320,7 +329,7 @@ gen_simparm() {
 }
 
 ## OPTIONS
-while getopts "hglj:n:m:" option; do
+while getopts "hglij:n:m:" option; do
 	case $option in
 		h) # print script parameters to CLT
 			help
@@ -331,6 +340,8 @@ while getopts "hglj:n:m:" option; do
             declare -i BOOL_GEN=1 ;;
 		l) # generate parameters along logscale
 			declare -i BOOL_LOGSCALE=1 ;;
+        i) # simulate ideal chain
+            declare -i BOOL_IDEAL=1;;
         n) # number of force extension values to test
             declare -i N_FORCE_VAL=${OPTARG};;
         m) # maxmimum force value to test
