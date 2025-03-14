@@ -9,42 +9,12 @@ import pandas as pd
 from fig.Figure import Figure
 from fig.scatter_plot import gen_scatter
 from analysis import parse_results, plot_force_extension
-from analysis import monofit
+from util.smoothie import monotonic_slope
 from fig.scatter_plot import gen_scatter
 
 
 ## PARAMETERS
 # none
-
-## SLOPE METHODS (move to util)
-# converts linear scale to log scale
-def lin2log(x, base):
-    return math.log(x) / math.log(base)
-
-# converts log scale to linear scale
-def log2lin (x, base):
-    return math.pow(base, x)
-
-# calculate slope using a monotonic fit
-def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25):
-
-	# convert data to a log scale
-	if log:
-		# TODO :: convert data to logscale if requested
-		pass
-
-	# use monotonic function to calculate slope
-	ymono, err, errstr = monofit (y, Wn = monotonic_parameter)
-
-	# use smoothed function to calculate the slope
-	xder = []
-	yder = []
-	for i in range(len(x) - 1):
-		# calculate slope
-		xder.append((x[i + 1] + x[i]) / 2.)
-		yder.append((ymono[i + 1] - ymono[i]) / (x[i + 1] - x[i]))
-
-	return xder, yder
 
 ## METHODS
 # calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
