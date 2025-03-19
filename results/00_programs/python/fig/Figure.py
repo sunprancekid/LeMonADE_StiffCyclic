@@ -335,7 +335,10 @@ class Figure (object):
     # return marker corresponding to ival
     """ method returns marker that correspons to ival in marker dictionary. """
     def get_marker (self, ival = None):
-        return self.marker_dict[ival]
+        if ival is None:
+            return default_markerset[0]
+        else:
+            return self.marker_dict[ival]
 
     # initialize list of labels that correspons to each unique ival in icol
     """ method initializes labels used to describe each unique ival in plots as that ival stored within that Figure dataframe. """
@@ -356,10 +359,20 @@ class Figure (object):
     def get_label (self, ival = None):
         return self.label_dict[ival]
 
+    # method that determines if isolation column has been specified within the dataframe
+    """ returns boolean the determines if isolation column has been specified within dataframe. """
+    def has_ivals(self):
+        return self.icol is not None
+
     # method that returns unique values for the isolation column
     """ returns list of all unique values contained within icol. """
     def get_unique_ivals (self):
-        return self.df[self.icol].unique()
+        if self.icol is not None:
+            # if an icol has been specified return all unique items
+            return self.df[self.icol].unique()
+        else:
+            # otherwise, if an icol has not been specified, return a list with empty string
+            return [""]
 
     # method that returns list of xvalues
     """ returns list of xvals contained within xcol. if ival is specified, xvals returned are those which share the same ival in icol (if any). """
@@ -690,7 +703,7 @@ class Figure (object):
     # check if yaxis is logscale
     """ method returns boolean determining if the yaxis is logscale or not. """
     def yaxis_is_logscale(self):
-        return (self.xaxis_scale is not None)
+        return (self.yaxis_scale is not None)
 
     # returns the scale assigned to yaxis
     """ method that returns scale used for yaxis as either 'log' or 'linear' """
@@ -773,15 +786,17 @@ class Figure (object):
         # set c scale to be linear
         # self.set_caxis_scale(linear = True)
 
-    def set_logscale (self, base = default_logscale_base):
+    def set_logscale (self, base = default_logscale_base, logx = True, logy = True):
 
-        # set the xaxis scale to be log
-        self.set_xaxis_scale(log = True, logscale_base = base)
-        self.set_xaxis_ticks()
+        if logx:
+            # set the xaxis scale to be log
+            self.set_xaxis_scale(log = True, logscale_base = base)
+            self.set_xaxis_ticks()
 
-        # set the yaxis scale to be log
-        self.set_yaxis_scale(log = True, logscale_base = base)
-        self.set_yaxis_ticks()
+        if logy:
+            # set the yaxis scale to be log
+            self.set_yaxis_scale(log = True, logscale_base = base)
+            self.set_yaxis_ticks()
 
         # set the xaxis scale to be log
         # self.set_caxis_scale(log = True, logscale_base = base)

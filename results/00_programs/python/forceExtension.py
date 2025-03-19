@@ -14,11 +14,12 @@ from fig.scatter_plot import gen_scatter
 
 
 ## PARAMETERS
-# none
+# default name used for force extension jobs
+default_jobdir = "forceExtension"
 
 ## METHODS
 # calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
-def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, log = True, show = True, save = False):
+def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, logx = True, logy = True, show = True, save = False, norm = None):
 	
 	# check that the correct parameters were passed to the method
 	if df is None:
@@ -32,6 +33,14 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 	if K_parallel_col is None and K_perp_col is None:
 		# must specify at least the parallel or perpendicular columns containing the bond order parameter
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specify either column containing parallel bond order parameter (as 'K_parallel_col') or column containing perpendicular bond order parameter (as 'K_parallel_col'), or both.")
+
+	normalized = False
+	if norm is not None:
+		normalized = True
+	if (not isinstance(norm, float)) and (not isinstance(norm, int)):
+		# if norm is not a float or an int, reassign 1
+		norm = 1.
+		normalized = False
 
 	# loop through the each line in the df, process the data
 	f = [] # force associated with chain extension
@@ -49,18 +58,18 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		# determine the parallel linear elastic constant
 		if K_parallel_col is not None:
 			if F_col is not None:
-				f.append(row[F_col])
+				f.append(row[F_col] * norm)
 			if R_col is not None:
-				r.append(row[R_col])
+				r.append(row[R_col] / norm)
 			k.append(1. / row[K_parallel_col + "_var"])
 			l.append('parallel')
 
 		# determine the perpendicular elastic constant
 		if K_perp_col is not None:
 			if F_col is not None:
-				f.append(row[F_col])
+				f.append(row[F_col] * norm)
 			if R_col is not None:
-				r.append(row[R_col])
+				r.append(row[R_col] / norm)
 			k.append(1. / row[K_perp_col + "_var"])
 			l.append('perp')
 
@@ -69,19 +78,22 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		df = pd.DataFrame.from_dict({'x': f, 'y': k, 'i': l})
 		fig = Figure()
 		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
-		fig.set_xaxis_label("Force ($F$)")
+		if normalized:
+			fig.set_xaxis_label(f"Normalized Force ($F \\cdot X$ where (X = {norm:.2f}))")
+			fig.set_title_label("Non-Linear Elasticity against Normalized Force")
+		else:
+			fig.set_xaxis_label("Force ($F$)")
+			fig.set_title_label("Non-Linear Elasicity against Force")
 		fig.set_yaxis_label("Linear Elastic Constant ($K$)")
-		fig.set_title_label("Non-Linear Elasicity against Force")
 		fig.set_subtitle_label(label)
 		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
-		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\parallel}$)")
-		if log is True:
-			fig.set_logscale()
+		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\perp}$)")
+		fig.set_yaxis_min(1.)
+		if logx is True or logy is True:
+			fig.set_logscale(logx = logx, logy = logy)
 		if save:
-			if label is None:
-				fig.set_saveas(savedir = ".", filename = f"elasticity_v_force")
-			else:
-				fig.set_saveas(savedir = f"{path:s}{label:s}/", filename = f"elasticity_v_force")
+			# set save location and name
+			fig.set_saveas(savedir = path, filename = label)
 			# save data
 			fig.save_data()
 
@@ -93,19 +105,22 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		df = pd.DataFrame.from_dict({'x': r, 'y': k, 'i': l})
 		fig = Figure()
 		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
-		fig.set_xaxis_label("Chain Extension ($R_{E2E}$)")
-		fig.set_yaxis_label("Linear Elastic Constat ($K$)")
-		fig.set_title_label("Non-Linear Elasticity againt Chain Extension")
+		if normalized:
+			fig.set_xaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$ where (X = {norm:.2f}))")
+			fig.set_title_label("Non-Linear Elasticity against Normalized Chain Extension")
+		else:
+			fig.set_xaxis_label("Chain Extension ($R_{E2E}$)")
+			fig.set_title_label("Non-Linear Elasticity againt Chain Extension")
+		fig.set_yaxis_label("Linear Elastic Constant ($K$)")
 		fig.set_subtitle_label(label)
 		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
-		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\parallel}$)")
-		if log is True:
-			fig.set_logscale()
+		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\perp}$)")
+		fig.set_yaxis_min(1.)
+		if logx is True or logy is True:
+			fig.set_logscale(logx = logx, logy = logy)
 		if save:
-			if label is None:
-				fig.set_saveas(savedir = ".", filename = f"elasticity_v_extension")
-			else:
-				fig.set_saveas(savedir = f"{path:s}{label:s}/", filename = f"elasticity_v_extension")
+			# set save location and name
+			fig.set_saveas(savedir = path, filename = label)
 			# save data
 			fig.save_data()
 
@@ -140,10 +155,10 @@ def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = F
 	# calculate the slope
 	if monotonic:
 		# calculate the slope using a monotonic (smoothed function)
-		xder, yder = monotonic_slope(x = x, y = y, log = True)
+		xder, yder = monotonic_slope(x = x, y = y, log = True, average_int = 10)
 		for i in range(len(xder)):
-			print(f"{x[i]:.02f}\t{y[i]:.04f}\t{xder[i]:.02f}\t{yder[i]:.02f}")
-		exit()
+			print(f"{x[i]:.04f}\t{y[i]:.04f}\t{xder[i]:.05f}\t{yder[i]:.05f}")
+		# exit()
 	# calculate the slope using a spline function
 	# calculate the slope using a standard derivative
 	# determine the region where the slope is constant (within the variance)
@@ -163,13 +178,18 @@ figure = ("allfigs" in sys.argv)
 fig1 = ("fig1" in sys.argv)
 # show figures on generation 
 show = ("show" in sys.argv)
+# parse the directory passed as an argument, if specified
+if ("job" in sys.argv):
+	jobdir = sys.argv[sys.argv.index("job") + 1]
+else:
+	jobdir = default_jobdir
 
 ## SCRIPT
 # collect raw simulation data
 lin = ['log']
 for l in lin:
 	# force extension for linear data set
-	job = 'forceExtension_' + l
+	job = jobdir + '_' + l
 	data_dir = "01_raw_data/" + job + "/"
 	anal_dir = "02_processed_data/" + job + "/"
 	parm_file = job + ".csv"
@@ -202,23 +222,80 @@ for l in lin:
 		FE_parms = pd.read_csv(anal_dir + parm_file)
 
 	# process data 
+	## IDEAL CHAIN
+
+	## REAL CHAIN
 	# estimate the linear elasticity constant
+	i = 0
 	for top in FE_parms['top'].unique(): # unique topology
 		for k in FE_parms['K'].unique(): # strength of bending potential
 			# for each, create a unique directory
 			d = f"{top}_k{k:0.2f}"
 			df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k)]
+			print(d)
 			# get the no force change extension and then remove it from the dataframe
-			df = df.drop(0)
-			# print(df['E2Eproj_M1'].to_list())
-			# exit()
+			r_nf = df.loc[0, 'E2Eproj_M1']
+			df = df.reset_index().drop(0).dropna()
+			# get the max chain extension
+			r_max = df.loc[(len(df.index - 1)), 'E2Eproj_M1']
+
+			## PLOT THE FORCE EXTENSION CURVE RvF and FvR
+			df_norm = df.copy(deep = True)
+			df_norm['F'] = df['F'] * r_nf
+			df_norm['E2Eproj_M1'] = df_norm['E2Eproj_M1'] / r_nf
+			fig = Figure()
+			fig.load_data(d = df_norm, xcol = 'E2Eproj_M1', ycol = 'F')
+			fig.set_xaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$)")
+			fig.set_yaxis_label(f"Normalized Force ($F \\cdot X$)")
+			fig.set_title_label(f"Force Extension Curve ($X$ = {r_nf:.2f})")
+			fig.set_subtitle_label(d)
+			fig.set_yaxis_ticks(minval = 0.01, maxval = 500., nmajorticks = 3, nminorticks = 2)
+			fig.set_logscale()
+			fig.set_saveas(savedir = f"./02_processed_data/{job:s}/{d:s}/", filename = "FvR")
+			gen_scatter(fig = fig, show = False, markersize = 20)
+
+			fig = Figure()
+			fig.load_data(d = df_norm, xcol = 'F', ycol = 'E2Eproj_M1')
+			fig.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$)")
+			fig.set_xaxis_label(f"Normalized Force ($F \\cdot X$)")
+			fig.set_title_label(f"Force Extension Curve ($X$ = {r_nf:.2f})")
+			fig.set_subtitle_label(d)
+			fig.set_xaxis_ticks(minval = 0.01, maxval = 500., nmajorticks = 3, nminorticks = 2)
+			fig.set_logscale()
+			fig.set_saveas(savedir = f"./02_processed_data/{job:s}/{d:s}/", filename = "RvF")
+			gen_scatter(fig = fig, show = False, markersize = 20)
+
+
 			## PARALLEL AND PERPENDICULAR ELASTICITY
 			# plot the parallel and perpendicular elasticity against the applied force
+			plot_elasticity_bondop(df = df, F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_force")
+			# same plot with normalization
+			plot_elasticity_bondop(df = df, norm = float(r_nf), F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_force_norm")
+			## TODO get the transition force
+			## LOG vs LIN Scale
 			# plot the parallel and perpendicular elasticity against the chain extension
-			plot_elasticity_bondop(df = df, F_col = 'F', R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/forceExtension_{l:s}/", label = d)
-			# plot the force extension curve along with the numerically calcualted elasticity
-			# determine the linear elastic constant
+			plot_elasticity_bondop(df = df, R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_extension")
+			# same plot but with normalization
+			plot_elasticity_bondop(df = df, norm = r_nf, R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_extension_norm")
+			# plot the nonlinear elasticity on a linear scale against the unitary chain extension
+			plot_elasticity_bondop(df = df, norm = r_max, R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_extension_max", logx = False)
+			# TODO get the transition chain length
+			exit()
+			
+
+			## LINEAR ELASTICITY
+			# linear elastic constant is the y(x = 1) of line fit to data on log scale
+			# use the transition chain extension to determine the linear elastic constant
 			k_lin = calc_linear_elastic_constant(df = df, F_col = 'F', R_col = 'E2Eproj_M1')
+			# i = i + 1
+			# if i >= 4:
+			#   # exit()
+
+			## NUMERICAL ELASTIC CONSTANT
+		
+
+	## ADD HEAT MAP OF KLIN PER TOPOLOGY AND BENDING PARM
+	## ADD SCATTER PLOT OF TRANSITION LENGTH OF FORCE PER BENDING PARM AND TOPOLOGY
 
 	# force extension curve comparing topologies with constant elasticity
 	if not os.path.exists(anal_dir + "FE_top/"):

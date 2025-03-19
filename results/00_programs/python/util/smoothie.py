@@ -8,6 +8,7 @@
 import sys, os, math
 import pandas as pd 
 import numpy as np
+import statistics
 from scipy.optimize import curve_fit
 from scipy.stats import norm
 from scipy import interpolate # spline for curve fitting
@@ -77,6 +78,10 @@ def monofit( y, Wn=0.1, verbose = False):
 def linear_fit (x, m, b):
     return (x * m) + b
 
+# equation used for linear fits with y-intercept at zero
+def linear_fit_no_intercept (x, m):
+    return linear_fit (x, m, 0.)
+
 # converts linear scale to log scale
 def lin2log(x, base):
     return math.log(x) / math.log(base)
@@ -86,37 +91,47 @@ def log2lin (x, base):
     return math.pow(base, x)
 
 # calculate slope using a monotonic fit
-def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25):
+def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25, average_int = 2):
 
-	# convert data to a log scale
-	x0 = []
-	y0 = []
-	if log:
-		for i in range(len(x)):
-			x0.append(lin2log(x[i], 10.))
-			y0.append(lin2log(y[i], 10.))
-	else:
-		for i in range(len(x)):
-			x0.append(x[i])
-			y0.append(y[i])
+    # check that the average int is greater than 2
+    if average_int < 2:
+        average_int = 2
 
-	# use monotonic function to calculate slope
-	ymono, err, errstr = monofit (y0, Wn = monotonic_parameter)
+    # convert data to a log scale
+    x0 = []
+    y0 = []
+    if log:
+        for i in range(len(x)):
+            x0.append(lin2log(x[i], 10.))
+            y0.append(lin2log(y[i], 10.))
+    else:
+        for i in range(len(x)):
+            x0.append(x[i])
+            y0.append(y[i])
 
-	# use smoothed function to calculate the slope
-	xder = []
-	yder = []
-	for i in range(len(x0) - 1):
-		# calculate slope
-		xder.append((x0[i + 1] + x0[i]) / 2.)
-		yder.append((ymono[i + 1] - ymono[i]) / (x0[i + 1] - x0[i]))
+    # use monotonic function to calculate slope
+    ymono, err, errstr = monofit (y0, Wn = monotonic_parameter)
 
-	# if log was called, return the xder to the linear scale
-	if log:
-		for i in range(len(xder)):
-			xder[i] = log2lin(xder[i], 10.)
+    # use smoothed function to calculate the slope
+    xder = []
+    yder = []
+    for i in range(len(x0) - (average_int - 1)):
+        x_fit = []
+        y_fit = []
+        for j in range(average_int):
+            x_fit.append(x0[i + j])
+            y_fit.append(ymono[i + j])
+        # fit data to a line
+        popt, pcov = curve_fit(f = linear_fit, xdata =  x_fit, ydata = y_fit)
+        xder.append(statistics.mean(x_fit))
+        yder.append(popt[0])
 
-	return xder, yder
+    # if log was called, return the xder to the linear scale
+    if log:
+        for i in range(len(xder)):
+            xder[i] = log2lin(xder[i], 10.)
+
+    return xder, yder
 
 
 ## ARGUMENTS

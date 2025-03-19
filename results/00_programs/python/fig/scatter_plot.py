@@ -48,12 +48,18 @@ def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_
 
     # plot scatter
     leg = [] # empty list used for legend
-    for i in fig.get_unique_ivals():
-        leg.append(mlines.Line2D([], [], color = edgecolor, marker = fig.get_marker(i), ls = '', label = fig.get_label(i)))
-        plt.scatter(fig.get_xval_list(i), fig.get_yval_list(i), marker = fig.get_marker(i), s = markersize, edgecolor = edgecolor) # == colorval, label == label, cmap == cmap
+    if fig.has_ivals():
+        # if the figure has unique isolated values
+        for i in fig.get_unique_ivals():
+            leg.append(mlines.Line2D([], [], color = edgecolor, marker = fig.get_marker(i), ls = '', label = fig.get_label(i)))
+            plt.scatter(fig.get_xval_list(i), fig.get_yval_list(i), marker = fig.get_marker(i), s = markersize, edgecolor = edgecolor) # == colorval, label == label, cmap == cmap
+        # add the legend
+        plt.legend(handles = leg, loc = legendloc) # TODO increase size of legend labels
+    else:
+        # otherwise the figure does not have isolated values, so just create one plot
+        plt.scatter(fig.get_xval_list(), fig.get_yval_list(), marker = fig.get_marker(), s = markersize, edgecolor = edgecolor)
 
     # add min and max, labels
-    plt.legend(handles = leg, loc = legendloc) # TODO increase size of legend labels
     plt.xlim(fig.get_xaxis_min(), fig.get_xaxis_max())
     plt.ylim(fig.get_yaxis_min(), fig.get_yaxis_max())
     if fig.get_title_label() is not None:
