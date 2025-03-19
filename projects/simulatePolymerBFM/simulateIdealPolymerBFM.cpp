@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
                     infile = optarg;
                     break;
                 case 'o':
-                    outfile = atoi(optarg);
+                    outfile = optarg;
                     break;
                 case 's':
                     save_interval=atoi(optarg);
