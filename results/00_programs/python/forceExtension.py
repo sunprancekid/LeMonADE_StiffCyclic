@@ -216,6 +216,13 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = 5, monotonic = monotonic, spline = spline)
 
 	# determine the linear region and the linear elastic constant
+	# the slope with the line regime is constant and zero
+	# find the regine with slope close to zero
+	# calculat the slope of the slope
+	f1, fdrdf = numerical_slope(x = f0, y = dfdr, log = False, average_int = 5, monotonic = True)
+	for i in range(len(f1)):
+		print(f"{f1[i]:.04f}\t{fdrdf[i]:.04f}")
+	exit()
 
 	# TODO determine the pincus regime and the non-linear elastic pincus constant
 	# plot the elastic constant
