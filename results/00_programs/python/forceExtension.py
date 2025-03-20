@@ -205,16 +205,18 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 	# parse data
 	f = df[F_col].to_list()
 	r = df[R_col].to_list()
+
 	# normalize if requested
 	if normalized:
 		f = f * norm
 		r = r / norm
+
 	# calculate the slope, using smoothing if specified
 	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = 5, monotonic = monotonic, spline = spline)
 	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = 5, monotonic = monotonic, spline = spline)
-	# TODO calculate the slope using a spline function
-	# TODO calculate the slope using a standard derivative
-	# TODO determine the linear region and the linear elastic constant
+
+	# determine the linear region and the linear elastic constant
+
 	# TODO determine the pincus regime and the non-linear elastic pincus constant
 	# plot the elastic constant
 	fig = Figure()

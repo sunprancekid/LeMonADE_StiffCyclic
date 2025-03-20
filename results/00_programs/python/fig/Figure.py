@@ -115,7 +115,6 @@ class Label (object):
     def get_size (self):
         return self.size
 
-
 ## Axis class
 class Axis (object):
 

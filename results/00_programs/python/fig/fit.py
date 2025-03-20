@@ -8,13 +8,20 @@
 # from conda
 import pandas as pd
 # local
-
+from fig.Figure import Label
 
 ################
 ## PARAMETERS ##
 ################
+# line types
+logarithmic_type = "log"
+linear_type = "linear"
 # defaults
+default_label_string = ""
+default_label_size = 6
 default_linestyle = '--'
+default_linewidth = 2
+default_linecolor = 'k'
 
 
 #############
@@ -33,16 +40,40 @@ default_linestyle = '--'
 class Line(object):
 	"""docstring for Line"""
 	def __init__(self):
-		self.linear = False # boolean determining if the line is of a linear type
-		self.log = False 	# boolean determining if the line is of a logarithmic type
-		self.label = None	# string used to label the line
-		self.parameters = None # parameters describing the x -> relationship of the line
-		self.line_style = None # line style
-		self.line_width = None # width of line
-		self.line_color = None # key describing color of line
+		self.set_label()
+		self.reset_type()
+		self.reset_parameters()
+		self.line_style = default_linestyle # line style
+		self.line_width = default_linewidth # width of line
+		self.line_color = default_linecolor # key describing color of line
+
+	## LABEL ## 
 
 	# method that sets the label used for the string
+	""" assign label to Line object. """
+	def set_label(self, l = default_label_string, s = default_label_size):
+		self.label = Label(l, s)
 
+	# returns label assigned to Line object
+	""" returns Label object describing the Line object. """
+	def get_label(self):
+		return self.label
+
+	## TYPE ## 
+	# used to describe the type of line
+
+	# reset line type
+	""" resets line type as none. """
+	def reset_type (self):
+		self.type = None
+
+	""" returns string describing the type assigned to Line object. """
+	def get_type(self):
+		return self.type
+
+	## PARAMETERS ## 
+
+	# reset parameteres
 
 ###############
 ## ARGUMENTS ##
