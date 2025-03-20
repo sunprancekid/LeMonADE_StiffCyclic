@@ -209,8 +209,8 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		f = f * norm
 		r = r / norm
 	# calculate the slope, using smoothing if specified
-	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = 10, monotonic = monotonic, spline = spline)
-	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = 10, monotonic = monotonic, spline = spline)
+	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = 5, monotonic = monotonic, spline = spline)
+	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = 5, monotonic = monotonic, spline = spline)
 	# TODO calculate the slope using a spline function
 	# TODO calculate the slope using a standard derivative
 	# TODO determine the linear region and the linear elastic constant
@@ -227,7 +227,8 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		fig.set_xaxis_label("Force ($F$)")
 		fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
-	gen_plot(fig = fig, show = True, save = False)
+	fig.set_yaxis_ticks(minval = 0.9, maxval = 5000., nmajorticks = 3, nminorticks = 2)
+	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = True, save = False)
 	exit()
 
 

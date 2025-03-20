@@ -19,14 +19,19 @@ from fig.Figure import Figure
 ################
 ## PARAMETERS ##
 ################
-# none
+# defaults associated with scatter plot
+default_plot_markersize = 10
+default_plot_linewidth = 2
+default_edgecolor = 'black'
+default_colormap = 'coolwarm'
+default_legendloc = 'best'
 
 
 #############
 ## METHODS ##
 #############
 # generate plot
-def gen_plot (fig = None, markersize = default_markersize, legendloc = default_legendloc, show = True, save = True):
+def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = default_plot_markersize, legendloc = default_legendloc, show = True, save = True):
 
     # if no figure was provided ..
     if fig is None:
@@ -43,12 +48,12 @@ def gen_plot (fig = None, markersize = default_markersize, legendloc = default_l
         # if the figure has unique isolated values
         for i in fig.get_unique_ivals():
             leg.append(mlines.Line2D([], [], color = edgecolor, marker = fig.get_marker(i), ls = '', label = fig.get_label(i)))
-            plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), marker = fig.get_marker(i), s = markersize, edgecolor = edgecolor) # == colorval, label == label, cmap == cmap
+            plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), s = markersize) # == colorval, label == label, cmap == cmap, #  
         # add the legend
         plt.legend(handles = leg, loc = legendloc) # TODO increase size of legend labels
     else:
         # otherwise the figure does not have isolated values, so just create one plot
-        plt.plot(fig.get_xval_list(), fig.get_yval_list(), marker = fig.get_marker(), s = markersize, edgecolor = edgecolor)
+        plt.plot(fig.get_xval_list(), fig.get_yval_list(), linewidth = linewidth, marker = fig.get_marker(), markersize = markersize)
 
     # add min and max, labels
     plt.xlim(fig.get_xaxis_min(), fig.get_xaxis_max())

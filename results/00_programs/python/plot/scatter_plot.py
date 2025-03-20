@@ -19,7 +19,7 @@ from fig.Figure import Figure
 ################
 
 # defaults associated with scatter plot
-default_markersize = 42
+default_scatter_markersize = 42
 default_edgecolor = 'black'
 default_colormap = 'coolwarm'
 default_legendloc = 'best'
@@ -29,7 +29,7 @@ default_legendloc = 'best'
 #############
 
 # generate scatter plot
-def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_markersize, legendloc = default_legendloc, show = True, save = True):
+def gen_scatter(fig = None, edgecolor = default_edgecolor, markersize = default_scatter_markersize, legendloc = default_legendloc, show = True, save = True):
 
     # if no figure was provided ..
     if fig is None:
