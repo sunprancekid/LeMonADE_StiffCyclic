@@ -90,8 +90,9 @@ def lin2log(x, base):
 def log2lin (x, base):
     return math.pow(base, x)
 
-# calculate slope using a monotonic fit
-def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25, average_int = 2):
+# method used to determine the slope of a line
+# options to smooth slope using a monotonic or spline function
+def numerical_slope (x = None, y = None, log = False, monotonic = False, spline = False, monotonic_parameter = 0.25, average_int = 2):
 
     # check that the average int is greater than 2
     if average_int < 2:
@@ -109,8 +110,12 @@ def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25
             x0.append(x[i])
             y0.append(y[i])
 
-    # use monotonic function to calculate slope
-    ymono, err, errstr = monofit (y0, Wn = monotonic_parameter)
+    # if smoothing was requested
+    if monotonic:   
+        # use monotonic function to calculate slope
+        ymono, err, errstr = monofit (y0, Wn = monotonic_parameter)
+    elif spline:
+        pass
 
     # use smoothed function to calculate the slope
     xder = []
@@ -120,7 +125,10 @@ def monotonic_slope (x = None, y = None, log = False, monotonic_parameter = 0.25
         y_fit = []
         for j in range(average_int):
             x_fit.append(x0[i + j])
-            y_fit.append(ymono[i + j])
+            if monotonic:
+                y_fit.append(ymono[i + j])
+            else:
+                y_fit.append(y0[i + j])
         # fit data to a line
         popt, pcov = curve_fit(f = linear_fit, xdata =  x_fit, ydata = y_fit)
         xder.append(statistics.mean(x_fit))

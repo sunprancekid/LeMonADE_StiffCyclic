@@ -15,7 +15,7 @@ import itertools # used for iterating over markers
 from decimal import Decimal # used for formating large numbers to scientific notation
 # local
 from fig.Figure import Figure
-from fig.scatter_plot import gen_scatter
+from plot.scatter_plot import gen_scatter
 
 ################
 ## PARAMETERS ##
