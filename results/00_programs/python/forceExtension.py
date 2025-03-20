@@ -8,6 +8,7 @@ import pandas as pd
 # local packages
 from fig.Figure import Figure
 from plot.scatter_plot import gen_scatter
+from plot.plot import gen_plot
 from analysis import parse_results, plot_force_extension
 from util.smoothie import numerical_slope
 
@@ -226,7 +227,7 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		fig.set_xaxis_label("Force ($F$)")
 		fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
-	gen_scatter(fig = fig, show = True, save = False)
+	gen_plot(fig = fig, show = True, save = False)
 	exit()
 
 
