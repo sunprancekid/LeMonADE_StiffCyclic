@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 # local packages
 from fig.Figure import Figure
+from fig.fit import Line
 from plot.scatter_plot import gen_scatter
 from plot.plot import gen_plot
 from analysis import parse_results, plot_force_extension
