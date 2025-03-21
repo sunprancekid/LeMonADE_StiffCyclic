@@ -11,7 +11,7 @@ from fig.fit import Line, langevin_fit
 from plot.scatter_plot import gen_scatter
 from plot.plot import gen_plot
 from analysis import parse_results, plot_force_extension
-from util.smoothie import numerical_slope
+from util.smoothie import numerical_slope, find_regime
 
 
 ## PARAMETERS
@@ -167,7 +167,7 @@ def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = F
 	## plot the force against the chain extension with the linear region identified
 
 # calculate elasticity numerically from force extension curve
-def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = False, show = False, norm = None, monotonic = False, spline = False):
+def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = False, show = False, norm = None, monotonic = False, spline = False, average_int = 5):
 
 	## CHECK ARGUMENTS
 	# check that the data frame was provided
@@ -212,22 +212,20 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		r = r / norm
 
 	# calculate the slope, using smoothing if specified
-	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = 5, monotonic = monotonic, spline = spline)
-	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = 5, monotonic = monotonic, spline = spline)
+	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
+	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
 
-	# determine the linear region and the linear elastic constant
-	# the slope with the line regime is constant and zero
-	# find the regine with slope close to zero
-	# calculat the slope of the slope
-	f1, fdrdf = numerical_slope(x = f0, y = dfdr, log = False, average_int = 5, monotonic = True)
-	for i in range(len(f1)):
-		print(f"{f1[i]:.04f}\t{fdrdf[i]:.04f}")
-	exit()
+	# find the linear and non-linear elastic regions according to the slope of the eklasticity
+	f1, fdrdf = numerical_slope(x = f0, y = dfdr, log = True, average_int = average_int, monotonic = True)
+
+	# determine the regimes corresponding to linear and non-linear elasticity
+	lin_xmin, lin_xmax = find_regime (x = f1, y = fdrdf, v = 0.)
+	nlin_xmin, nlin_xmax = find_regime (x = f1, y = fdrdf, v = 1., x_start = lin_xmax)
 
 	# TODO determine the pincus regime and the non-linear elastic pincus constant
 	# plot the elastic constant
 	fig = Figure()
-	fig.load_data(d = pd.DataFrame.from_dict({'F':f0, 'dfdr': dfdr}), xcol = 'F', ycol = 'dfdr')
+	fig.load_data(d = pd.DataFrame.from_dict({'F':f0, 'dfdr': dfdr, 'l': ["Simulation Data"] * len(f0)}), xcol = 'F', ycol = 'dfdr', icol = 'l')
 	if normalized:
 		fig.set_title_label("Normalized Elastic Constant against Normalized Force")
 		fig.set_xaxis_label("Normalized Force ($F \\cdot X$)")
@@ -237,7 +235,9 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		fig.set_xaxis_label("Force ($F$)")
 		fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
-	fig.set_yaxis_ticks(minval = 0.9, maxval = 5000., nmajorticks = 3, nminorticks = 2)
+	# fig.set_yaxis_ticks(minval = 0.9, maxval = 5000., nmajorticks = 3, nminorticks = 2)
+
+
 	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = True, save = False)
 	exit()
 
@@ -307,7 +307,11 @@ for l in lin:
 				# for each, create a unique directory
 				d = f"{top}_N{n:03d}_k{k:0.2f}"
 				df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k) & (FE_parms['N'] == n)]
+				df = df.reset_index()
 				print(d)
+
+				if n < 250:
+					continue
 
 				# get the no force change extension and then remove it from the dataframe
 				r_nf = df.loc[0, 'E2Eproj_M1']
@@ -315,9 +319,9 @@ for l in lin:
 				# get the max chain extension
 				r_max = df.loc[(len(df.index - 1)), 'E2Eproj_M1']
 
-				## plot the force extension curve FvR, compare to Langevin model
+				## PLOT THE FORCE EXTENSION CURVE (RvF), compare to Langevin model
 				df_norm = df.copy(deep = True)
-				df_norm['F'] = df['F']
+				df_norm['F'] = df['F'] * 2.69
 				df_norm['E2Eproj_M1'] = df_norm['E2Eproj_M1'] / r_max
 				df_norm['label'] = ["Simulation Data"] * len(df['F'].to_list())
 
@@ -325,8 +329,8 @@ for l in lin:
 				fig = Figure()
 				fig.load_data(d = df_norm, xcol = 'F', ycol = 'E2Eproj_M1', icol = 'label')
 				fig.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / R_{{max}}$)")
-				fig.set_xaxis_label(f"Force ($F$)")
-				fig.set_title_label(f"Force Extension Curve ($X$ = {r_nf:.2f})")
+				fig.set_xaxis_label(f"Normalized Force ($F \\cdot b$)")
+				fig.set_title_label(f"Force Extension Curve ($b$ = {2.69:.2f})")
 				fig.set_subtitle_label(d)
 				fig.set_yaxis_ticks(minval = 0.0, maxval = 1., nmajorticks = 3, nminorticks = 2)
 				fig.set_xaxis_min(0.0)
@@ -335,19 +339,12 @@ for l in lin:
 				fit = langevin_fit()
 
 				fig.set_saveas(savedir = f"./02_processed_data/{job:s}/{d:s}/", filename = "RvF")
-				gen_plot(fig = fig, show = True, fit = fit)
-				exit()
+				fig.save_data()
+				gen_plot(fig = fig, show = show, fit = fit, legendloc = 'lower right')
 
-				fig = Figure()
-				fig.load_data(d = df_norm, xcol = 'F', ycol = 'E2Eproj_M1')
-				fig.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$)")
-				fig.set_xaxis_label(f"Normalized Force ($F \\cdot X$)")
-				fig.set_title_label(f"Force Extension Curve ($X$ = {r_nf:.2f})")
-				fig.set_subtitle_label(d)
-				fig.set_xaxis_ticks(minval = 0.01, maxval = 500., nmajorticks = 3, nminorticks = 2)
-				fig.set_logscale()
-				fig.set_saveas(savedir = f"./02_processed_data/{job:s}/{d:s}/", filename = "RvF")
-				gen_scatter(fig = fig, show = False, markersize = 20)
+
+				## CALCULATE THE ELASTICITY NUMERICALLY, determine linear constants
+				calc_elasticity_numerically(df = df_norm, F_col = 'F', R_col = 'E2Eproj_M1', monotonic = True, average_int = 10)
 
 
 				## PARALLEL AND PERPENDICULAR ELASTICITY
@@ -366,7 +363,6 @@ for l in lin:
 				## TODO get the transition chain length
 			
 				## LINEAR ELASTICITY
-				calc_elasticity_numerically(df = df_norm, F_col = 'F', R_col = 'E2Eproj_M1', monotonic = True)
 				exit()
 				# linear elastic constant is the y(x = 1) of line fit to data on log scale
 				# use the transition chain extension to determine the linear elastic constant

@@ -19,9 +19,9 @@ from analysis import monofit
 ## PARAMETERS
 # none
 
-#############################################
-## USED FOR MONOTONIC SPLINE CURVE FITTING ##
-#############################################
+#####################################################
+## METHODS USED FOR MONOTONIC SPLINE CURVE FITTING ##
+#####################################################
 #!/usr/bin/env python
 """https://stackoverflow.com/questions/56551114/fully-monotone-interpolation-in-python """
 # see also

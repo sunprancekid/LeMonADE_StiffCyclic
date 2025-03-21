@@ -7,6 +7,7 @@
 ##############
 # from conda
 import pandas as pd
+import numpy as np
 # local
 from fig.Figure import Label
 
@@ -16,6 +17,7 @@ from fig.Figure import Label
 # line types
 logarithmic_type = "log"
 linear_type = "linear"
+langevin_type = "langevin"
 # defaults
 default_label_string = ""
 default_label_size = 6
@@ -37,9 +39,11 @@ default_markersize = 2
 
 # method for fitting data to langevin function
 def langevin_fit():
-	# set label
-	# set type as langevin
-	return Line()
+	# initialize line object, assign label and type
+	l = Line()
+	l.set_label(l = "Langevin Function", s = None)
+	l.set_langevin_type()
+	return l
 
 
 #############
@@ -77,6 +81,11 @@ class Line(object):
 	""" resets line type as none. """
 	def reset_type (self):
 		self.type = None
+
+	# assign the line as having langevin type fit
+	""" assign langevin type to line object. """
+	def set_langevin_type(self):
+		self.type = langevin_type
 
 	""" returns string describing the type assigned to Line object. """
 	def get_type(self):
@@ -151,13 +160,11 @@ class Line(object):
 	def get_xval_list(self, lims = None, n = None, log = False):
 		# unpack touple containing min and max
 		xmin, xmax = lims
-		print(xmin, xmax)
-		exit()
 		if not log:
 			# create linear spacing 
 			xvals = []
 			for i in range(n):
-				xvals.append()
+				xvals.append((i / (n - 1)) * (xmax - xmin) + xmin)
 		else:
 			# create logarithimic spacing
 			pass
@@ -166,7 +173,24 @@ class Line(object):
 
 	# return list containing y value list
 	def get_yval_list(self, lims = None, n = None, log = False):
-		return []
+
+		# get xvals
+		xvals = self.get_xval_list(lims = lims, n = n, log = log)
+
+		# use xvals and line type to get yvals
+		yvals = []
+		if self.type == langevin_type:
+			for i in range(len(xvals)):
+				x = xvals[i]
+				if not (x == 0.):
+					yvals.append((np.cosh(x) / np.sinh(x)) - (1. / x))
+				else:
+					yvals.append(0.)
+		else:
+			print("Line :: get_yval_list :: ERROR :: line type \'{}\' does not exists.".format(self.type))
+			exit()
+
+		return yvals
 
 ###############
 ## ARGUMENTS ##
