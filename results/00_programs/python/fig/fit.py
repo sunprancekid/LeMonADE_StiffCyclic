@@ -22,6 +22,8 @@ default_label_size = 6
 default_linestyle = '--'
 default_linewidth = 2
 default_linecolor = 'k'
+default_marker = ''
+default_markersize = 2
 
 
 #############
@@ -33,6 +35,13 @@ default_linecolor = 'k'
 # method for fitting data to line
 
 
+# method for fitting data to langevin function
+def langevin_fit():
+	# set label
+	# set type as langevin
+	return Line()
+
+
 #############
 ## CLASSES ##
 #############
@@ -42,10 +51,12 @@ class Line(object):
 	def __init__(self):
 		self.set_label()
 		self.reset_type()
-		self.reset_parameters()
-		self.line_style = default_linestyle # line style
-		self.line_width = default_linewidth # width of line
-		self.line_color = default_linecolor # key describing color of line
+		# self.reset_parameters()
+		self.set_linestyle() # assign default linestyle
+		self.set_marker() # assign the default marker
+		self.set_markersize() # assign the default markersize
+		self.set_linewidth() # assign the default line width
+		self.set_linecolor() # assign the default line color
 
 	## LABEL ## 
 
@@ -74,6 +85,88 @@ class Line(object):
 	## PARAMETERS ## 
 
 	# reset parameteres
+
+	## LINESTYLE ## 
+
+	# set the linestyle used for the line
+	""" set the line style used for the line. if not linestyle is specified, default is used. """
+	def set_linestyle(self, ls = default_linestyle):
+		self.linestyle = ls
+
+	# get the linestyle used for the line
+	def get_linestyle(self):
+		return self.linestyle
+
+	## MARKER ## 
+
+	# set the marker used for plotting the line
+	""" set the marker used when plotting the line. if no marker is specified, the default marker is assigned to the line. """
+	def set_marker (self, m = default_marker):
+		self.marker = m
+
+	# returns the marker used for the line
+	""" return the marker assigned to the line object. """
+	def get_marker(self):
+		return self.marker
+
+	## MARKERSIZE ## 
+
+	# set the markersize used for plotting the line
+	""" set the marker size used for plotting the line. if not markersize as specified, assign the default."""
+	def set_markersize(self, ms = default_markersize):
+		self.markersize = ms 
+
+	# get the markersize used for plotting the line
+	""" return the markersize used for plotting the line assigned to the object. """
+	def get_markersize(self):
+		return self.markersize
+
+	## LINEWIDTH ## 
+
+	# set the linestyle used for plotting the line
+	""" assign the linestyle used when plotting the object. if a linestyle is not passed to the method, assign the default. """
+	def set_linewidth(self, ls = default_linewidth):
+		self.linewidth = default_linewidth
+
+	# get the line style used for plotting the object
+	""" return the linestyle used for plotting the object. """
+	def get_linewidth(self):
+		return self.linewidth
+
+	## LINECOLOR ##
+
+	# set the line color assigned to the object
+	""" assign the line color used when plotting the object. if a linestyle is not assigned to the method, assign the default. """
+	def set_linecolor(self, lc = default_linecolor):
+		self.linecolor = lc
+
+	# return the line color assigned to the object
+	def get_linecolor(self):
+		return self.linecolor
+
+
+	## X AND Y VALS ##
+
+	# returns list containing x values used for line
+	def get_xval_list(self, lims = None, n = None, log = False):
+		# unpack touple containing min and max
+		xmin, xmax = lims
+		print(xmin, xmax)
+		exit()
+		if not log:
+			# create linear spacing 
+			xvals = []
+			for i in range(n):
+				xvals.append()
+		else:
+			# create logarithimic spacing
+			pass
+
+		return xvals
+
+	# return list containing y value list
+	def get_yval_list(self, lims = None, n = None, log = False):
+		return []
 
 ###############
 ## ARGUMENTS ##
