@@ -169,43 +169,6 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		# plot
 		gen_plot(fig = fig, show = show, save = save, markersize = 36)
 
-# calculate the linear elastic constant from the force extension curve
-def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = False, monotonic = True, smooth_int = 10):
-
-	## check that the correct arguments were passed to the method
-	# check that the data frame was provided
-	if df is None:
-		# must pass dataframe to the method
-		print("analysis :: forceExtension :: calc_linear_elastic_constant :: ERROR :: must pass dataframe to method as 'df'.")
-		return
-
-	# check that the force column was specified
-	if F_col is None:
-		# must provide the label for the force column
-		print("analysis :: forceExtension :: calc_linear_elastic_constant :: ERROR :: must specify the column in 'df' which contains the force data as 'F_col'.")
-		return
-
-	if R_col is None:
-		# must provide the label for the chain extension column
-		print("analysis :: forceExtension :: calc_linear_elastic_constant :: ERROR :: must specify the column in 'df' which contains the chain extensino data as 'R_col'.")
-		return 
-
-	## determine the region where the relationship between the chain extension and the force is linear
-	# parse data
-	y = df[F_col].to_list()
-	x = df[R_col].to_list()
-	# calculate the slope
-	if monotonic:
-		# calculate the slope using a monotonic (smoothed function)
-		xder, yder = numerical_slope(x = x, y = y, log = True, average_int = smooth_int)
-		for i in range(len(xder)):
-			print(f"{x[i]:.04f}\t{y[i]:.04f}\t{xder[i]:.05f}\t{yder[i]:.05f}")
-		# exit()
-	# calculate the slope using a spline function
-	# calculate the slope using a standard derivative
-	# determine the region where the slope is constant (within the variance)
-
-	## plot the force against the chain extension with the linear region identified
 
 # calculate elasticity numerically from force extension curve
 def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = False, show = False, norm = None, monotonic = False, spline = False, average_int = 5, savedir = None, real = False, ideal = False):
