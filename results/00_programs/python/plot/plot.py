@@ -41,14 +41,20 @@ def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = defau
         exit()
         
     ## TODO :: check figure 
+
+    # f, ax = plt.subplots()
+    # ax.spines['top'].set_visible(False)
+    # ax.spines['right'].set_visible(False)
     
     # plot scatter
     leg = [] # empty list used for legend
     if fig.has_ivals():
+        n = len(fig.get_unique_ivals())
         # if the figure has unique isolated values
-        for i in fig.get_unique_ivals():
-            line = plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), linewidth = linewidth, marker = fig.get_marker(i), markersize = markersize) 
-            leg.append(mlines.Line2D([], [], marker = fig.get_marker(i), ls = line[-1].get_ls(), label = fig.get_label(i)))
+        for i in fig.get_unique_ivals(rev = False):
+            line = plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), linewidth = linewidth, marker = fig.get_marker(i), markersize = markersize, zorder = n) 
+            leg.append(mlines.Line2D([], [], marker = fig.get_marker(i), ls = line[-1].get_ls(), label = fig.get_label(i), color = line[-1].get_color()))
+            n -= 1
     else:
         # otherwise the figure does not have isolated values, so just create one plot
         plt.plot(fig.get_xval_list(), fig.get_yval_list(), linewidth = linewidth, marker = fig.get_marker(), markersize = markersize)
@@ -64,10 +70,12 @@ def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = defau
 
         # loop through fits
         for i in range(len(fit)):
+            n = len(fig.get_unique_ivals()) + len(fit)
             if fit[i] is not None:
                 # there is only one fit, add it to the graph
-                line = plt.plot(fit[i].get_xval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), fit[i].get_yval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), linewidth = fit[i].get_linewidth(), marker = fit[i].get_marker(), markersize = fit[i].get_markersize(), ls = fit[i].get_linestyle(), color = fit[i].get_linecolor())
+                line = plt.plot(fit[i].get_xval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), fit[i].get_yval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), linewidth = fit[i].get_linewidth(), marker = fit[i].get_marker(), markersize = fit[i].get_markersize(), ls = fit[i].get_linestyle(), color = fit[i].get_linecolor(), zorder = n)
                 leg.append(mlines.Line2D([], [], marker = fit[i].get_marker(), ls = fit[i].get_linestyle(), label = fit[i].get_label().get_label(), color = fit[i].get_linecolor()))
+                n -= 1
 
     # set yaxis min and max, add labels
     ylim = plt.ylim(fig.get_yaxis_min(), fig.get_yaxis_max())

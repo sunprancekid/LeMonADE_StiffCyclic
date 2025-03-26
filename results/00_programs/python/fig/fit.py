@@ -6,6 +6,7 @@
 ## PACKAGES ##
 ##############
 # from conda
+import sys, os, math
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
@@ -20,6 +21,7 @@ from util.smoothie import lin2log, log2lin
 logarithmic_type = "log"
 linear_type = "linear"
 langevin_type = "langevin"
+bfm_langevin_type = "bfm_langevin"
 # defaults
 default_label_string = ""
 default_label_size = 6
@@ -69,6 +71,138 @@ def parse_data(x, y, x_start = None, x_end = None, log = False):
 			y_fit[i] = lin2log(y_fit[i])
 
 	return x_fit, y_fit
+
+# method that calculates the langevin function according to the BFM
+def bfm_langevin_fn(x):
+	bv = gen_bfm_bondvectors()
+
+	top = 0.
+	bot = 0.
+	for i in range(len(bv)):
+		top += (bv[i][0] * math.exp(x * bv[i][0]))
+		bot += math.exp(x * bv[i][0])
+	return top / (3. * bot)
+
+# generates 108 bondvectors for BFM langevin function
+# returns list of 108 bond vectors in 3-spatial dimensions
+def gen_bfm_bondvectors():
+
+	bv = []
+	# 200
+	bv.append([ 2, 0, 0]) # 1
+	bv.append([ 0, 2, 0]) # 2
+	bv.append([ 0, 0, 2]) # 3
+	bv.append([-2, 0, 0]) # 4
+	bv.append([ 0,-2, 0]) # 5
+	bv.append([ 0, 0,-2]) # 6
+	# 120
+	bv.append([ 2, 1, 0]) # 7
+	bv.append([ 1, 0, 2]) # 8
+	bv.append([ 0, 2, 1]) # 9
+	bv.append([-2, 1, 0]) # 10
+	bv.append([ 1, 0,-2]) # 11
+	bv.append([ 0,-2, 1]) # 12
+	bv.append([ 2,-1, 0]) # 13
+	bv.append([-1, 0, 2]) # 14
+	bv.append([ 0, 2,-1]) # 15
+	bv.append([-2,-1, 0]) # 16
+	bv.append([-1, 0,-2]) # 17
+	bv.append([ 0,-2,-1]) # 18
+	bv.append([ 1, 2, 0]) # 19
+	bv.append([ 2, 0, 1]) # 20
+	bv.append([ 0, 1, 2]) # 21
+	bv.append([-1, 2, 0]) # 22
+	bv.append([ 2, 0,-1]) # 23
+	bv.append([ 0,-1, 2]) # 24
+	bv.append([ 1,-2, 0]) # 25
+	bv.append([-2, 0, 1]) # 26
+	bv.append([ 0, 1,-2]) # 27
+	bv.append([-1,-2, 0]) # 28
+	bv.append([-2, 0,-1]) # 29
+	bv.append([ 0,-1,-2]) # 30
+	# 211
+	bv.append([ 2, 1, 1]) # 31
+	bv.append([ 1, 1, 2]) # 32
+	bv.append([ 1, 2, 1]) # 33
+	bv.append([-2, 1, 1]) # 34
+	bv.append([ 1, 1,-2]) # 35
+	bv.append([ 1,-2, 1]) # 36
+	bv.append([ 2,-1, 1]) # 37
+	bv.append([-1, 1, 2]) # 38
+	bv.append([ 1, 2,-1]) # 39
+	bv.append([-2,-1, 1]) # 40
+	bv.append([-1, 1,-2]) # 41
+	bv.append([ 1,-2,-1]) # 42
+	bv.append([ 2, 1,-1]) # 43
+	bv.append([ 1,-1, 2]) # 44
+	bv.append([-1, 2, 1]) # 45
+	bv.append([-2, 1,-1]) # 46
+	bv.append([ 1,-1,-2]) # 47
+	bv.append([-1,-2, 1]) # 48
+	bv.append([ 2,-1,-1]) # 49
+	bv.append([-1,-1, 2]) # 50
+	bv.append([-1, 2,-1]) # 51
+	bv.append([-2,-1,-1]) # 52
+	bv.append([-1,-1,-2]) # 53
+	bv.append([-1,-2,-1]) # 54
+	# 300
+	bv.append([ 3, 0, 0]) # 55
+	bv.append([ 0, 3, 0]) # 56
+	bv.append([ 0, 0, 3]) # 57
+	bv.append([-3, 0, 0]) # 58
+	bv.append([ 0,-3, 0]) # 59
+	bv.append([ 0, 0,-3]) # 60
+	# 221
+	bv.append([ 2, 2, 1]) # 61
+	bv.append([ 2, 1, 2]) # 62
+	bv.append([ 1, 2, 2]) # 63
+	bv.append([-2, 2, 1]) # 64
+	bv.append([ 2, 1,-2]) # 65
+	bv.append([ 1,-2, 2]) # 66
+	bv.append([ 2,-2, 1]) # 67
+	bv.append([-2, 1, 2]) # 68
+	bv.append([ 1, 2,-2]) # 69
+	bv.append([-2,-2, 1]) # 70
+	bv.append([-2, 1,-2]) # 71
+	bv.append([ 1,-2,-2]) # 72
+	bv.append([ 2, 2,-1]) # 73
+	bv.append([ 2,-1, 2]) # 74
+	bv.append([-1, 2, 2]) # 75
+	bv.append([-2, 2,-1]) # 76
+	bv.append([ 2,-1,-2]) # 77
+	bv.append([-1,-2, 2]) # 78
+	bv.append([ 2,-2,-1]) # 79
+	bv.append([-2,-1, 2]) # 80
+	bv.append([-1, 2,-2]) # 81
+	bv.append([-2,-2,-1]) # 82
+	bv.append([-2,-1,-2]) # 83
+	bv.append([-1,-2,-2]) # 84
+	# 310
+	bv.append([ 3, 1, 0]) # 85
+	bv.append([ 1, 0, 3]) # 86
+	bv.append([ 0, 3, 1]) # 87
+	bv.append([-3, 1, 0]) # 88
+	bv.append([ 1, 0,-3]) # 89
+	bv.append([ 0,-3, 1]) # 90
+	bv.append([ 3,-1, 0]) # 91
+	bv.append([-1, 0, 3]) # 92
+	bv.append([ 0, 3,-1]) # 93
+	bv.append([-3,-1, 0]) # 94
+	bv.append([-1, 0,-3]) # 95
+	bv.append([ 0,-3,-1]) # 96
+	bv.append([ 1, 3, 0]) # 97
+	bv.append([ 3, 0, 1]) # 98
+	bv.append([ 0, 1, 3]) # 99
+	bv.append([-1, 3, 0]) # 100
+	bv.append([ 3, 0,-1]) # 101
+	bv.append([ 0,-1, 3]) # 102
+	bv.append([ 1,-3, 0]) # 103
+	bv.append([-3, 0, 1]) # 104
+	bv.append([ 0, 1,-3]) # 105
+	bv.append([-1,-3, 0]) # 106
+	bv.append([-3, 0,-1]) # 107
+	bv.append([ 0,-1,-3]) # 108
+	return bv
 
 # method for fitting data to expotentional
 def power_fit(x, p):
@@ -135,6 +269,15 @@ def langevin_fit():
 	l.set_langevin_type()
 	return l
 
+# method for diffting data to the bfm langebin function
+def bfm_langevin_fit():
+
+	# initialize line object, assign label and type
+	l = Line()
+	l.set_label(l = "BFM Langevin Function", s = None)
+	l.set_bfm_langevin_type()
+	return l
+
 
 #############
 ## CLASSES ##
@@ -190,6 +333,9 @@ class Line(object):
 	def set_linear_type(self, opt = None, cov = None):
 		self.type = linear_type
 		self.set_parameters(opt)
+
+	def set_bfm_langevin_type(self, opt = None, cov = None):
+		self.type = bfm_langevin_type
 
 	""" returns string describing the type assigned to Line object. """
 	def get_type(self):
@@ -262,7 +408,6 @@ class Line(object):
 	def get_linecolor(self):
 		return self.linecolor
 
-
 	## X AND Y VALS ##
 
 	# returns list containing x values used for line
@@ -309,6 +454,13 @@ class Line(object):
 						yvals.append(log2lin(linear_fit(lin2log(xvals[i]), *linparms)))
 					else:
 						yvals.append(linear_fit(xvals[i], *linparms))
+		elif self.type == bfm_langevin_type:
+			for i in range(len(xvals)):
+				x = xvals[i]
+				if not (x == 0.):
+					yvals.append(bfm_langevin_fn(x))
+				else:
+					yvals.append(0.)
 		else:
 			print("Line :: get_yval_list :: ERROR :: line type \'{}\' does not exists.".format(self.type))
 			exit()

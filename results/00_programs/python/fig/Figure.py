@@ -8,6 +8,7 @@
 ##############
 
 import pandas as pd
+import numpy as np
 import os # used to check path
 import itertools # used for iterating over markers
 
@@ -244,7 +245,7 @@ class Figure (object):
 
     """ save data frame data to directory and with name associated with object."""
     def save_data(self):
-        self.df.to_csv(self.savedir + self.filename + ".csv")
+        self.df.to_csv(self.savedir + self.filename + ".csv", index = False)
 
     ## GETTERS AND SETTERS ##
 
@@ -365,10 +366,14 @@ class Figure (object):
 
     # method that returns unique values for the isolation column
     """ returns list of all unique values contained within icol. """
-    def get_unique_ivals (self):
+    def get_unique_ivals (self, rev = False):
         if self.icol is not None:
             # if an icol has been specified return all unique items
-            return self.df[self.icol].unique()
+            l = self.df[self.icol].unique()
+            if rev:
+                return np.flip(l)
+            else:
+                return l
         else:
             # otherwise, if an icol has not been specified, return a list with empty string
             return [""]
