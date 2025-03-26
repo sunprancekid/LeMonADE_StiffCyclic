@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 # local packages
 from fig.Figure import Figure
-from fig.fit import Line, langevin_fit
+from fig.fit import Line, langevin_fit, fit_line_no_slope, fit_line_no_intercept, fit_line
 from plot.scatter_plot import gen_scatter
 from plot.plot import gen_plot
 from analysis import parse_results, plot_force_extension
@@ -20,7 +20,7 @@ default_jobdir = "forceExtension"
 
 ## METHODS
 # calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
-def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, logx = True, logy = True, show = True, save = False, norm = None):
+def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, logx = True, logy = True, show = True, save = False, norm = None, linear = False, nonlinear = False):
 	
 	# check that the correct parameters were passed to the method
 	if df is None:
@@ -76,6 +76,47 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 
 	# plot the elasticity constants against the force
 	if F_col:
+		# if linear is true, identify the linear constant
+		fit_linear_regime = None
+		if linear:
+			# accumulate the data for the parallel constant
+			x = []
+			y = []
+			for i in range(len(f)):
+				if l[i] == 'parallel':
+					x.append(f[i])
+					y.append(k[i])
+			# find the regime corresponding to a slope equal to zero
+			x_linear, m_linear = find_regime(x = x, y = y, slope = 0., tol = 0.15, log = True, monotonic = True, average_int = 10)
+			# fit that data to a line without slope
+			fit_linear_regime = fit_line_no_slope(x = x, y = y, x_start = x_linear[0], x_end = x_linear[-1])
+			parms = fit_linear_regime.get_parameters()
+			fit_linear_regime.set_linecolor("k")
+			fit_linear_regime.set_linestyle(":")
+			K_linear = parms[1]
+			fit_linear_regime.set_label(f"Linear Regime\n(K = {K_linear:.02f})")
+
+		fit_nonlinear_regime = None
+		if nonlinear:
+			# accumulate the data for the parallel constant
+			x = []
+			y = []
+			for i in range(len(f)):
+				if l[i] == 'parallel':
+					x.append(f[i])
+					y.append(k[i])
+			# find the regime corresponding to a slope equal to two
+			x_nonlinear, m_nonlinear = find_regime(x = x, y = y, slope = 2.1, tol = 0.5, log = True, monotonic = True, average_int = 10, x_start = x_linear[-1])
+			for i in range(len(x_nonlinear)):
+				print(i, x_nonlinear[i], m_nonlinear[i])
+			# fit that data to a line without slope
+			fit_nonlinear_regime = fit_line(x = x, y = y, x_start = x_nonlinear[0], x_end = x_nonlinear[-1], log = True)
+			parms = fit_nonlinear_regime.get_parameters()
+			fit_nonlinear_regime.set_linecolor("k")
+			fit_nonlinear_regime.set_linestyle("--")
+			K_nonlinear = parms[0]
+			fit_nonlinear_regime.set_label(f"Non-Linear Regime\n($K \\alpha F^{{{K_nonlinear:.02f}}}$)")
+
 		df = pd.DataFrame.from_dict({'x': f, 'y': k, 'i': l})
 		fig = Figure()
 		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
@@ -85,7 +126,7 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		else:
 			fig.set_xaxis_label("Force ($F$)")
 			fig.set_title_label("Non-Linear Elasicity against Force")
-		fig.set_yaxis_label("Linear Elastic Constant ($K$)")
+		fig.set_yaxis_label("Non-Linear Elastic Constant ($K$)")
 		fig.set_subtitle_label(label)
 		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
 		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\perp}$)")
@@ -99,7 +140,7 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 			fig.save_data()
 
 		# plot
-		gen_scatter(fig = fig, show = show, save = save, markersize = 36)
+		gen_plot(fig = fig, show = show, save = save, fit = [fit_linear_regime, fit_nonlinear_regime])
 
 	# plot the elasticity constants against the chain extension
 	if R_col:
@@ -126,7 +167,7 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 			fig.save_data()
 
 		# plot
-		gen_scatter(fig = fig, show = show, save = save, markersize = 36)
+		gen_plot(fig = fig, show = show, save = save, markersize = 36)
 
 # calculate the linear elastic constant from the force extension curve
 def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = False, monotonic = True, smooth_int = 10):
@@ -167,7 +208,7 @@ def calc_linear_elastic_constant(df = None, F_col = None, R_col = None, plot = F
 	## plot the force against the chain extension with the linear region identified
 
 # calculate elasticity numerically from force extension curve
-def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = False, show = False, norm = None, monotonic = False, spline = False, average_int = 5):
+def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = False, show = False, norm = None, monotonic = False, spline = False, average_int = 5, savedir = None, real = False, ideal = False):
 
 	## CHECK ARGUMENTS
 	# check that the data frame was provided
@@ -215,15 +256,63 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
 	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
 
-	# find the linear and non-linear elastic regions according to the slope of the eklasticity
-	f1, fdrdf = numerical_slope(x = f0, y = dfdr, log = True, average_int = average_int, monotonic = True)
+	# remove and negative numbers
+	for i in range(len(r0) - 1, -1, -1):
+		if dfdr[i] < 0.:
+			dfdr.pop(i)
+			r0.pop(i)
+			drdf.pop(i)
+			f0.pop(i)
 
-	# determine the regimes corresponding to linear and non-linear elasticity
-	lin_xmin, lin_xmax = find_regime (x = f1, y = fdrdf, v = 0.)
-	nlin_xmin, nlin_xmax = find_regime (x = f1, y = fdrdf, v = 1., x_start = lin_xmax)
+	## DETERMING THE LINEAR REGIME AND LINEAR ELASTICITY CONSTANT
+	x_kvf_linear, m_kvf_linear = find_regime (x = f0, y = dfdr, slope = 0., tol = 0.3, log = True, monotonic = True, average_int = 10)
+	# create fits for the linear and nonlinear regimes
+	fit_kvf_linear = None
+	if x_kvf_linear is not None:
+		for i in range(len(x_kvf_linear)):
+			print(i, x_kvf_linear[i], m_kvf_linear[i])
+		fit_kvf_linear = fit_line_no_slope(x = f0, y = dfdr, x_start = x_kvf_linear[0], x_end = x_kvf_linear[-1])
+		parms = fit_kvf_linear.get_parameters()
+		fit_kvf_linear.set_linecolor("k")
+		fit_kvf_linear.set_linestyle(":")
+		K_linear = parms[1]
+		fit_kvf_linear.set_label(f"Linear Regime\n($K = {K_linear:.02f}$)")
+	else:
+		K_linear = None
 
-	# TODO determine the pincus regime and the non-linear elastic pincus constant
-	# plot the elastic constant
+	# TODO :: identify the pincus regime for ideal chains
+
+	# identify the pincus regime for real chains
+	fit_kvf_nonlinear = None
+	fit_kvr_nonlinear = None
+	if real and K_linear is not None:
+		# the elastic constant vs. the force should scale with approximately 1/3 in the pinucs regime
+		x_kvf_nonlinear, __ = find_regime (x = f0, y = dfdr, slope = (2./3.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
+
+		# fit the nonlinear data to a line against the force
+		if x_kvf_nonlinear is not None:
+			fit_kvf_nonlinear = fit_line(x = f0, y = dfdr, x_start = x_kvf_nonlinear[0], x_end = x_kvf_nonlinear[-1], log = True)
+			parms = fit_kvf_nonlinear.get_parameters()
+			fit_kvf_nonlinear.set_linecolor("k")
+			fit_kvf_nonlinear.set_linestyle("--")
+			kvf_nonlinear = parms[0]
+			fit_kvf_nonlinear.set_label(f"Non-Linear Regime\n($K \\alpha F^{{{kvf_nonlinear:.02f}}}$)")
+
+		# the elastic constant vs. the chain length should scale with approximately 1/2 in the pincus regime
+		x_kvr_nonlinear, __ = find_regime (x = r0, y = dfdr, slope = (1.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
+
+		# fit the nonlinear data to a line against the chain length
+		if x_kvr_nonlinear is not None:
+			fit_kvr_nonlinear = fit_line(x = r0, y = dfdr, x_start = x_kvr_nonlinear[0], x_end = x_kvr_nonlinear[-1], log = True)
+			parms = fit_kvr_nonlinear.get_parameters()
+			fit_kvr_nonlinear.set_linecolor("k")
+			fit_kvr_nonlinear.set_linestyle("--")
+			kvr_nonlinear = parms[0]
+			fit_kvr_nonlinear.set_label(f"Non-Linear Regime\n($K \\alpha R^{{{kvr_nonlinear:.02f}}}$)")
+
+	# x_nonlinear, m_nonlinear = find_regime (x = f0, y = dfdr, x_start = x_linear[0], slope = 1., tol = 0.5, log = True, monotonic = True, average_int = 5)
+
+	## PLOT EvF 
 	fig = Figure()
 	fig.load_data(d = pd.DataFrame.from_dict({'F':f0, 'dfdr': dfdr, 'l': ["Simulation Data"] * len(f0)}), xcol = 'F', ycol = 'dfdr', icol = 'l')
 	if normalized:
@@ -235,12 +324,29 @@ def calc_elasticity_numerically (df = None, F_col = None, R_col = None, plot = F
 		fig.set_xaxis_label("Force ($F$)")
 		fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
-	# fig.set_yaxis_ticks(minval = 0.9, maxval = 5000., nmajorticks = 3, nminorticks = 2)
+	if savedir is not None:
+		fig.set_saveas(savedir = savedir, filename = "EvF")
+		fig.save_data()
+	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = False, save = (savedir is not None), fit = [fit_kvf_linear, fit_kvf_nonlinear])
 
+	# PLOT EvR
+	fig = Figure()
+	fig.load_data(d = pd.DataFrame.from_dict({'R':r0, 'dfdr': dfdr, 'l': ["Simulation Data"] * len(f0)}), xcol = 'R', ycol = 'dfdr', icol = 'l')
+	if normalized:
+		fig.set_title_label("Normalized Elastic Constant against Normalized Chain Extension")
+		fig.set_xaxis_label("Normalized Chain Extension ($R / X$)")
+		fig.set_yaxis_label("Normalized Elastic Constant ($K = d(F \\cdot X) / d(R \\cdot X^{{-1}})$)")
+	else:
+		fig.set_title_label("Elastic Constant against Chain Extension")
+		fig.set_xaxis_label("Chain Extension ($R$)")
+		fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
+	fig.set_logscale()
+	if savedir is not None:
+		fig.set_saveas(savedir = savedir, filename = "EvR")
+		fig.save_data()
+	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = False, save = (savedir is not None), fit = [fit_kvf_linear, fit_kvr_nonlinear])
 
-	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = True, save = False)
-	exit()
-
+	return K_linear
 
 
 ## ARGUMENTS
@@ -252,6 +358,10 @@ figure = ("allfigs" in sys.argv)
 fig1 = ("fig1" in sys.argv)
 # show figures on generation 
 show = ("show" in sys.argv)
+# analysis of real polymer chains
+real = ("real" in sys.argv)
+# analysis of ideal polymer chains
+ideal = ("ideal" in sys.argv)
 # parse the directory passed as an argument, if specified
 if ("job" in sys.argv):
 	jobdir = sys.argv[sys.argv.index("job") + 1]
@@ -295,10 +405,6 @@ for l in lin:
 	else:
 		FE_parms = pd.read_csv(anal_dir + parm_file)
 
-	# process data 
-	## IDEAL CHAIN
-
-	## REAL CHAIN
 	# estimate the linear elasticity constant
 	i = 0
 	for n in FE_parms['N'].unique():
@@ -309,9 +415,6 @@ for l in lin:
 				df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k) & (FE_parms['N'] == n)]
 				df = df.reset_index()
 				print(d)
-
-				if n < 250:
-					continue
 
 				# get the no force change extension and then remove it from the dataframe
 				r_nf = df.loc[0, 'E2Eproj_M1']
@@ -336,7 +439,9 @@ for l in lin:
 				fig.set_xaxis_min(0.0)
 
 				# add langevin function
-				fit = langevin_fit()
+				fit = None
+				if ideal:
+					fit = langevin_fit()
 
 				fig.set_saveas(savedir = f"./02_processed_data/{job:s}/{d:s}/", filename = "RvF")
 				fig.save_data()
@@ -344,12 +449,13 @@ for l in lin:
 
 
 				## CALCULATE THE ELASTICITY NUMERICALLY, determine linear constants
-				calc_elasticity_numerically(df = df_norm, F_col = 'F', R_col = 'E2Eproj_M1', monotonic = True, average_int = 10)
-
+				k_lin = calc_elasticity_numerically(df = df_norm, F_col = 'F', R_col = 'E2Eproj_M1', monotonic = False, average_int = 5, savedir = f"./02_processed_data/{job:s}/{d:s}/", real = real)
 
 				## PARALLEL AND PERPENDICULAR ELASTICITY
 				# plot the parallel and perpendicular elasticity against the applied force
-				plot_elasticity_bondop(df = df, F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_force")
+				# determine the slope of the linear and non-linear regimes
+				plot_elasticity_bondop(df = df_norm, F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_force", linear = True, nonlinear = True)
+				continue
 				# same plot with normalization
 				plot_elasticity_bondop(df = df, norm = float(r_nf), F_col = 'F', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_force_norm")
 				## TODO get the transition force
@@ -360,18 +466,6 @@ for l in lin:
 				plot_elasticity_bondop(df = df, norm = r_nf, R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_extension_norm")
 				# plot the nonlinear elasticity on a linear scale against the unitary chain extension
 				plot_elasticity_bondop(df = df, norm = r_max, R_col = 'E2Eproj_M1', K_parallel_col = 'cos_theta_parallel', K_perp_col = 'cos_theta_perp', show = show, save = True, path = f"./02_processed_data/{job:s}/{d:s}/", label = "elasticity_v_extension_max", logx = False)
-				## TODO get the transition chain length
-			
-				## LINEAR ELASTICITY
-				exit()
-				# linear elastic constant is the y(x = 1) of line fit to data on log scale
-				# use the transition chain extension to determine the linear elastic constant
-				k_lin = calc_linear_elastic_constant(df = df, F_col = 'F', R_col = 'E2Eproj_M1')
-				# i = i + 1
-				# if i >= 4:
-				#   # exit()
-
-				## NUMERICAL ELASTIC CONSTANT
 		
 
 	## ADD HEAT MAP OF KLIN PER TOPOLOGY AND BENDING PARM

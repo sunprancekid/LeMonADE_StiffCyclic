@@ -42,7 +42,6 @@ def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = defau
         
     ## TODO :: check figure 
     
-
     # plot scatter
     leg = [] # empty list used for legend
     if fig.has_ivals():
@@ -59,15 +58,16 @@ def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = defau
 
     # add fits, if any were passed to the method
     if fit is not None:
-        # if there are multipule fits, fits should be a list object
-        if type(fit) is list:
-            # iterate through each fit
-            print(fit)
-        else:
-            # there is only one fit, add it to the graph
-            line = plt.plot(fit.get_xval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), fit.get_yval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), linewidth = fit.get_linewidth(), marker = fit.get_marker(), markersize = fit.get_markersize(), ls = fit.get_linestyle(), color = fit.get_linecolor())
-            leg.append(mlines.Line2D([], [], marker = fit.get_marker(), ls = fit.get_linestyle(), label = fit.get_label().get_label(), color = fit.get_linecolor()))
+        if type(fit) is not list:
+            # then fit is only one item, pack fit into an interable list
+            fit = [fit]
 
+        # loop through fits
+        for i in range(len(fit)):
+            if fit[i] is not None:
+                # there is only one fit, add it to the graph
+                line = plt.plot(fit[i].get_xval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), fit[i].get_yval_list(lims = xlim, n = n_xfits, log = fig.xaxis_is_logscale()), linewidth = fit[i].get_linewidth(), marker = fit[i].get_marker(), markersize = fit[i].get_markersize(), ls = fit[i].get_linestyle(), color = fit[i].get_linecolor())
+                leg.append(mlines.Line2D([], [], marker = fit[i].get_marker(), ls = fit[i].get_linestyle(), label = fit[i].get_label().get_label(), color = fit[i].get_linecolor()))
 
     # set yaxis min and max, add labels
     ylim = plt.ylim(fig.get_yaxis_min(), fig.get_yaxis_max())

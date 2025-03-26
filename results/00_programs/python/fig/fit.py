@@ -8,8 +8,10 @@
 # from conda
 import pandas as pd
 import numpy as np
+from scipy.optimize import curve_fit
 # local
 from fig.Figure import Label
+from util.smoothie import lin2log, log2lin
 
 ################
 ## PARAMETERS ##
@@ -31,11 +33,99 @@ default_markersize = 2
 #############
 ## METHODS ##
 #############
+# method for parsing x and y data for fitting from starting and ending x-vales
+def parse_data(x, y, x_start = None, x_end = None, log = False):
+	
+	# initialize arrays
+	x_fit = []
+	y_fit = []
+
+	# if x_start has been specified, determine while to start adding the data which needs to be fit
+	if x_start is None or x_start > max(x):
+		idx_x_start = 0
+	else:
+		for i in range(len(x)):
+			if x[i] >= x_start:
+				idx_x_start = i
+				break
+
+	# cumulate the data as needed
+	if x_end is None or x_end > max(x):
+		for i in range(idx_x_start, len(x)):
+			print(i, x[i], y[i])
+			x_fit.append(x[i])
+			y_fit.append(y[i])
+	else:
+		for i in range(idx_x_start, len(x)):
+			if x[i] <= x_end:
+				x_fit.append(x[i])
+				y_fit.append(y[i])
+			else:
+				break
+
+	if log:
+		for i in range(len(x_fit)):
+			x_fit[i] = lin2log(x_fit[i])
+			y_fit[i] = lin2log(y_fit[i])
+
+	return x_fit, y_fit
+
 # method for fitting data to expotentional
+def power_fit(x, p):
+	return math.pow(x, p)
 
+# uses paraemters which describe a linear relationship
+def linear_fit(x, m, b):
+	return m * x + b
 
-# method for fitting data to line
+# linear fit without y-intercept
+def linear_fit_no_intercept (x, m):
+	return linear_fit (x, m, 0.)
 
+# linear fit without slope
+def linear_fit_no_slope (x, b):
+	return linear_fit (x, 0., b)
+
+# methods for fitting data to line
+# returns Line object which contains the parameters for linear relationship for data passed to method
+def fit_line (x, y, x_start = None, x_end = None, log = False):
+	
+	# find the data that corresponds to the starting and ending regime, if specified
+	x_fit, y_fit = parse_data(x, y, x_start = x_start, x_end = x_end, log = log)
+	popt, pcov = curve_fit(f = linear_fit, xdata =  x_fit, ydata = y_fit)
+	
+	# create line object which contains parameters
+	l = Line()
+	l.set_label(l = "Linear Fit", s = None)
+	l.set_log(log)
+	l.set_linear_type(opt = popt, cov = pcov)
+	return l
+
+# returns Line object which fits data to line with out y-intercept
+def fit_line_no_intercept(x, y, x_start = None, x_end = None):
+
+	# fit the data to a line without a y-intercept
+	x_fit, y_fit = parse_data(x, y, x_start = x_start, x_end = x_end)
+	popt, pcov = curve_fit(f = linear_fit_no_intercept, xdata =  x_fit, ydata = y_fit)
+
+	# create line with parameters fit to linear relationship
+	l = Line()
+	l.set_label(l = "Linear Fit", s = None)
+	l.set_linear_type(opt = [popt[0], 0.], cov = pcov)
+	return l
+
+# returns Line object which fits data to line without slope
+def fit_line_no_slope(x, y, x_start = None, x_end = None):
+
+	# fit the data to a line without a y-intercept
+	x_fit, y_fit = parse_data(x, y, x_start = x_start, x_end = x_end)
+	popt, pcov = curve_fit(f = linear_fit_no_slope, xdata =  x_fit, ydata = y_fit)
+
+	# create line with parameters fit to linear relationship
+	l = Line()
+	l.set_label(l = "Linear Fit", s = None)
+	l.set_linear_type(opt = [0., popt[0]], cov = pcov)
+	return l
 
 # method for fitting data to langevin function
 def langevin_fit():
@@ -55,7 +145,8 @@ class Line(object):
 	def __init__(self):
 		self.set_label()
 		self.reset_type()
-		# self.reset_parameters()
+		self.set_parameters() 
+		self.set_log()
 		self.set_linestyle() # assign default linestyle
 		self.set_marker() # assign the default marker
 		self.set_markersize() # assign the default markersize
@@ -74,6 +165,15 @@ class Line(object):
 	def get_label(self):
 		return self.label
 
+	## LOG SCALE ##
+	# sets logscale for fit
+	def set_log(self, l = False):
+		self.log = l
+
+	# return logscale
+	def get_log (self):
+		return self.l
+
 	## TYPE ## 
 	# used to describe the type of line
 
@@ -84,16 +184,25 @@ class Line(object):
 
 	# assign the line as having langevin type fit
 	""" assign langevin type to line object. """
-	def set_langevin_type(self):
+	def set_langevin_type(self, opt = None, cov = None):
 		self.type = langevin_type
+
+	def set_linear_type(self, opt = None, cov = None):
+		self.type = linear_type
+		self.set_parameters(opt)
 
 	""" returns string describing the type assigned to Line object. """
 	def get_type(self):
 		return self.type
 
 	## PARAMETERS ## 
+	# set parameters
+	def set_parameters (self, opt = None):
+		self.parameters = opt
 
-	# reset parameteres
+	# get parameters
+	def get_parameters (self):
+		return self.parameters
 
 	## LINESTYLE ## 
 
@@ -160,14 +269,20 @@ class Line(object):
 	def get_xval_list(self, lims = None, n = None, log = False):
 		# unpack touple containing min and max
 		xmin, xmax = lims
-		if not log:
-			# create linear spacing 
-			xvals = []
-			for i in range(n):
-				xvals.append((i / (n - 1)) * (xmax - xmin) + xmin)
-		else:
-			# create logarithimic spacing
-			pass
+		if log:
+			# convert to log scale if requested
+			xmin = lin2log(xmin)
+			xmax = lin2log(xmax)
+
+		# create linear spacing 
+		xvals = []
+		for i in range(n):
+			x = (i / (n - 1)) * (xmax - xmin) + xmin
+			if log:
+				# convert back to linear scale 
+				xvals.append(log2lin(x))
+			else:
+				xvals.append(x)
 
 		return xvals
 
@@ -186,6 +301,14 @@ class Line(object):
 					yvals.append((np.cosh(x) / np.sinh(x)) - (1. / x))
 				else:
 					yvals.append(0.)
+		elif self.type == linear_type:
+			linparms = self.get_parameters()
+			for i in range(len(xvals)):
+				if linparms is not None:
+					if self.log:
+						yvals.append(log2lin(linear_fit(lin2log(xvals[i]), *linparms)))
+					else:
+						yvals.append(linear_fit(xvals[i], *linparms))
 		else:
 			print("Line :: get_yval_list :: ERROR :: line type \'{}\' does not exists.".format(self.type))
 			exit()
