@@ -20,122 +20,134 @@ default_jobdir = "forceExtension"
 
 ## METHODS
 # calculate parallel and perpendicular non-linear elasticity constants from bond order parameters
-def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, R_col = None, K_parallel_col = None, K_perp_col = None, iso_col = None, logx = True, logy = True, show = True, save = False, norm = None, linear = False, nonlinear = False):
+def plot_elasticity_bondop (df = None, fcol = None, rcol = None, icol = None, ilabel = None, K_parallel_col = None, K_perp_col = None, iso_col = None, logx = True, logy = True, show = True, savedir = False, scale = False, linear = False, nonlinear = False, rmax = None):
 	
 	# check that the correct parameters were passed to the method
 	if df is None:
 		# must pass dataframe to the method
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must pass dataframe to method as 'df'.")
 
-	if F_col is None and R_col is None:
+	if fcol is None and rcol is None:
 		# must specifcy column containing force
-		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specifiy column in 'df' containing force values as 'F_col'.")
+		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specifiy column in 'df' containing force values as 'fcol'.")
 	
 	if K_parallel_col is None and K_perp_col is None:
 		# must specify at least the parallel or perpendicular columns containing the bond order parameter
 		print("analysis :: forceExtension :: plot_elasticity_bondop :: ERROR :: must specify either column containing parallel bond order parameter (as 'K_parallel_col') or column containing perpendicular bond order parameter (as 'K_parallel_col'), or both.")
 
-	normalized = False
-	if norm is not None:
-		normalized = True
-	if (not isinstance(norm, float)) and (not isinstance(norm, int)):
-		# if norm is not a float or an int, reassign 1
-		norm = 1.
-		normalized = False
-
 	# loop through the each line in the df, process the data
+	fit_linear_regime = None
+	fit_nonlinear_regime = None
 	f = [] # force associated with chain extension
 	r = [] # chain extension
 	k = [] # linear elastic constant from bond order paramemer fluctuation
 	l = [] # label determines if elastic constant is either parallel or perpendicular
-	for i, row in df.iterrows():
+	if icol is not None:
+		for u in df[icol].unique(): 
+			# parse the no force extension and remove from the dataframe
+			udf = df[df[icol] == u]
+			r_nf = udf[udf[fcol] <= 0.]
+			x_nf = r_nf.reset_index().loc[0, rcol] # no force chain extension, used for scaling
+			for i in r_nf.index:
+				udf = udf.drop(i).dropna()
 
-		if (F_col is not None and row[F_col] < 0.000001) or (R_col is not None and row[R_col] < 0.000001):
-			## TODO :: opportunity to pull normalizing values here
-			# skip if the minimum force or chain extension has not been surpased
-			# (this is challenging for log log plots when there are negative values, etc.)
-			continue
+			# get the data, scale if needed
+			f_temp = udf[fcol].to_list()
+			r_temp = udf[rcol].to_list()
+			for i in range(len(f_temp)):
+				if scale:
+					f_temp[i] = f_temp[i] * x_nf
+					r_temp[i] = r_temp[i] / x_nf
+				elif rmax is not None:
+					r_temp[i] = r_temp[i] / rmax
 
-		# determine the parallel linear elastic constant
-		if K_parallel_col is not None:
-			if F_col is not None:
-				f.append(row[F_col] * norm)
-			if R_col is not None:
-				r.append(row[R_col] / norm)
-			k.append(1. / row[K_parallel_col + "_var"])
-			l.append('parallel')
+			if K_parallel_col is not None:
+				k_par_temp = udf[K_parallel_col + "_var"].to_list()
 
-		# determine the perpendicular elastic constant
-		if K_perp_col is not None:
-			if F_col is not None:
-				f.append(row[F_col] * norm)
-			if R_col is not None:
-				r.append(row[R_col] / norm)
-			k.append(1. / row[K_perp_col + "_var"])
-			l.append('perp')
+				# get linear and non-linear fits, only for the parallel elasticity, only wrt force
+				if linear and fit_linear_regime is None:
+					# find the regime corresponding to a slope equal to zero
+					x_linear, m_linear = find_regime(x = f_temp, y = k_par_temp, slope = 0., tol = 0.15, log = True, monotonic = True, average_int = 10)
+					# fit that data to a line without slope
+					fit_linear_regime = fit_line_no_slope(x = f_temp, y = k_par_temp, x_start = x_linear[0], x_end = x_linear[-1])
+					parms = fit_linear_regime.get_parameters()
+					fit_linear_regime.set_linecolor("k")
+					fit_linear_regime.set_linestyle(":")
+					K_linear = parms[1]
+					fit_linear_regime.set_label(f"Linear Regime\n(K = {K_linear:.04f})")
 
-	# plot the elasticity constants against the force
-	if F_col:
-		# if linear is true, identify the linear constant
-		fit_linear_regime = None
-		if linear:
-			# accumulate the data for the parallel constant
-			x = []
-			y = []
-			for i in range(len(f)):
-				if l[i] == 'parallel':
-					x.append(f[i])
-					y.append(k[i])
-			# find the regime corresponding to a slope equal to zero
-			x_linear, m_linear = find_regime(x = x, y = y, slope = 0., tol = 0.15, log = True, monotonic = True, average_int = 10)
-			# fit that data to a line without slope
-			fit_linear_regime = fit_line_no_slope(x = x, y = y, x_start = x_linear[0], x_end = x_linear[-1])
-			parms = fit_linear_regime.get_parameters()
-			fit_linear_regime.set_linecolor("k")
-			fit_linear_regime.set_linestyle(":")
-			K_linear = parms[1]
-			fit_linear_regime.set_label(f"Linear Regime\n(K = {K_linear:.04f})")
+					if nonlinear and fit_nonlinear_regime is None:
+						# find the regime corresponding to a slope equal to two
+						x_nonlinear, m_nonlinear = find_regime(x = f_temp, y = k_par_temp, slope = 2.1, tol = 0.5, log = True, monotonic = True, average_int = 10, x_start = x_linear[-1]) 
+						if x_nonlinear is not None:
+							# fit that data to a line without slope
+							fit_nonlinear_regime = fit_line(x = f_temp, y = k_par_temp, x_start = x_nonlinear[0], x_end = x_nonlinear[-1], log = True)
+							parms = fit_nonlinear_regime.get_parameters()
+							fit_nonlinear_regime.set_linecolor("k")
+							fit_nonlinear_regime.set_linestyle("--")
+							K_nonlinear = parms[0]
+							fit_nonlinear_regime.set_label(f"Non-Linear Regime\n($K \\propto F^{{{K_nonlinear:.02f}}}$)")
 
-		fit_nonlinear_regime = None
-		if nonlinear:
-			# accumulate the data for the parallel constant
-			x = []
-			y = []
-			for i in range(len(f)):
-				if l[i] == 'parallel':
-					x.append(f[i])
-					y.append(k[i])
-			# find the regime corresponding to a slope equal to two
-			x_nonlinear, m_nonlinear = find_regime(x = x, y = y, slope = 2.1, tol = 0.5, log = True, monotonic = True, average_int = 10, x_start = x_linear[-1])
-			for i in range(len(x_nonlinear)):
-				print(i, x_nonlinear[i], m_nonlinear[i])
-			# fit that data to a line without slope
-			fit_nonlinear_regime = fit_line(x = x, y = y, x_start = x_nonlinear[0], x_end = x_nonlinear[-1], log = True)
-			parms = fit_nonlinear_regime.get_parameters()
-			fit_nonlinear_regime.set_linecolor("k")
-			fit_nonlinear_regime.set_linestyle("--")
-			K_nonlinear = parms[0]
-			fit_nonlinear_regime.set_label(f"Non-Linear Regime\n($K \\propto F^{{{K_nonlinear:.02f}}}$)")
+			if K_perp_col is not None:
+				k_perp_temp = udf[K_perp_col + "_var"].to_list()
 
+			# process data, add to list
+			for i in range(len(f_temp)):
+				# append the chain extension
+				f.append(f_temp[i])
+				r.append(r_temp[i])
+				# append parallel and perpendicular
+				if K_parallel_col is not None:
+					k.append(1. / k_par_temp[i])
+					if ilabel is not None:
+						scale_label = " "
+						if scale:
+							scale_label += "(X = {:.2f})".format(x_nf)
+						if ilabel is not None:
+							l_temp = ilabel.format(u) + scale_label
+							l.append(l_temp)
+						else:
+							l_temp = str(u) + scale_label
+							l.append(l_temp)
+					else:
+						# if a label has not been specified, label according to the type of elastisity
+						l.append("Parallel ($K_{\\parallel}$)")
+				if K_perp_col is not None:
+					k.append(1. / k_perp_temp[i])
+					if ilabel is not None:
+						scale_label = " "
+						if scale:
+							scale_label += "(X = {:.2f})".format(x_nf)
+						if ilabel is not None:
+							l_temp = ilabel.format(u) + scale_label
+							l.append(l_temp)
+						else:
+							l_temp = str(u) + scale_label
+							l.append(l_temp)
+					else:
+						# if a label has not been specified, label according to the type of elasticity
+						l.append("Perpendicular ($K_{\\perp}$)")
+
+	if fcol is not None:
+		# plot against force
 		df = pd.DataFrame.from_dict({'x': f, 'y': k, 'i': l})
 		fig = Figure()
 		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
-		if normalized:
-			fig.set_xaxis_label(f"Normalized Force ($F \\cdot X$ where (X = {norm:.2f}))")
-			fig.set_title_label("Non-Linear Elasticity against Normalized Force")
+		if scale:
+			fig.set_xaxis_label(f"Normalized Force ($F \\cdot X$)")
 		else:
 			fig.set_xaxis_label("Force ($F$)")
-			fig.set_title_label("Non-Linear Elasicity against Force")
+		fig.set_title_label("Non-Linear Elasicity against Force")
 		fig.set_yaxis_label("Non-Linear Elastic Constant ($K$)")
-		fig.set_subtitle_label(label)
-		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
-		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\perp}$)")
 		fig.set_yaxis_min(1.)
 		if logx is True or logy is True:
 			fig.set_logscale(logx = logx, logy = logy)
-		if save:
+		if savedir is not None:
 			# set save location and name
-			fig.set_saveas(savedir = path, filename = label)
+			if scale:
+				fig.set_saveas(savedir = savedir, filename = "BvF_norm")
+			else:
+				fig.set_saveas(savedir = savedir, filename = "BvF")
 			# save data
 			fig.save_data()
 
@@ -143,26 +155,26 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 		gen_plot(fig = fig, show = show, save = save, fit = [fit_linear_regime, fit_nonlinear_regime])
 
 	# plot the elasticity constants against the chain extension
-	if R_col:
+	if rcol is not None:
 		df = pd.DataFrame.from_dict({'x': r, 'y': k, 'i': l})
 		fig = Figure()
 		fig.load_data(d = df, xcol = 'x', ycol = 'y', icol = 'i')
-		if normalized:
-			fig.set_xaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$ where (X = {norm:.2f}))")
-			fig.set_title_label("Non-Linear Elasticity against Normalized Chain Extension")
+		if scale:
+			fig.set_xaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / X$)")
 		else:
 			fig.set_xaxis_label("Chain Extension ($R_{E2E}$)")
-			fig.set_title_label("Non-Linear Elasticity againt Chain Extension")
+		fig.set_title_label("Non-Linear Elasticity againt Chain Extension")
 		fig.set_yaxis_label("Linear Elastic Constant ($K$)")
-		fig.set_subtitle_label(label)
-		fig.set_label(ival = 'parallel', label = "Parallel ($K_{\\parallel}$)")
-		fig.set_label(ival = 'perp', label = "Perpendicular ($K_{\\perp}$)")
 		fig.set_yaxis_min(1.)
 		if logx is True or logy is True:
 			fig.set_logscale(logx = logx, logy = logy)
-		if save:
+		if savedir is not None:
 			# set save location and name
-			fig.set_saveas(savedir = path, filename = label)
+			if scale:
+				fig.set_saveas(savedir = savedir, filename = "BvR_norm")
+			else:
+				fig.set_saveas(savedir = savedir, filename = "BvR")
+
 			# save data
 			fig.save_data()
 
@@ -565,7 +577,12 @@ for l in lin:
 			# regular
 			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n))
 			# normalized
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, rmax = (3 * n), scale = True)
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, scale = True)
+
+			## PLOT BOND OP
+			# regular
+			plot_elasticity_bondop(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', K_parallel_col = 'cos_theta_parallel', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", savedir = savedir, rmax = (3 * n), show = show)
+			plot_elasticity_bondop(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', K_parallel_col = 'cos_theta_parallel', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", savedir = savedir, scale = True, show = True, linear = True, nonlinear = True)
 			exit()
 
 
