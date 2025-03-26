@@ -206,6 +206,13 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 		normalized = False
 
 	## PARSE AND ANALYZE DATA
+	# initialize fits
+	fit_kvf_linear = None
+	fit_kvf_nonlinear = None
+	fit_kvr_nonlinear = None
+	for i in df[icol].unique()
+		print(i)
+	exit()
 	# parse data
 	f = df[fcol].to_list()
 	r = df[rcol].to_list()
@@ -230,7 +237,6 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 	## DETERMING THE LINEAR REGIME AND LINEAR ELASTICITY CONSTANT
 	x_kvf_linear, m_kvf_linear = find_regime (x = f0, y = dfdr, slope = 0., tol = 0.3, log = True, monotonic = True, average_int = 10)
 	# create fits for the linear and nonlinear regimes
-	fit_kvf_linear = None
 	if x_kvf_linear is not None:
 		for i in range(len(x_kvf_linear)):
 			print(i, x_kvf_linear[i], m_kvf_linear[i])
@@ -244,8 +250,6 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 		K_linear = None
 
 	# identify the pincus regime for real chains
-	fit_kvf_nonlinear = None
-	fit_kvr_nonlinear = None
 	if real and K_linear is not None:
 		# the elastic constant vs. the force should scale with approximately 1/3 in the pinucs regime
 		x_kvf_nonlinear, __ = find_regime (x = f0, y = dfdr, slope = (2./3.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
@@ -519,13 +523,17 @@ for l in lin:
 			plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, rmax = (3 * n))
 			# add scaling
 			plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, scale = True)
+
+			## PLOT ELASTICITY
+			# regular
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir)
 			exit()
 
 
 			for k in FE_parms['K'].unique(): # strength of bending potential
 				## ANALYZE EACH UNIQUE FORCE-EXTENSION SIMULATION
 				# for each, create a unique directory
-				d = f"{top}_N{n:03d}_k{k:0.2f}"
+				d = f"{top}_N{n:03d}/k{k:0.2f}"
 				df = FE_parms[(FE_parms['top'] == top) & (FE_parms['K'] == k) & (FE_parms['N'] == n)]
 				df = df.reset_index()
 				print(d)
