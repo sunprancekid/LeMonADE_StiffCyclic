@@ -171,7 +171,7 @@ def plot_elasticity_bondop (path = "./", label = None, df = None, F_col = None, 
 
 
 # calculate elasticity numerically from force extension curve
-def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = None, ilabel = None, plot = False, show = False, norm = None, monotonic = False, spline = False, average_int = 5, savedir = None, real = False, ideal = False):
+def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = None, ilabel = None, plot = False, show = False, scale = False, monotonic = False, spline = False, average_int = 5, savedir = None, real = False, ideal = False, rmax = None):
 
 	## CHECK ARGUMENTS
 	# check that the data frame was provided
@@ -195,135 +195,172 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 	# if smoothing factors were specified, check that one spline or monotonic is called
 	if spline and monotonic:
 		spline = False
-	
-	# if normalization factor was specified
-	normalized = False
-	if norm is not None:
-		normalized = True
-	if (not isinstance(norm, float)) and (not isinstance(norm, int)):
-		# if norm is not a float or an int, reassign 1
-		norm = 1.
-		normalized = False
 
 	## PARSE AND ANALYZE DATA
-	# initialize fits
+	# initialize fits and lists
+	K_linear = None
+	fit_langevin = None
 	fit_kvf_linear = None
 	fit_kvf_nonlinear = None
 	fit_kvr_nonlinear = None
-	for i in df[icol].unique()
-		print(i)
-	exit()
-	# parse data
-	f = df[fcol].to_list()
-	r = df[rcol].to_list()
+	f = []
+	r = []
+	k = []
+	l = []
+	if icol is not None:
+		for u in df[icol].unique():
+			# get and remove the no force extension
+			udf = df[df[icol] == u]
+			r_nf = udf[udf[fcol] <= 0.]
+			x_nf = r_nf.reset_index().loc[0, rcol] # no force chain extension, used for scaling
+			for i in r_nf.index:
+				udf = udf.drop(i).dropna()
 
-	# normalize if requested
-	if normalized:
-		f = f * norm
-		r = r / norm
+			# grab the data
+			f_temp = udf[fcol].to_list()
+			r_temp = udf[rcol].to_list()
+			# normalize if requested
+			if scale:
+				for i in range(len(f_temp)):
+					f_temp[i] = f_temp[i] * x_nf
+					r_temp[i] = r_temp[i] / x_nf
+			elif rmax is not None:
+				r_temp = r_temp / rmax
 
-	# calculate the slope, using smoothing if specified
-	r0, dfdr = numerical_slope(x = r, y = f, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
-	f0, drdf = numerical_slope(x = f, y = r, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
+			# calculate the slope numerically
+			r0, dfdr = numerical_slope(x = r_temp, y = f_temp, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
+			f0, drdf = numerical_slope(x = f_temp, y = r_temp, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
+			
+			# remove and negative numbers
+			for i in range(len(r0) - 1, -1, -1):
+				if dfdr[i] < 0.:
+					dfdr.pop(i)
+					r0.pop(i)
+					drdf.pop(i)
+					f0.pop(i)
 
-	# remove and negative numbers
-	for i in range(len(r0) - 1, -1, -1):
-		if dfdr[i] < 0.:
-			dfdr.pop(i)
-			r0.pop(i)
-			drdf.pop(i)
-			f0.pop(i)
+			## DETERMINE THE LINEAR ELASTIC REGIME AND CONSTANT
+			if (real or ideal) and fit_kvf_linear is None:
+				x_kvf_linear, m_kvf_linear = find_regime (x = f0, y = dfdr, slope = 0., tol = 0.3, log = True, monotonic = True, average_int = 10)
+				# create fits for the linear and nonlinear regimes
+				if x_kvf_linear is not None:
+					fit_kvf_linear = fit_line_no_slope(x = f0, y = dfdr, x_start = x_kvf_linear[0], x_end = x_kvf_linear[-1])
+					parms = fit_kvf_linear.get_parameters()
+					fit_kvf_linear.set_linecolor("k")
+					fit_kvf_linear.set_linestyle(":")
+					K_linear = parms[1]
+					fit_kvf_linear.set_label(f"Linear Regime\n($K = {K_linear:.04f}$)")
+				else:
+					K_linear = None
 
-	## DETERMING THE LINEAR REGIME AND LINEAR ELASTICITY CONSTANT
-	x_kvf_linear, m_kvf_linear = find_regime (x = f0, y = dfdr, slope = 0., tol = 0.3, log = True, monotonic = True, average_int = 10)
-	# create fits for the linear and nonlinear regimes
-	if x_kvf_linear is not None:
-		for i in range(len(x_kvf_linear)):
-			print(i, x_kvf_linear[i], m_kvf_linear[i])
-		fit_kvf_linear = fit_line_no_slope(x = f0, y = dfdr, x_start = x_kvf_linear[0], x_end = x_kvf_linear[-1])
-		parms = fit_kvf_linear.get_parameters()
-		fit_kvf_linear.set_linecolor("k")
-		fit_kvf_linear.set_linestyle(":")
-		K_linear = parms[1]
-		fit_kvf_linear.set_label(f"Linear Regime\n($K = {K_linear:.04f}$)")
+			## DETERMINE THE NONLINEAR REGIME WRT FORCE
+			if real and fit_kvf_nonlinear is None:
+				# the elastic constant vs. the force should scale with approximately 1/3 in the pinucs regime
+				x_kvf_nonlinear, __ = find_regime (x = f0, y = dfdr, slope = (2./3.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
+
+				# fit the nonlinear data to a line against the force
+				if x_kvf_nonlinear is not None:
+					fit_kvf_nonlinear = fit_line(x = f0, y = dfdr, x_start = x_kvf_nonlinear[0], x_end = x_kvf_nonlinear[-1], log = True)
+					parms = fit_kvf_nonlinear.get_parameters()
+					fit_kvf_nonlinear.set_linecolor("k")
+					fit_kvf_nonlinear.set_linestyle("--")
+					kvf_nonlinear = parms[0]
+					fit_kvf_nonlinear.set_label(f"Non-Linear Regime\n($K \\propto F^{{{kvf_nonlinear:.04f}}}$)")
+
+			## DETERMINE THE NONLINEAR REGIME WRT CHAIN EXTENSION
+			if real and fit_kvr_nonlinear is None:
+				# the elastic constant vs. the chain length should scale with approximately 1/2 in the pincus regime
+				x_kvr_nonlinear, __ = find_regime (x = r0, y = dfdr, slope = (1.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
+
+				# fit the nonlinear data to a line against the chain length
+				if x_kvr_nonlinear is not None:
+					fit_kvr_nonlinear = fit_line(x = r0, y = dfdr, x_start = x_kvr_nonlinear[0], x_end = x_kvr_nonlinear[-1], log = True)
+					parms = fit_kvr_nonlinear.get_parameters()
+					fit_kvr_nonlinear.set_linecolor("k")
+					fit_kvr_nonlinear.set_linestyle("--")
+					kvr_nonlinear = parms[0]
+					fit_kvr_nonlinear.set_label(f"Non-Linear Regime\n($K \\propto R^{{{kvr_nonlinear:.04f}}}$)")
+
+			## DETERMINE THE IDEAL ELASTICITY FROM BFM
+			if ideal and fit_langevin is None:
+				# create the bfm fit
+				fit = bfm_langevin_fit()
+				bfm_f = fit.get_xval_list(lims = (min(f0), max(f0)), n = 100, log = True)
+				bfm_r = fit.get_yval_list(lims = (min(f0), max(f0)), n = 100, log = True)
+				bfm_r0, bfm_dfdr = numerical_slope(x = bfm_r, y = bfm_f, average_int = average_int, monotonic = monotonic, spline = spline, log = False)
+				bfm_f0, __ = numerical_slope(x = bfm_f, y = bfm_r, average_int = average_int, monotonic = monotonic, spline = spline, log = False)
+				# append the values to the list
+				for i in range(len(bfm_f0)):
+					f.append(bfm_f0[i])
+					r.append(bfm_r0[i])
+					k.append(bfm_dfdr[i])
+					l.append("BFM Langevin Function")
+
+			## APPEND THE DATA AFTER ANALYSIS
+			for i in range(len(f0)):
+				f.append(f0[i])
+				r.append(r0[i])
+				k.append(dfdr[i])
+				scale_label = " "
+				if scale:
+					scale_label += "(X = {:.2f})".format(x_nf)
+				if ilabel is not None:
+					l_temp = ilabel.format(u) + scale_label
+					l.append(l_temp)
+				else:
+					l_temp = str(u) + scale_label
+					l.append(l_temp)
 	else:
-		K_linear = None
+		print(" forceExtension :: calc_elasticity_numerically :: ERROR :: must specify 'icol' in 'df'.")
 
-	# identify the pincus regime for real chains
-	if real and K_linear is not None:
-		# the elastic constant vs. the force should scale with approximately 1/3 in the pinucs regime
-		x_kvf_nonlinear, __ = find_regime (x = f0, y = dfdr, slope = (2./3.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
-
-		# fit the nonlinear data to a line against the force
-		if x_kvf_nonlinear is not None:
-			fit_kvf_nonlinear = fit_line(x = f0, y = dfdr, x_start = x_kvf_nonlinear[0], x_end = x_kvf_nonlinear[-1], log = True)
-			parms = fit_kvf_nonlinear.get_parameters()
-			fit_kvf_nonlinear.set_linecolor("k")
-			fit_kvf_nonlinear.set_linestyle("--")
-			kvf_nonlinear = parms[0]
-			fit_kvf_nonlinear.set_label(f"Non-Linear Regime\n($K \\propto F^{{{kvf_nonlinear:.04f}}}$)")
-
-		# the elastic constant vs. the chain length should scale with approximately 1/2 in the pincus regime
-		x_kvr_nonlinear, __ = find_regime (x = r0, y = dfdr, slope = (1.), tol = 0.3, log = True, monotonic = True, average_int = 10, count_threshold = 5, x_start = x_kvf_linear[-1])
-
-		# fit the nonlinear data to a line against the chain length
-		if x_kvr_nonlinear is not None:
-			fit_kvr_nonlinear = fit_line(x = r0, y = dfdr, x_start = x_kvr_nonlinear[0], x_end = x_kvr_nonlinear[-1], log = True)
-			parms = fit_kvr_nonlinear.get_parameters()
-			fit_kvr_nonlinear.set_linecolor("k")
-			fit_kvr_nonlinear.set_linestyle("--")
-			kvr_nonlinear = parms[0]
-			fit_kvr_nonlinear.set_label(f"Non-Linear Regime\n($K \\propto R^{{{kvr_nonlinear:.04f}}}$)")
-
-	# for ideal chains, plot the derivative of the bond-fluctuation langevin function
-	label = ["Simulation Data"] * len(f0)
-	if ideal:
-		# create the bfm fit
-		fit = bfm_langevin_fit()
-		bfm_f = fit.get_xval_list(lims = (min(f0), max(f0)), n = 100, log = True)
-		bfm_r = fit.get_yval_list(lims = (min(f0), max(f0)), n = 100, log = True)
-		bfm_r0, bfm_dfdr = numerical_slope(x = bfm_r, y = bfm_f, average_int = average_int, monotonic = monotonic, spline = spline, log = False)
-		bfm_f0, __ = numerical_slope(x = bfm_f, y = bfm_r, average_int = average_int, monotonic = monotonic, spline = spline, log = False)
-		# append the values to the list
-		for i in range(len(bfm_f0)):
-			f0.append(bfm_f0[i])
-			r0.append(bfm_r0[i])
-			dfdr.append(bfm_dfdr[i])
-			label.append("BFM Langevin Function")
 
 	## PLOT EvF 
 	fig = Figure()
-	fig.load_data(d = pd.DataFrame.from_dict({'F':f0, 'dfdr': dfdr, 'l': label}), xcol = 'F', ycol = 'dfdr', icol = 'l')
-	if normalized:
+	fig.load_data(d = pd.DataFrame.from_dict({'F':f, 'dfdr': k, 'l': l}), xcol = 'F', ycol = 'dfdr', icol = 'l')
+	# set axis labels
+	if scale:
 		fig.set_title_label("Normalized Elastic Constant against Normalized Force")
 		fig.set_xaxis_label("Normalized Force ($F \\cdot X$)")
-		fig.set_yaxis_label("Normalized Elastic Constant ($K = d(F \\cdot X) / d(R \\cdot X^{{-1}})$)")
+		fig.set_yaxis_label("Normalized Elastic Constant ($K = X^{{2}} \\cdot d(F) / d(R)$)")
 	else:
 		fig.set_title_label("Elastic Constant against Force")
 		fig.set_xaxis_label("Force ($F$)")
-		fig.set_yaxis_label("Elastic Constant ($K = R_{{max}} \\cdot d(F) / d(R)$)")
+		if rmax is not None:
+			fig.set_yaxis_label("Elastic Constant ($K = R_{{max}} \\cdot d(F) / d(R)$)")
+		else:
+			fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
 	if ideal:
 		fig.set_marker("BFM Langevin Function", "x")
 	if savedir is not None:
-		fig.set_saveas(savedir = savedir, filename = "EvF")
+		if scale:
+			fig.set_saveas(savedir = savedir, filename = "EvF_scale")
+		else:
+			fig.set_saveas(savedir = savedir, filename = "EvF")
 		fig.save_data()
 	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = False, save = (savedir is not None), fit = [fit_kvf_linear, fit_kvf_nonlinear], legendloc = 'upper left')
 
 	# PLOT EvR
 	fig = Figure()
-	fig.load_data(d = pd.DataFrame.from_dict({'R':r0, 'dfdr': dfdr, 'l': label}), xcol = 'R', ycol = 'dfdr', icol = 'l')
-	if normalized:
+	fig.load_data(d = pd.DataFrame.from_dict({'R':r, 'dfdr': k, 'l': l}), xcol = 'R', ycol = 'dfdr', icol = 'l')
+	if scale:
 		fig.set_title_label("Normalized Elastic Constant against Normalized Chain Extension")
 		fig.set_xaxis_label("Normalized Chain Extension ($R / X$)")
 		fig.set_yaxis_label("Normalized Elastic Constant ($K = d(F \\cdot X) / d(R \\cdot X^{{-1}})$)")
 	else:
 		fig.set_title_label("Elastic Constant against Chain Extension")
-		fig.set_xaxis_label("Normalized Chain Extension ($R / R_{{max}})$)")
-		fig.set_yaxis_label("Elastic Constant ($K = R_{{max}} \\cdot d(F) / d(R)$)")
+		if rmax is not None:
+			fig.set_xaxis_label("Normalized Chain Extension ($R / R_{{max}})$)")
+			fig.set_yaxis_label("Elastic Constant ($K = R_{{max}} \\cdot d(F) / d(R)$)")
+		else:
+			fig.set_xaxis_label("Chain Extension ($R)$)")
+			fig.set_yaxis_label("Elastic Constant ($K = d(F) / d(R)$)")
 	fig.set_logscale()
 	if savedir is not None:
-		fig.set_saveas(savedir = savedir, filename = "EvR")
+		if scale:
+			fig.set_saveas(savedir = savedir, filename = "EvR_scale")
+		else:
+			fig.set_saveas(savedir = savedir, filename = "EvR")
 		fig.save_data()
 	gen_plot(fig = fig, markersize = 2, linewidth = 1, show = False, save = (savedir is not None), fit = [fit_kvf_linear, fit_kvr_nonlinear], legendloc = 'upper left')
 
@@ -526,7 +563,9 @@ for l in lin:
 
 			## PLOT ELASTICITY
 			# regular
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir)
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n))
+			# normalized
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, rmax = (3 * n), scale = True)
 			exit()
 
 
