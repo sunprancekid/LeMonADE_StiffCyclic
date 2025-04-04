@@ -63,6 +63,8 @@ def plot_elasticity_bondop (df = None, fcol = None, rcol = None, icol = None, il
 
 			if K_parallel_col is not None:
 				k_par_temp = udf[K_parallel_col + "_var"].to_list()
+				for i in range(len(k_par_temp)):
+					k_par_temp[i] = 1. / k_par_temp[i]
 
 				# get linear and non-linear fits, only for the parallel elasticity, only wrt force
 				if linear and fit_linear_regime is None:
@@ -90,6 +92,8 @@ def plot_elasticity_bondop (df = None, fcol = None, rcol = None, icol = None, il
 
 			if K_perp_col is not None:
 				k_perp_temp = udf[K_perp_col + "_var"].to_list()
+				for i in range(len(k_perp_temp)):
+					k_perp_temp.append(1. / k_perp_temp[i])
 
 			# process data, add to list
 			for i in range(len(f_temp)):
@@ -98,7 +102,7 @@ def plot_elasticity_bondop (df = None, fcol = None, rcol = None, icol = None, il
 				r.append(r_temp[i])
 				# append parallel and perpendicular
 				if K_parallel_col is not None:
-					k.append(1. / k_par_temp[i])
+					k.append(k_par_temp[i])
 					if ilabel is not None:
 						scale_label = " "
 						if scale:
@@ -566,6 +570,7 @@ for l in lin:
 			save = f"{top}_N{n:03d}"
 			savedir = f"./02_processed_data/{job:s}/{save:s}/"
 			df = FE_parms[(FE_parms['top'] == top) & (FE_parms['N'] == n)]
+			print(save)
 
 			## PLOT FORCE-EXTENSION
 			# regular
@@ -575,16 +580,16 @@ for l in lin:
 
 			## PLOT ELASTICITY
 			# regular
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n))
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n), monotonic = True, average_int = 10)
 			# normalized
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, scale = True)
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, scale = True, monotonic = True, average_int = 10)
 
 			## PLOT BOND OP
 			# regular
 			plot_elasticity_bondop(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', K_parallel_col = 'cos_theta_parallel', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", savedir = savedir, rmax = (3 * n), show = show)
-			plot_elasticity_bondop(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', K_parallel_col = 'cos_theta_parallel', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", savedir = savedir, scale = True, show = True, linear = True, nonlinear = True)
-			exit()
+			plot_elasticity_bondop(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', K_parallel_col = 'cos_theta_parallel', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", savedir = savedir, scale = True, show = False, linear = True, nonlinear = True)
 
+			continue
 
 			for k in FE_parms['K'].unique(): # strength of bending potential
 				## ANALYZE EACH UNIQUE FORCE-EXTENSION SIMULATION
@@ -630,6 +635,7 @@ for l in lin:
 
 	## ADD HEAT MAP OF KLIN PER TOPOLOGY AND BENDING PARM
 	## ADD SCATTER PLOT OF TRANSITION LENGTH OF FORCE PER BENDING PARM AND TOPOLOGY
+	exit()
 
 	# force extension curve comparing topologies with constant elasticity
 	if not os.path.exists(anal_dir + "FE_top/"):
