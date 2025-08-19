@@ -17,6 +17,7 @@ from scipy import signal as sig # used for monotonic curve smoothing
 from analysis import monofit
 from fig.Figure import Figure
 from plot.plot import gen_plot
+from plot.scatter_plot import gen_scatter
 
 ## PARAMETERS
 # none
@@ -91,6 +92,111 @@ def lin2log(x, base = 10):
 # converts log scale to linear scale
 def log2lin (x, base = 10):
     return math.pow(base, x)
+
+# method used to determine the slope of a line
+# uses Savitzky-Golay filter to reduce noise in data
+def filter_slope (x = None, y = None, log = False, order = 2, window = None, skip_int = 5):
+
+    # convert data to logscale if requested
+    x0 = [] # first order x-data
+    y0 = [] # first order y-data
+    if log:
+        for i in range(len(x)):
+            # if numbers are less than zero, convert to absolute scale
+            if y[i] < 0.000000001:
+                y[i] = abs(y[i])
+            else:
+                x0.append(lin2log(x[i], 10.))
+                y0.append(lin2log(y[i], 10.))
+    else:
+        for i in range(len(x)):
+            x0.append(x[i])
+            y0.append(y[i])
+
+    # based on the window, filter data sets
+    dx_check = []
+    x_plot = []
+    y_plot = []
+    y_plot_sg = []
+    y_plot_data = []
+    l_plot = []
+    # initialize the sg filter averaging
+    sg_x_cum = []
+    sg_x_count = []
+    sg_y_cum = []
+    sg_y_count = []
+    for i in range(len(x0) - skip_int * 2):
+        sg_x_cum.append(0.)
+        sg_x_count.append(0)
+        sg_y_cum.append(0.)
+        sg_y_count.append(0)
+
+    for i in range(len(x0) - (window - 1)):
+        # generate data set within window
+        x0_fit = [] # zero order x-data corresponding to window
+        y0_fit = [] # zero order y-data corresponding to window
+        dx = 0. # used to determine average step size 
+        # NOTE: SG filter assumes all data points are equally spaced ..
+        #       so, dx should be the equal for all windows
+        n = 0 
+        x_avg = 0.
+
+        # parse window data from set
+        for j in range(window):
+            x0_fit.append(x0[i + j])
+            y0_fit.append(y0[i + j])
+            x_avg += x0_fit[-1]
+            if j > 0:
+                # accumulate the window spacing
+                dx = x0_fit[j] - x0_fit[j - 1]
+                n += 1
+
+        # apply SG filter
+        x_avg = x_avg / n
+        dx = dx / n
+        dx_check.append(dx)
+        y0_filter = sig.savgol_filter(y0_fit, window, order, delta = dx)
+
+        # cumulate the filter for averaging
+        for j in range(len(y0_filter)):
+            if (j > skip_int - 1) and (j < (window - skip_int)):
+                sg_x_cum[i + j - skip_int] += x0_fit[j]
+                sg_x_count[i + j - skip_int] += 1
+                sg_y_cum[i + j - skip_int] += y0_filter[j]
+                sg_y_count[i + j - skip_int] += 1
+
+    # convert everything back to linear scale
+    for i in range(len(sg_y_cum)):
+        sg_y_cum[i] = sg_y_cum[i] / sg_y_count[i] # average sg filter cumulation
+        sg_x_cum[i] = sg_x_cum[i] / sg_x_count[i] 
+        l_plot.append("SG filter")
+        if log:
+            x_plot.append(log2lin(sg_x_cum[i]))
+            y_plot.append(log2lin(sg_y_cum[i]))
+        else:
+            x_plot.append(x0[i])
+            y_plot.append(sg_y_cum[i])
+
+    return x_plot, y_plot
+
+    # for i in range(len(y0)):
+    #     x_plot.append(x0[i])
+    #     y_plot.append(log2lin(y0[i]))
+    #     l_plot.append("Simulation Data")
+
+    # # plot the fit against the real data, to double check
+    # fig_check = Figure()
+    # fig_check.load_data(d = pd.DataFrame.from_dict({'X': x_plot, 'Y': y_plot, 'L':l_plot}), xcol = 'X', ycol = 'Y', icol = 'L')
+    # fig_check.reset_markers(['o', 'D'])
+    # fig_check.set_logscale()
+    # fig_check.set_yaxis_min(0.001)
+    # fig_check.set_yaxis_max(1.1)
+    # fig_check.set_xaxis_min(0.001)
+    # fig_check.set_xaxis_max(10.)
+    # fig_check.set_saveas('~/Desktop/', 'SG_filter')
+    # fig_check.save_data()
+    # gen_plot(fig = fig_check, markersize = 5, show = True, save = False)
+
 
 # method used to determine the slope of a line
 # options to smooth slope using a monotonic or spline function

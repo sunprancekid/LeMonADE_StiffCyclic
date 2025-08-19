@@ -516,7 +516,7 @@ while getopts "hzvstoj:p:f:l:e:c:" option; do
 		s) # submit simulations to SLURM
 			declare -i BOOL_SUBMIT_SLURM=1 ;;
         t) # test submit status
-            declare -i BOOL_TEST=1;;
+            declare -i BOOL_TEST=1 ;;
 		j) # update job name
             declare -i BOOL_JOB=1
 			JOB="${OPTARG}" ;;

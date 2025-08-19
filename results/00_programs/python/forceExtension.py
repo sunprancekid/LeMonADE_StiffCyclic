@@ -11,7 +11,7 @@ from fig.fit import Line, bfm_langevin_fit, fit_line_no_slope, fit_line_no_inter
 from plot.scatter_plot import gen_scatter
 from plot.plot import gen_plot
 from analysis import parse_results, plot_force_extension
-from util.smoothie import numerical_slope, find_regime
+from util.smoothie import numerical_slope, find_regime, filter_slope
 
 
 ## PARAMETERS
@@ -185,9 +185,8 @@ def plot_elasticity_bondop (df = None, fcol = None, rcol = None, icol = None, il
 		# plot
 		gen_plot(fig = fig, show = show, save = save)
 
-
 # calculate elasticity numerically from force extension curve
-def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = None, ilabel = None, plot = False, show = False, scale = False, monotonic = False, spline = False, average_int = 5, savedir = None, real = False, ideal = False, rmax = None):
+def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = None, ilabel = None, plot = False, show = False, scale = False, monotonic = False, spline = False, average_int = 2, savedir = None, real = False, ideal = False, rmax = None):
 
 	## CHECK ARGUMENTS
 	# check that the data frame was provided
@@ -243,11 +242,19 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 			elif rmax is not None:
 				r_temp = r_temp / rmax
 
-			# calculate the slope numerically
-			r0, dfdr = numerical_slope(x = r_temp, y = f_temp, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
-			f0, drdf = numerical_slope(x = f_temp, y = r_temp, log = False, average_int = average_int, monotonic = monotonic, spline = spline)
+			# filter the data
+			f_sg, r_sg = filter_slope (x = f_temp, y = r_temp, order = 2, window = 45, log = True)
+
+			# determine the numerical slope of both the real and filtered data
+			# elasticity is change in force over change in distance
+			r0, dfdr = numerical_slope(x = r_temp, y = f_temp, log = False, average_int = average_int)
+			r0_sg, dfdr_sg = numerical_slope(x = r_sg, y = f_sg, log = False, average_int = average_int)
+
+			# compliance in change distance over change in force
+			f0, drdf = numerical_slope(x = f_temp, y = r_temp, log = False, average_int = average_int)
+			f0_sg, drdf_sg = numerical_slope(x = f_sg, y = r_sg, log = False, average_int = average_int)
 			
-			# remove and negative numbers
+			# remove negative numbers
 			for i in range(len(r0) - 1, -1, -1):
 				if dfdr[i] < 0.:
 					dfdr.pop(i)
@@ -313,6 +320,7 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 					l.append("BFM Langevin Function")
 
 			## APPEND THE DATA AFTER ANALYSIS
+			# numerical data
 			for i in range(len(f0)):
 				f.append(f0[i])
 				r.append(r0[i])
@@ -326,6 +334,12 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 				else:
 					l_temp = str(u) + scale_label
 					l.append(l_temp)
+			# filter data
+			for i in range(len(f0_sg)):
+				f.append(f0_sg[i])
+				r.append(r0_sg[i])
+				k.append(dfdr_sg[i])
+				l.append("SG Filter")
 	else:
 		print(" forceExtension :: calc_elasticity_numerically :: ERROR :: must specify 'icol' in 'df'.")
 
@@ -351,6 +365,8 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 	if savedir is not None:
 		if scale:
 			fig.set_saveas(savedir = savedir, filename = "EvF_scale")
+			fig.set_yaxis_min(0.1)
+			fig.set_yaxis_max(100.)
 		else:
 			fig.set_saveas(savedir = savedir, filename = "EvF")
 		fig.save_data()
@@ -375,6 +391,8 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 	if savedir is not None:
 		if scale:
 			fig.set_saveas(savedir = savedir, filename = "EvR_scale")
+			fig.set_yaxis_min(0.1)
+			fig.set_yaxis_max(100.)
 		else:
 			fig.set_saveas(savedir = savedir, filename = "EvR")
 		fig.save_data()
@@ -382,8 +400,7 @@ def calc_elasticity_numerically (df = None, fcol = None, rcol = None, icol = Non
 
 	return K_linear
 
-
-def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilabel = None, show = False, savedir = None, real = False, ideal = False, rmax = None, scale = None):
+def plot_force_extension (df = None, fcol = None, rcol = None, vcol = None, icol = None, ilabel = None, show = False, savedir = None, real = False, ideal = False, rmax = None, scale = None, plot_linearscale = True, plot_logscale = True):
 
 	# initialize fits
 	fit_langevin = None
@@ -394,21 +411,28 @@ def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilab
 	f = []
 	r = []
 	l = []
+	v = []
 	## TODO :: think there is a better way to run this without so much looping, but I am not entirely sure how yet
 	if icol is not None:
 		for i in df[icol].unique():
 			# get the portion of the data frame corresponding to the unique value
 			udf = df[df[icol] == i]
 			# get the no chain extension data, drop from udf and reset
-			r_nf = udf[udf[fcol] <= 0.]
+			r_nf = udf[udf[fcol] <= 0.] # no force data is when force is less than or equal to zero
 			x_nf = r_nf.reset_index().loc[0, rcol] # no force chain extension, used for scaling
 			for i in r_nf.index:
 				udf = udf.drop(i).dropna()
+			# from negative chain extension values from udf (only occurs at low force)
+			for i in udf.index:
+				if udf.loc[i, rcol] <= 0.:
+					udf = udf.drop(i)
 
 			# accumulate the chain extension data
 			f_temp = udf[fcol].to_list()
 			r_temp = udf[rcol].to_list()
 			l_temp = udf[icol].to_list()
+			if vcol is not None:
+				v_temp = udf[vcol].to_list()
 			for i in range(len(f_temp)):
 				# append the force
 				if scale:
@@ -435,6 +459,27 @@ def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilab
 					label = ilabel.format(l_temp[i])
 					l.append(label + scale_label)
 
+				# append the variance, if called
+				if vcol is not None:
+					# normalize if requested, according to scale request
+					if scale:
+						v_temp[i] = v_temp[i] / pow(x_nf, 2)
+						v.append(v_temp[i])
+					elif rmax is not None:
+						v_temp[i] = v_temp[i] / pow(rmax, 2)
+						v.append(v_temp[i])
+					else:
+						v.append(v_temp[i])
+
+			# calculate the SG filter
+			f_sg, r_sg = filter_slope (x = f_temp, y = r_temp, order = 2, window = 45, log = True)
+
+			# append the filtered data to the plot
+			for i in range(len(f_sg)):
+				f.append(f_sg[i])
+				r.append(r_sg[i])
+				l.append("SG Filter")
+
 			# fit langevin data
 			if fit_langevin is None:
 				if ideal:
@@ -443,9 +488,9 @@ def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilab
 			# fit the linear regime
 			if fit_linear is None:
 				if real:
-					x_linear, m_linear = find_regime (x = f_temp, y = r_temp, slope = 1., tol = 0.05, log = True, monotonic = True, average_int = 10)
+					x_linear, m_linear = find_regime (x = f_sg, y = r_sg, slope = 1., tol = 0.05, log = True, monotonic = True, average_int = 10)
 					if x_linear is not None: # if the regime was found
-						fit_linear = fit_line_no_intercept(x = f_temp, y = r_temp, x_start = x_linear[0], x_end = x_linear[-1])
+						fit_linear = fit_line_no_intercept(x = f_sg, y = r_sg, x_start = x_linear[0], x_end = x_linear[-1])
 						fit_linear.set_linecolor("k")
 						fit_linear.set_linestyle("--")
 						fit_linear.set_label(f"Linear Regime\n($R \\propto F$)")
@@ -454,9 +499,9 @@ def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilab
 			if fit_pincus is None:
 				if real:
 					# for real chains, the pincus regime has slope of ~2/3
-					x_pincus, m_pincus = find_regime (x = f_temp, y = r_temp, slope = (2. / 3.), tol = 0.05, log = True, monotonic = True, average_int = 10)
+					x_pincus, m_pincus = find_regime (x = f_sg, y = r_sg, slope = (2. / 3.), tol = 0.05, log = True, monotonic = True, average_int = 10)
 					if x_pincus is not None:
-						fit_pincus = fit_line(x = f_temp, y = r_temp, x_start = x_pincus[0], x_end = x_pincus[-1], log = True)
+						fit_pincus = fit_line(x = f_sg, y = r_sg, x_start = x_pincus[0], x_end = x_pincus[-1], log = True)
 						p = fit_pincus.get_parameters()
 						fit_pincus.set_linestyle(":")
 						fit_pincus.set_linecolor("k")
@@ -464,44 +509,68 @@ def plot_force_extension (df = None, fcol = None, rcol = None, icol = None, ilab
 	else:
 		print(" forceExtension :: plot_force_extension :: ERROR :: must specify 'icol'.")
 
-	# plot the force extension on a regular scale
-	fig = Figure()
-	fig.load_data(d = pd.DataFrame.from_dict({'F': f, 'R': r, 'L': l}), xcol = 'F', ycol = 'R', icol = 'L')
+	# plot the chain extension against the force, and variance if called
+	fig_chainext = Figure()
+	if vcol is not None: fig_chainvar = Figure()
+	fig_chainext.load_data(d = pd.DataFrame.from_dict({'F': f, 'R': r, 'L': l}), xcol = 'F', ycol = 'R', icol = 'L')
+	fig_chainext.reset_linestyles(" ")
+	if vcol is not None: fig_chainvar.load_data(d = pd.DataFrame.from_dict({'F': f, 'RV': v, 'L': l}), xcol = 'F', ycol = 'RV', icol = 'L')
 	# set y axis label
 	if scale:
-		fig.set_yaxis_label(f"Chain Extension ($R_{{E2E}} \\cdot X^{{-1}}$)")
+		fig_chainext.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} \\cdot X^{{-1}}$)")
+		if vcol is not None: fig_chainvar.set_yaxis_label(f"Normalized Chain Extension Variance ($\\sigma_{{E2E}} \\cdot X^{{-2}}$)")
 	elif rmax is not None:
-		fig.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / R_{{max}}$)")
+		fig_chainext.set_yaxis_label(f"Normalized Chain Extension ($R_{{E2E}} / R_{{max}}$)")
+		if vcol is not None: fig_chainvar.set_yaxis_label(f"Normalized Chain Extension Variance ($\\sigma_{{E2E}} \\cdot R_{{max}}^{{-2}}$)")
 	else:
-		fig.set_yaxis_label(f"Chain Extension ($R_{{E2E}}$)")
+		fig_chainext.set_yaxis_label(f"Chain Extension ($R_{{E2E}}$)")
+		if vcol is not None: fig_chainvar.set_yaxis_label(f"Chain Extension Variance ($\\sigma_{{E2E}}$)")
 	# set x axis label
 	if scale:
-		fig.set_xaxis_label(f"Normalized Chain Extension ($F \\cdot X$)")
+		fig_chainext.set_xaxis_label(f"Normalized Force ($F \\cdot X$)")
+		if vcol is not None: fig_chainvar.set_yaxis_label(f"Normalized Force ($F \\cdot X$)")
 	else:
-		fig.set_xaxis_label(f"Force ($F$)")
-	# set title
-	fig.set_title_label(f"Force Extension Curve")
-	# fig.set_subtitle_label(d)
-	fig.set_xaxis_min(0.0)
+		fig_chainext.set_xaxis_label(f"Force ($F$)")
+		if vcol is not None: fig_chainvar.set_yaxis_label(f"Force ($F$)")
 
+	# set title
+	fig_chainext.set_title_label(f"Force Extension Curve")
+	if vcol is not None: fig_chainvar.set_title_label(f"Force Extension Variance")
+	# fig_chainext.set_subtitle_label(d)
+	fig_chainext.set_xaxis_min(0.0)
+	if vcol is not None: fig_chainvar.set_xaxis_min(0.0)
+
+	# plot on linear scale
 	if savedir is not None:
 		if scale:
-			fig.set_saveas(savedir = savedir, filename = "RvF_scale")
+			fig_chainext.set_saveas(savedir = savedir, filename = "RvF_scale")
+			if vcol is not None: fig_chainvar.set_saveas(savedir = savedir, filename = "RVvF_scale")
 		else:
-			fig.set_saveas(savedir = savedir, filename = "RvF")
-		fig.save_data()
-	gen_plot(fig = fig, show = show, fit = fit_langevin, legendloc = 'lower right')
+			fig_chainext.set_saveas(savedir = savedir, filename = "RvF")
+			if vcol is not None: fig_chainvar.set_saveas(savedir = savedir, filename = "RVvF")
+		fig_chainext.save_data()
+		if vcol is not None: fig_chainvar.save_data()
+	if plot_linearscale:
+		gen_plot(fig = fig_chainext, show = show, fit = fit_langevin, legendloc = 'lower right')
+		if vcol is not None: gen_plot(fig = fig_chainvar, show = show, legendloc = 'lower right')
 
 	# plot force extension on a log-log scale
-	fig.set_logscale()
-	fig.set_yaxis_min(min(r))
-	fig.set_xaxis_min(min(f))
-	if savedir is not None:
-		if scale:
-			fig.set_saveas(savedir = savedir, filename = "RvF_scale_log")
-		else:
-			fig.set_saveas(savedir = savedir, filename = "RvF_log")
-	gen_plot(fig = fig, show = show, fit = [fit_linear, fit_pincus], legendloc = 'lower right')
+	if plot_logscale:
+		fig_chainext.set_logscale()
+		fig_chainext.set_yaxis_min(min(r))
+		fig_chainext.set_xaxis_min(min(f))
+		if vcol is not None: fig_chainvar.set_logscale()
+		if vcol is not None: fig_chainvar.set_yaxis_min(min(v))
+		if vcol is not None: fig_chainvar.set_xaxis_min(min(f))
+		if savedir is not None:
+			if scale:
+				fig_chainext.set_saveas(savedir = savedir, filename = "RvF_scale_log")
+				if vcol is not None: fig_chainvar.set_saveas(savedir = savedir, filename = "RVvF_scale_log")
+			else:
+				fig_chainext.set_saveas(savedir = savedir, filename = "RvF_log")
+				if vcol is not None: fig_chainvar.set_saveas(savedir = savedir, filename = "RVvF_log")
+		gen_plot(fig = fig_chainext, show = show, fit = [fit_linear, fit_pincus], legendloc = 'lower right')
+		if vcol is not None: gen_plot(fig = fig_chainvar, show = show, legendloc = 'lower right')
 
 
 
@@ -549,7 +618,8 @@ for l in lin:
 				print("forceExtension :: ERROR :: Unknown top code " + r['R'] + ".")
 				exit()
 		FE_parms['top'] = top
-		# average simulation properties
+		# average / collect simulation properties
+		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 0, title = 'sim_time', maxval = True, M1 = False, M2 = False, var = False, bootstrapping = False, tabsep = True, plot = False)
 		# FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 4, title = 'E2Etot', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True, plot = False)
 		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 5, title = 'E2Eproj', M1 = True, M2 = True, var = True, bootstrapping = True, tabsep = True, plot = False)
 		FE_parms = parse_results(parms = FE_parms, dir = data_dir, simfile = 'RE2E.dat', col = 8, title = 'cos_theta_parallel', M1 = True, M2 = True, var = True, bootstrapping = False, tabsep = True, plot = False)
@@ -562,8 +632,9 @@ for l in lin:
 		FE_parms = pd.read_csv(anal_dir + parm_file, index_col = False)
 
 	## FORCE-EXTENSION, ELASTICITY ANALYSIS
-	for n in FE_parms['N'].unique(): # chain length
-		for top in FE_parms['top'].unique(): # unique topology
+	for top in FE_parms['top'].unique(): # unique topology
+		# chain elasticity vs. force
+		for n in FE_parms['N'].unique(): # chain length
 
 			## COMPARE EACH FORCE EXTENSION CURVE FOR EACH TOPOLOGY
 			# get the unique dataframe, establish save name and directory
@@ -572,17 +643,22 @@ for l in lin:
 			df = FE_parms[(FE_parms['top'] == top) & (FE_parms['N'] == n)]
 			print(save)
 
+			if n != 800: continue
+
 			## PLOT FORCE-EXTENSION
-			# regular
-			plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, rmax = (3 * n))
+			# no normalization with variance
+			# plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', vcol = 'E2Eproj_var', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, plot_linearscale = False)
+			# normalize according to chain length
+			# plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, rmax = (3 * n), plot_linearscale = False)
 			# add scaling
-			plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, scale = True)
+			plot_force_extension(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = ideal, show = False, savedir = savedir, scale = True, plot_linearscale = False)
 
 			## PLOT ELASTICITY
 			# regular
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n), monotonic = True, average_int = 10)
+			# calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = False, ideal = False, show = False, savedir = savedir, rmax = (3 * n), monotonic = True, average_int = 10)
 			# normalized
-			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, scale = True, monotonic = True, average_int = 10)
+			calc_elasticity_numerically(df = df, fcol = 'F', rcol = 'E2Eproj_M1', icol = 'K', ilabel = "$\\kappa_{{\\theta}}$ = {:.02f}", real = real, ideal = False, show = False, savedir = savedir, scale = True, monotonic = True, average_int = 3)
+			exit()
 
 			## PLOT BOND OP
 			# regular
@@ -610,7 +686,7 @@ for l in lin:
 				df_norm['F'] = df['F'] #* 2.69
 				df_norm['E2Eproj_M1'] = df_norm['E2Eproj_M1'] / r_max
 				df_norm['label'] = ["Simulation Data"] * len(df['F'].to_list())
-				plot_force_extension (df = df_norm, rcol = 'E2Eproj_M1', fcol = 'F', real = real, ideal = ideal, show = False, savedir = f"./02_processed_data/{job:s}/{d:s}/")
+				plot_force_extension (df = df_norm, rcol = 'E2Eproj_M1', fcol = 'F', icol = 'K', real = real, ideal = ideal, show = False, savedir = f"./02_processed_data/{job:s}/{d:s}/")
 
 				## CALCULATE THE ELASTICITY NUMERICALLY, determine linear constants
 				k_lin = calc_elasticity_numerically(df = df_norm, F_col = 'F', R_col = 'E2Eproj_M1', monotonic = False, average_int = 5, savedir = f"./02_processed_data/{job:s}/{d:s}/", real = real, ideal = ideal, icol = 'label')

@@ -37,6 +37,7 @@ default_file_location = "./"
 default_file_name = "figure"
 default_file_type = ".png"
 default_markerset = ["D", "^", "v", "<", "o", "s", "p", "*"]
+default_linestyle = '-'
 default_logscale_base = 10
 minimum_logscale_base = 0.1
 accepted_filetypes = [".png", ".tif"]
@@ -297,6 +298,7 @@ class Figure (object):
         self.df = pd.DataFrame(df_dict)
         self.reset_markers()
         self.reset_labels()
+        self.reset_linestyles()
 
     # initialize set of random set of markers that can be used for each unique ival in icol
     """ method generates a random set of markers than can be used with matplotlib. """
@@ -339,6 +341,26 @@ class Figure (object):
             return default_markerset[0]
         else:
             return self.marker_dict[ival]
+
+    # initialize linestyles assigned to each i value
+    def reset_linestyles (self, ls = default_linestyle):
+        self.linestyle_dict = {} # empty dictionary
+        for i in self.get_unique_ivals():
+            self.linestyle_dict.update({i: ls})
+
+    # assign linestyle to ival
+    def set_linestyle (self, ival = None, ls = None):
+        if ival in self.linestyle_dict:
+            self.linestyle_dict[ival] = ls
+
+    # get linestyle
+    """ returns linestyle corresponding to ival."""
+    def get_linestyle (self, ival = None):
+        if ival is None:
+            return '-'
+        else:
+            return self.linestyle_dict[ival]
+
 
     # initialize list of labels that correspons to each unique ival in icol
     """ method initializes labels used to describe each unique ival in plots as that ival stored within that Figure dataframe. """

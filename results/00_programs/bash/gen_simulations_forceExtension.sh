@@ -33,13 +33,13 @@ MAX_FORCE_VAL="10"
 # minimum force to test
 MIN_FORCE_VAL=".001"
 # array containing N to test
-PARM_N=( 100 )
+PARM_N=( 100 200 300 400 )
 # array containing whether to test rings structures or not
-PARM_RING=( 0 1 2 )
+PARM_RING=( 0 ) # 1 2 
 # array containing which potential to test
 PARM_CSA=( "TRUE" )
 # array containing persistence lengths to test
-PARM_LP=( 0 2 5 9 )
+PARM_LP=( 0 ) # 2 5 9 
 # array containing bending potential strings to test
 # PARM_BEND=( 0 1 5 10 30 )
 # array containing different force vectors to test
@@ -56,7 +56,7 @@ LINUXSERV="gandalf"
 EXECDIR="00_programs/build/bin/"
 ## PARAMETERS -- SIMULATION
 # number of MCSs between each property calculation
-declare -i N_MCS=10000000000 # 10 billion
+declare -i N_MCS=20000000000 # 10 billion
 # number of time properties are calculation
 declare -i save_interval=1000000
 # number of MCSs before equilibrium properties are calculated
@@ -66,16 +66,16 @@ declare -i t_equilibrium=1000000000 # 1 billion
 ## FUNCTIONS
 # display script options
 help () {
-	echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>"
-	echo -e "\n"
-	echo -e " ## SCRIPT PROTOCOL ##"
-	echo -e " -g           | generate simulation parameters / directories ."
-	echo -e " -l           | generate simulation parameters according to logscale (no negatives)."
+    echo -e "\nScript for generating polymer simulations with BFM model on linux clusters.\nUSAGE: ./gen_scaling simulations.sh << FLAGS >>"
+    echo -e "\n"
+    echo -e " ## SCRIPT PROTOCOL ##"
+    echo -e " -g           | generate simulation parameters / directories ."
+    echo -e " -l           | generate simulation parameters according to logscale (no negatives)."
     echo -e " -i           | simulate ideal chain (deafult is real)."
-	echo -e " -j << ARG >> | rename job."
-	echo -e " -n << ARG >> | number of simulation parameters to test (default is ${N_FORCE_VAL})."
-	echo -e " -m << ARG >> | maximum force to test (default is ${MAX_FORCE_VAL})."
-	echo -e "\n"
+    echo -e " -j << ARG >> | rename job."
+    echo -e " -n << ARG >> | number of simulation parameters to test (default is ${N_FORCE_VAL})."
+    echo -e " -m << ARG >> | maximum force to test (default is ${MAX_FORCE_VAL})."
+    echo -e "\n"
 }
 
 # log10 function, echos log10 of first argument passed to method
@@ -153,22 +153,22 @@ linscale() {
 # generate simulation parameters
 gen_simparm() {
 
-	## PARAMETERS
-	# path to simulation directories
-	PATH_SIMPARM="${MAINDIR}/${JOB}/"
-	# file to write simulation parameters to
-	FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
-	# header used for the simulation parameter file
-	HEADER_SIMPARM="id,path,pot,mcs_run,mcs_equil,mcs_si,R,N,K,F,FV"
+    ## PARAMETERS
+    # path to simulation directories
+    PATH_SIMPARM="${MAINDIR}/${JOB}/"
+    # file to write simulation parameters to
+    FILE_SIMPARM="${PATH_SIMPARM}${JOB}.csv"
+    # header used for the simulation parameter file
+    HEADER_SIMPARM="id,path,pot,mcs_run,mcs_equil,mcs_si,R,N,K,F,FV"
 
-	## ARGUMENTS
-	# none
+    ## ARGUMENTS
+    # none
 
-	## SCRIPT
-	# if the path does not exist, make the directories
-	if [ ! -d $PATH_SIMPARM ]; then
-		mkdir $PATH_SIMPARM
-	fi
+    ## SCRIPT
+    # if the path does not exist, make the directories
+    if [ ! -d $PATH_SIMPARM ]; then
+        mkdir $PATH_SIMPARM
+    fi
 
     # determine flag used for simulating either a real or an ideal chain
     EXCLUDED_VOLUME_FLAG="Real"
@@ -176,9 +176,9 @@ gen_simparm() {
         EXCLUDED_VOLUME_FLAG="Ideal"
     fi
 
-	# write head to file, write parameters to file
-	echo $HEADER_SIMPARM > $FILE_SIMPARM
-	for c in "${PARM_CSA[@]}"; do
+    # write head to file, write parameters to file
+    echo $HEADER_SIMPARM > $FILE_SIMPARM
+    for c in "${PARM_CSA[@]}"; do
 
         if [ "${c}" == "TRUE" ]; then
             C="CSA"
@@ -324,27 +324,27 @@ gen_simparm() {
                 done
             done
         done
-	done
+    done
 }
 
 ## OPTIONS
 while getopts "hglij:n:m:" option; do
-	case $option in
-		h) # print script parameters to CLT
-			help
-			exit 0 ;;
+    case $option in
+        h) # print script parameters to CLT
+            help
+            exit 0 ;;
         j) # change job name
             JOB="${OPTARG}";;
         g) # generate simulation parameters
             declare -i BOOL_GEN=1 ;;
-		l) # generate parameters along logscale
-			declare -i BOOL_LOGSCALE=1 ;;
+        l) # generate parameters along logscale
+            declare -i BOOL_LOGSCALE=1 ;;
         i) # simulate ideal chain
-            declare -i BOOL_IDEAL=1;;
+            declare -i BOOL_IDEAL=1 ;;
         n) # number of force extension values to test
-            declare -i N_FORCE_VAL=${OPTARG};;
+            declare -i N_FORCE_VAL=${OPTARG} ;;
         m) # maxmimum force value to test
-            MAX_FORCE_VAL="${OPTARG}";;
+            MAX_FORCE_VAL="${OPTARG}" ;;
         \?) # sonstiges
             help
             exit $NONZERO_EXITCODE
@@ -364,13 +364,13 @@ if [ $BOOL_GEN -eq 1 ]; then
         mkdir "01_raw_data"
     fi
 
-	# differentiate jobs with lin and log tags
-	if [[ $BOOL_LOGSCALE -eq 1 ]]; then
+    # differentiate jobs with lin and log tags
+    if [[ $BOOL_LOGSCALE -eq 1 ]]; then
         log_tag="log"
     else
         log_tag="lin"
-	fi
-	# tag job
-	JOB="${JOB}_${log_tag}"
-	gen_simparm
+    fi
+    # tag job
+    JOB="${JOB}_${log_tag}"
+    gen_simparm
 fi

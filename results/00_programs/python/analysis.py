@@ -16,6 +16,7 @@ from decimal import Decimal # used for formating large numbers to scientific not
 # local
 from fig.Figure import Figure
 from plot.scatter_plot import gen_scatter
+from plot.plot import gen_plot
 
 ################
 ## PARAMETERS ##
@@ -205,7 +206,7 @@ def parse_data(filepath, avgcol = None, avgrow = None, header = None, tab = Fals
         return []
 
 # method for getting simulation results from files
-def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, M1 = False, M2 = False, var = False, tabsep = False, plot = False):
+def parse_results(parms = None, dir = None, simfile = None, col = None, row = None, title = None, bootstrapping = False, maxval = False, M1 = False, M2 = False, var = False, tabsep = False, plot = False):
 
     # make sure required information has been provided
     if title is None:
@@ -259,11 +260,16 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
         else:
             # calculate using the formula
             for i in vals:
-                avg += i
+                avg += float(i)
             avg = avg / nvals
 
-        # append average if requested
-        if M1:
+        # if max is requested, get the largest value
+        if maxval:
+            M1_arr.append(max(vals))
+            # if the max is requested, skip everything else
+            continue
+        # elseappend average if requested
+        elif M1:
             M1_arr.append(avg)
 
         # calculate the second moment of average, if requested
@@ -285,7 +291,8 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
             var_arr.append(math.sqrt(std)) # variance is sqrt of std
 
         # plot distribution if requested
-        if plot:
+        # can't plot if maxval is true
+        if plot and not maxval:
             n_bins = 50
             fig, ax = plt.subplots()
             ax.hist(vals, bins=n_bins, density=True, label = "Simulation Data")
@@ -304,6 +311,7 @@ def parse_results(parms = None, dir = None, simfile = None, col = None, row = No
 
 
     # add to parameters data frame and return to user
+    if maxval: parms[title + "_max"] = M1_arr
     if M1: parms[title + "_M1"] = M1_arr
     if M2: parms[title + "_M2"] = M2_arr
     if var: parms[title + "_var"] = var_arr
@@ -1722,14 +1730,47 @@ update = ("update" in sys.argv)
 figure = ("allfigs" in sys.argv)
 # generate / re-generate figure 1
 fig1 = ("fig1" in sys.argv)
+# generate / regenerate figure 2
+fig2 = ("fig2" in sys.argv)
 
 
 ############
 ## SCRIPT ##
 ############
 
+
 # use pre-analyzed results to generate publication quality figures
-if figure or fig1: ## generate figure one
+# first figure is the effect of chain length on the chain extension and elasticity of ideal chains
+if figure or fig1:
+    pass
+    # load analyzed data and simulation parameters from 'rsforceExtension_log'
+    df_simparm = pd.read_csv('./02_processed_data/rsForceExtension_log/rsForceExtension_log.csv')
+
+    # plot the scaled chain extension data against for scaled force
+    # plot the varaiance in the E2E data against the force
+    x_VvF = []
+    y_VvF = []
+    i_VvF = []
+    for n in df_simparm['N'].unique():
+        df_simdata = pd.read_csv('./02_processed_data/rsForceExtension_log/CHAIN_N{:d}/RVvF.csv'.format(n))
+        for i, r in df_simdata.iterrows():
+            x_VvF.append(r['F'])
+            y_VvF.append(r['RV'])
+            i_VvF.append("N = {:d}".format(n))
+    f = Figure()
+    f.load_data(d = pd.DataFrame.from_dict({'F': x_VvF, 'V': y_VvF, 'L': i_VvF}), xcol = 'F', ycol = 'V', icol = 'L')
+    f.set_title_label("Variance in Chain Extension vs. External Force")
+    f.set_xaxis_label("External Force ($F$)")
+    f.set_yaxis_label("Variance in Chain Extension ($\\sigma_{{E2E}}$)")
+    f.set_yaxis_max(11)
+    f.set_logscale()
+    f.set_saveas(savedir = './03_figures/fig1/', filename = 'fig1c')
+    gen_scatter(fig = f, markersize = 30, show = True, save = True)
+    # plot the scaled elasticity against the scaled force
+
+# second figure is the effect of chain length on the chain extension and elasticity of real chains
+
+if figure or fig2: ## generate figure one
     ## grab data from folder
     df = pd.read_csv("./03_figures/fig1/bendingPARM.csv")
 

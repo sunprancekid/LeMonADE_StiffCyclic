@@ -52,13 +52,13 @@ def gen_plot (fig = None, linewidth = default_plot_linewidth, markersize = defau
         n = len(fig.get_unique_ivals())
         # if the figure has unique isolated values
         for i in fig.get_unique_ivals(rev = False):
-            line = plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), linewidth = linewidth, marker = fig.get_marker(i), markersize = markersize, zorder = n) 
+            line = plt.plot(fig.get_xval_list(i), fig.get_yval_list(i), linewidth = linewidth, ls = fig.get_linestyle(i), marker = fig.get_marker(i), markersize = markersize, zorder = n) 
             leg.append(mlines.Line2D([], [], marker = fig.get_marker(i), ls = line[-1].get_ls(), label = fig.get_label(i), color = line[-1].get_color()))
             n -= 1
     else:
         # otherwise the figure does not have isolated values, so just create one plot
         plt.plot(fig.get_xval_list(), fig.get_yval_list(), linewidth = linewidth, marker = fig.get_marker(), markersize = markersize)
-
+        
     # add xaxis min and max, used min and max to plot fits
     xlim = plt.xlim(fig.get_xaxis_min(), fig.get_xaxis_max())
 
